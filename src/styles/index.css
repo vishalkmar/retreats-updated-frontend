@@ -142,9 +142,60 @@ h1, h2, h3, h4, h5 {
 .rich-prose hr { @apply my-6 border-slate-200; }
 .rich-prose img { @apply rounded-lg max-w-full my-4; }
 
+/* Inline icon span (emoji preset) — slightly bigger than text and aligned */
+.rich-prose .rte-icon {
+  display: inline-block;
+  font-size: 1.15em;
+  line-height: 1;
+  vertical-align: -0.1em;
+  margin: 0 0.15em;
+}
+
+/* Custom uploaded icon — small, inline-aligned image. Override the default
+   block-image rules above so it sits beside text, not on its own line. */
+.rich-prose img.rte-custom-icon {
+  display: inline-block;
+  width: 1.25em;
+  height: 1.25em;
+  margin: 0 0.2em;
+  vertical-align: -0.25em;
+  object-fit: contain;
+  border-radius: 0;
+}
+
 /* Placeholder for empty contentEditable */
 .rich-prose:empty:before {
   content: attr(data-placeholder);
   color: rgb(var(--ink-muted));
   pointer-events: none;
+}
+
+/* Activity strip — center the slides horizontally so the row sits in the
+   middle of the section instead of starting from the left edge. Swiper's
+   centerInsufficientSlides handles centering when slides fit; this CSS adds
+   a small safety net plus visual polish (shadow on swiper buttons).
+*/
+.activity-strip .swiper-wrapper {
+  justify-content: center;
+}
+@media (max-width: 640px) {
+  /* On narrow viewports, fall back to natural left-aligned scroll so the
+     last items aren't pushed off-screen. */
+  .activity-strip .swiper-wrapper {
+    justify-content: flex-start;
+  }
+}
+.activity-strip .swiper-button-prev,
+.activity-strip .swiper-button-next {
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  background: white;
+  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.12);
+  color: rgb(var(--brand));
+}
+.activity-strip .swiper-button-prev::after,
+.activity-strip .swiper-button-next::after {
+  font-size: 14px;
+  font-weight: 700;
 }

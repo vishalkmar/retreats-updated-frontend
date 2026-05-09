@@ -1,4 +1,5 @@
 import { Plus, Trash2 } from 'lucide-react';
+import RichTextEditor from './RichTextEditor.jsx';
 
 /**
  * Editor for an array of strings (highlights, includes, excludes).
@@ -81,13 +82,15 @@ export function ItineraryEditor({ value = [], onChange }) {
               <Trash2 size={16} />
             </button>
           </div>
-          <textarea
-            className="input"
-            rows={2}
-            value={item.description || ''}
-            placeholder="What happens this day?"
-            onChange={(e) => update(i, 'description', e.target.value)}
-          />
+          <div>
+            <span className="text-xs font-semibold text-ink-muted block mb-1">Description</span>
+            <RichTextEditor
+              value={item.description || ''}
+              onChange={(v) => update(i, 'description', v)}
+              placeholder="What happens this day? — formatting, lists, icons supported"
+              minHeight={140}
+            />
+          </div>
         </div>
       ))}
       <button

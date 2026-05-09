@@ -3,7 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import {
   Star, MapPin, Calendar, Users, Heart, Share2, Check, X as XIcon,
   ShieldCheck, Award, Flame, ChevronDown, Play, Send,
-  Utensils, Sparkles, Hotel,
+  Utensils, Sparkles, Hotel, Shield, RefreshCcw, XCircle, BookOpen,
+  Award as AwardIcon, Clock, Heart as HeartIcon,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -78,8 +79,14 @@ export default function PackageDetailPage() {
   const isVimeo = hasVideo && /vimeo\.com/.test(pkg.videoUrl);
   const youtubeId = isYoutube ? pkg.videoUrl.split(/(?:v=|\/)/).pop().split('?')[0] : null;
 
-  // Decide whether to show the rich-text block (preferred) or fall back to
-  // legacy structured highlights/includes/excludes lists.
+  // The page now supports three independent rich-text blocks for highlights,
+  // inclusions and exclusions. The legacy combined `richContent` and the older
+  // structured arrays are still rendered as fallbacks if the newer fields are
+  // empty, so existing packages keep working.
+  const hasHighlightsRich = !!pkg.highlightsRich && pkg.highlightsRich.trim() !== '';
+  const hasInclusionsRich = !!pkg.inclusionsRich && pkg.inclusionsRich.trim() !== '';
+  const hasExclusionsRich = !!pkg.exclusionsRich && pkg.exclusionsRich.trim() !== '';
+  const hasAnyRichSection = hasHighlightsRich || hasInclusionsRich || hasExclusionsRich;
   const hasRichContent = !!pkg.richContent && pkg.richContent.trim() !== '';
   const hasLegacyLists =
     (pkg.highlights?.length > 0) ||
@@ -198,15 +205,36 @@ export default function PackageDetailPage() {
             </Section>
           )}
 
-          {/* Highlights / What's included / What's not — single rich-text block */}
-          {hasRichContent && (
+          {/* Highlights — independent rich-text */}
+          {hasHighlightsRich && (
+            <Section title="Highlights">
+              <RichHtml html={pkg.highlightsRich} />
+            </Section>
+          )}
+
+          {/* What's included — independent rich-text */}
+          {hasInclusionsRich && (
+            <Section title="What's included">
+              <RichHtml html={pkg.inclusionsRich} />
+            </Section>
+          )}
+
+          {/* What's not included — independent rich-text */}
+          {hasExclusionsRich && (
+            <Section title="What's not included">
+              <RichHtml html={pkg.exclusionsRich} />
+            </Section>
+          )}
+
+          {/* Legacy combined block — only shown if none of the new fields are set */}
+          {!hasAnyRichSection && hasRichContent && (
             <Section title="What's included">
               <RichHtml html={pkg.richContent} />
             </Section>
           )}
 
-          {/* Legacy structured lists fallback (only if no richContent set) */}
-          {!hasRichContent && hasLegacyLists && (
+          {/* Legacy structured lists fallback (only if no rich blocks set) */}
+          {!hasAnyRichSection && !hasRichContent && hasLegacyLists && (
             <>
               {pkg.highlights?.length > 0 && (
                 <Section title="Highlights">
@@ -246,6 +274,27 @@ export default function PackageDetailPage() {
                 </div>
               )}
             </>
+          )}
+
+          {/* Retreat Experience */}
+          {pkg.retreatExperience && (
+            <Section title="The retreat experience" icon={HeartIcon}>
+              <RichHtml html={pkg.retreatExperience} />
+            </Section>
+          )}
+
+          {/* What makes this retreat special */}
+          {pkg.whatMakesSpecial && (
+            <Section title="What makes this retreat special" icon={AwardIcon}>
+              <RichHtml html={pkg.whatMakesSpecial} />
+            </Section>
+          )}
+
+          {/* Full program timing */}
+          {pkg.fullProgramTiming && (
+            <Section title="Full program timing" icon={Clock}>
+              <RichHtml html={pkg.fullProgramTiming} />
+            </Section>
           )}
 
           {/* Benefits */}
@@ -310,9 +359,12 @@ export default function PackageDetailPage() {
                       <ChevronDown size={16} className="group-open:rotate-180 transition" />
                     </summary>
                     {d.description && (
-                      <p className="px-4 pb-4 text-sm text-ink-muted whitespace-pre-line">
-                        {d.description}
-                      </p>
+                      <div className="px-4 pb-4">
+                        {/* Render as HTML so admin's rich-text formatting (lists, icons, headings) survives. */}
+                        {/^\s*</.test(d.description)
+                          ? <RichHtml html={d.description} className="text-sm" />
+                          : <p className="text-sm text-ink-muted whitespace-pre-line">{d.description}</p>}
+                      </div>
                     )}
                   </details>
                 ))}
@@ -358,6 +410,34 @@ export default function PackageDetailPage() {
                   </details>
                 ))}
               </div>
+            </Section>
+          )}
+
+          {/* Booking terms */}
+          {pkg.bookingTerms && (
+            <Section title="Booking terms" icon={BookOpen}>
+              <RichHtml html={pkg.bookingTerms} />
+            </Section>
+          )}
+
+          {/* Cancellation policy */}
+          {pkg.cancellationPolicy && (
+            <Section title="Cancellation policy" icon={XCircle}>
+              <RichHtml html={pkg.cancellationPolicy} />
+            </Section>
+          )}
+
+          {/* Refunds policy */}
+          {pkg.refundsPolicy && (
+            <Section title="Refunds policy" icon={RefreshCcw}>
+              <RichHtml html={pkg.refundsPolicy} />
+            </Section>
+          )}
+
+          {/* Terms & Conditions */}
+          {pkg.termsConditions && (
+            <Section title="Terms & Conditions" icon={Shield}>
+              <RichHtml html={pkg.termsConditions} />
             </Section>
           )}
 

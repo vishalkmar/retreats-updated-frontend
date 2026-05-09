@@ -1,15 +1,17 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { Plus, Edit, Trash2, Eye, EyeOff, FileText, Calendar, Tag } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Plus, Edit, Trash2, Eye, EyeOff, FileText, Calendar, Tag, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
 import ConfirmDialog from '../../components/admin/ConfirmDialog.jsx';
 
 export default function BlogsPage() {
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState(null);
+  const [duplicatingId, setDuplicatingId] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -35,6 +37,22 @@ export default function BlogsPage() {
       load();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Toggle failed');
+    }
+  };
+
+  const duplicate = async (b) => {
+    if (duplicatingId) return;
+    setDuplicatingId(b.id);
+    try {
+      const res = await api.post(`/blogs/${b.id}/duplicate`);
+      const newId = res.data?.data?.blog?.id;
+      toast.success('Blog duplicated — opening for edit');
+      if (newId) navigate(`/admin/blogs/${newId}/edit`);
+      else load();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Duplicate failed');
+    } finally {
+      setDuplicatingId(null);
     }
   };
 
@@ -122,6 +140,13 @@ export default function BlogsPage() {
                   <button onClick={() => toggle(b)} className="flex-1 btn-ghost text-xs">
                     {b.isPublished ? <EyeOff size={14} /> : <Eye size={14} />}
                     {b.isPublished ? 'Unpublish' : 'Publish'}
+                  </button>
+                  <button
+                    onClick={() => duplicate(b)}
+                    disabled={duplicatingId === b.id}
+                    className="flex-1 btn-ghost text-xs disabled:opacity-50"
+                  >
+                    <Copy size={14} /> Duplicate
                   </button>
                   <Link to={`/admin/blogs/${b.id}/edit`} className="flex-1 btn-ghost text-xs">
                     <Edit size={14} /> Edit

@@ -3,7 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, Save, Trash2, Image as ImageIcon, Tag, MapPin,
   Calendar, DollarSign, ListChecks, HelpCircle, User, Settings,
-  Utensils, Sparkles, Hotel,
+  Utensils, Sparkles, Hotel, Plus, Shield, RefreshCcw,
+  XCircle, BookOpen, Heart, Award, Clock,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
@@ -35,6 +36,10 @@ const blankForm = {
   priceFrom: 0, priceOriginal: '', currency: 'INR',
   freeCancellation: true, isGoldHost: false, isFeatured: false, isActive: true,
   richContent: '',
+  highlightsRich: '', inclusionsRich: '', exclusionsRich: '',
+  termsConditions: '', refundsPolicy: '', cancellationPolicy: '',
+  bookingTerms: '', retreatExperience: '', whatMakesSpecial: '',
+  fullProgramTiming: '',
   food: '', meals: [], diets: [],
   benefits: '',
   facilities: [],
@@ -140,6 +145,16 @@ export default function PackageFormPage() {
         isFeatured: !!p.isFeatured,
         isActive: p.isActive ?? true,
         richContent: p.richContent || '',
+        highlightsRich: p.highlightsRich || '',
+        inclusionsRich: p.inclusionsRich || '',
+        exclusionsRich: p.exclusionsRich || '',
+        termsConditions: p.termsConditions || '',
+        refundsPolicy: p.refundsPolicy || '',
+        cancellationPolicy: p.cancellationPolicy || '',
+        bookingTerms: p.bookingTerms || '',
+        retreatExperience: p.retreatExperience || '',
+        whatMakesSpecial: p.whatMakesSpecial || '',
+        fullProgramTiming: p.fullProgramTiming || '',
         food: p.food || '',
         meals: p.meals || [],
         diets: p.diets || [],
@@ -285,16 +300,14 @@ export default function PackageFormPage() {
           </div>
           <div className="sm:col-span-2">
             <label className="label">Short description</label>
-            <textarea
-              className="input leading-relaxed resize-y"
-              rows={4}
-              style={{ padding: '14px 16px', minHeight: 110 }}
+            <RichTextEditor
               value={form.shortDescription}
-              onChange={(e) => change('shortDescription', e.target.value)}
-              placeholder="One-line teaser shown in cards & listings."
+              onChange={(v) => change('shortDescription', v)}
+              placeholder="A short teaser shown in cards & listings — formatting and icons supported."
+              minHeight={140}
             />
             <p className="text-[11px] text-ink-muted mt-1.5">
-              Plain text · shown in cards and listings.
+              Rich text · shown in cards, listings and the top of the detail page.
             </p>
           </div>
           <div className="sm:col-span-2">
@@ -524,17 +537,42 @@ export default function PackageFormPage() {
         </div>
       </Section>
 
-      {/* Single rich-text block — replaces Highlights / Includes / Excludes */}
-      <Section icon={ListChecks} title="Highlights / What's included / What's not">
+      {/* Highlights — independent rich-text */}
+      <Section icon={ListChecks} title="Highlights">
         <p className="text-xs text-ink-muted -mt-1">
-          Use one rich-text block for highlights, what's included and what's not.
-          Use headings, lists and bold to structure it — the public page renders the same formatting.
+          The top reasons guests should pick this retreat. Use lists, icons and bold to structure it.
         </p>
         <RichTextEditor
-          value={form.richContent}
-          onChange={(v) => change('richContent', v)}
-          placeholder={`E.g.\n\nHighlights\n• 3 nights stay in a beachfront cottage\n\nIncluded\n• Daily yoga & meditation\n• 3 vegetarian meals/day\n\nNot included\n• Flights to/from destination`}
-          minHeight={260}
+          value={form.highlightsRich}
+          onChange={(v) => change('highlightsRich', v)}
+          placeholder={'• 3 nights stay in a beachfront cottage\n• Sunrise yoga sessions\n• Personal Ayurvedic consultation'}
+          minHeight={200}
+        />
+      </Section>
+
+      {/* What's included — independent rich-text */}
+      <Section icon={ListChecks} title="What's included">
+        <p className="text-xs text-ink-muted -mt-1">
+          Everything covered in the package price.
+        </p>
+        <RichTextEditor
+          value={form.inclusionsRich}
+          onChange={(v) => change('inclusionsRich', v)}
+          placeholder={'• Daily yoga & meditation\n• 3 vegetarian meals/day\n• Airport transfers'}
+          minHeight={200}
+        />
+      </Section>
+
+      {/* What's not included — independent rich-text */}
+      <Section icon={ListChecks} title="What's not included">
+        <p className="text-xs text-ink-muted -mt-1">
+          Things guests need to arrange or pay for separately.
+        </p>
+        <RichTextEditor
+          value={form.exclusionsRich}
+          onChange={(v) => change('exclusionsRich', v)}
+          placeholder={'• Flights to/from destination\n• Travel insurance\n• Personal expenses'}
+          minHeight={200}
         />
       </Section>
 
@@ -583,9 +621,56 @@ export default function PackageFormPage() {
       {/* Facilities */}
       <Section icon={Hotel} title="Facilities available" defaultOpen={false}>
         <CheckboxChips
-          options={FACILITY_OPTIONS}
+          options={[
+            ...FACILITY_OPTIONS,
+            // surface any custom facilities already saved so they keep their checked state
+            ...(form.facilities || []).filter((f) => !FACILITY_OPTIONS.includes(f)),
+          ]}
           value={form.facilities}
           onChange={(v) => change('facilities', v)}
+        />
+        <CustomFacilityInput
+          existing={form.facilities}
+          onAdd={(name) => change('facilities', [...(form.facilities || []), name])}
+        />
+      </Section>
+
+      {/* Retreat Experience — rich text */}
+      <Section icon={Heart} title="Retreat Experience" defaultOpen={false}>
+        <p className="text-xs text-ink-muted -mt-1">
+          Walk guests through what the retreat feels like — the vibe, mood, atmosphere.
+        </p>
+        <RichTextEditor
+          value={form.retreatExperience}
+          onChange={(v) => change('retreatExperience', v)}
+          placeholder="Describe the day-to-day feel of the retreat — quiet mornings, group meals, evening sound baths…"
+          minHeight={200}
+        />
+      </Section>
+
+      {/* What makes this retreat special */}
+      <Section icon={Award} title="What makes this retreat special" defaultOpen={false}>
+        <p className="text-xs text-ink-muted -mt-1">
+          The unique angle that sets this retreat apart from others.
+        </p>
+        <RichTextEditor
+          value={form.whatMakesSpecial}
+          onChange={(v) => change('whatMakesSpecial', v)}
+          placeholder="Our signature riverside meditation deck, the lineage of our teachers, locally-sourced organic kitchen…"
+          minHeight={200}
+        />
+      </Section>
+
+      {/* Full program timing */}
+      <Section icon={Clock} title="Full program timing" defaultOpen={false}>
+        <p className="text-xs text-ink-muted -mt-1">
+          A detailed schedule — daily routines, session timings, free hours.
+        </p>
+        <RichTextEditor
+          value={form.fullProgramTiming}
+          onChange={(v) => change('fullProgramTiming', v)}
+          placeholder={'06:30 — Morning yoga\n08:00 — Breakfast\n10:00 — Workshop / treatments\n13:00 — Lunch\n…'}
+          minHeight={220}
         />
       </Section>
 
@@ -597,6 +682,46 @@ export default function PackageFormPage() {
       {/* FAQs */}
       <Section icon={HelpCircle} title="Frequently asked questions" defaultOpen={false}>
         <FaqEditor value={form.faqs} onChange={(v) => change('faqs', v)} />
+      </Section>
+
+      {/* Booking terms */}
+      <Section icon={BookOpen} title="Booking terms" defaultOpen={false}>
+        <RichTextEditor
+          value={form.bookingTerms}
+          onChange={(v) => change('bookingTerms', v)}
+          placeholder="How bookings are confirmed, deposit requirements, payment schedule…"
+          minHeight={180}
+        />
+      </Section>
+
+      {/* Cancellation policy */}
+      <Section icon={XCircle} title="Cancellation policy" defaultOpen={false}>
+        <RichTextEditor
+          value={form.cancellationPolicy}
+          onChange={(v) => change('cancellationPolicy', v)}
+          placeholder="Free cancellation up to 30 days, 50% refund within 14 days…"
+          minHeight={180}
+        />
+      </Section>
+
+      {/* Refunds policy */}
+      <Section icon={RefreshCcw} title="Refunds policy" defaultOpen={false}>
+        <RichTextEditor
+          value={form.refundsPolicy}
+          onChange={(v) => change('refundsPolicy', v)}
+          placeholder="When refunds are issued, processing time, exclusions…"
+          minHeight={180}
+        />
+      </Section>
+
+      {/* Terms & Conditions */}
+      <Section icon={Shield} title="Terms & Conditions" defaultOpen={false}>
+        <RichTextEditor
+          value={form.termsConditions}
+          onChange={(v) => change('termsConditions', v)}
+          placeholder="The legal fine print guests should be aware of."
+          minHeight={200}
+        />
       </Section>
 
       {/* Host */}
@@ -688,5 +813,45 @@ export default function PackageFormPage() {
         </button>
       </div>
     </form>
+  );
+}
+
+function CustomFacilityInput({ existing = [], onAdd }) {
+  const [value, setValue] = useState('');
+
+  const apply = () => {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    if (existing.some((f) => f.toLowerCase() === trimmed.toLowerCase())) {
+      setValue('');
+      return; // already there — no-op
+    }
+    onAdd(trimmed);
+    setValue('');
+  };
+
+  return (
+    <div className="mt-3 pt-3 border-t flex items-center gap-2">
+      <input
+        className="input flex-1"
+        placeholder="Add custom facility (e.g. Bonfire pit, Meditation cave)"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            apply();
+          }
+        }}
+      />
+      <button
+        type="button"
+        onClick={apply}
+        disabled={!value.trim()}
+        className="btn-primary text-sm whitespace-nowrap disabled:opacity-50"
+      >
+        <Plus size={14} /> Add
+      </button>
+    </div>
   );
 }

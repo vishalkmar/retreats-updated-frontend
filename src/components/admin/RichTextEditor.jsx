@@ -5,8 +5,10 @@ import {
   Link as LinkIcon, Quote, Heading1, Heading2, Heading3,
   RemoveFormatting, Undo, Redo, Minus, Subscript, Superscript,
   IndentDecrease, IndentIncrease, Type, Palette,
-  ChevronDown, List, ListOrdered,
+  ChevronDown, List, ListOrdered, Smile, Image as ImageIcon,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import api from '../../services/api';
 
 const FONT_FAMILIES = [
   { label: 'Sans', value: 'Inter, system-ui, sans-serif' },
@@ -52,6 +54,15 @@ const OL_STYLES = [
   { label: 'A, B, C …', value: 'upper-alpha' },
   { label: 'i, ii, iii …', value: 'lower-roman' },
   { label: 'I, II, III …', value: 'upper-roman' },
+];
+
+const ICON_PRESETS = [
+  '✓', '✗', '★', '✦', '✿', '❀', '☀', '☾', '☘', '❤',
+  '🌿', '🌸', '🍃', '🌺', '🪷', '🧘', '🧘‍♀️', '🧘‍♂️', '🕉', '☮',
+  '🌅', '🌄', '🏞', '🏝', '🌊', '🔥', '💧', '🌳', '🌴', '🍀',
+  '🥗', '🍵', '🍯', '🥥', '🍋', '🥑', '🍓', '🥕', '🌶', '🧂',
+  '🛏', '🛀', '💆', '💆‍♀️', '💆‍♂️', '💇', '🪮', '🧴', '🪞', '🛁',
+  '🎵', '🎶', '📿', '🔔', '🎐', '🪔', '🕯', '🎋', '🎍', '🪴',
 ];
 
 /**
@@ -152,6 +163,51 @@ export default function RichTextEditor({
     exec('createLink', url);
   };
 
+  // Insert raw HTML at the current selection (or at the end if no selection).
+  const insertHtml = (html) => {
+    focusEditor();
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) {
+      // No selection — append at the end
+      const el = editorRef.current;
+      if (el) {
+        el.insertAdjacentHTML('beforeend', html);
+      }
+      emit();
+      return;
+    }
+    document.execCommand('insertHTML', false, html);
+    emit();
+  };
+
+  const insertEmoji = (emoji) => {
+    insertHtml(`<span class="rte-icon">${emoji}</span>`);
+  };
+
+  const insertIconImage = (url) => {
+    // Inline-sized image styled to look like an icon — sizing controlled by
+    // the .rte-custom-icon CSS class so it stays consistent everywhere.
+    insertHtml(`<img src="${url}" alt="" class="rte-custom-icon" />`);
+  };
+
+  const uploadIconFile = async (file) => {
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('file', file);
+    const tId = toast.loading('Uploading icon…');
+    try {
+      const res = await api.post('/uploads/inline', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const url = res?.data?.data?.url;
+      if (!url) throw new Error('No URL returned');
+      insertIconImage(url);
+      toast.success('Icon inserted', { id: tId });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Upload failed', { id: tId });
+    }
+  };
+
   const onInput = () => emit();
 
   const onPaste = (e) => {
@@ -246,6 +302,21 @@ export default function RichTextEditor({
           />
           <IconBtn title="Decrease indent" onClick={() => exec('outdent')}><IndentDecrease size={15} /></IconBtn>
           <IconBtn title="Increase indent" onClick={() => exec('indent')}><IndentIncrease size={15} /></IconBtn>
+        </Group>
+
+        {/* Group: icons */}
+        <Group>
+          <EmojiPicker
+            title="Insert symbol / icon"
+            icon={<Smile size={15} />}
+            options={ICON_PRESETS}
+            onPick={insertEmoji}
+          />
+          <IconUploader
+            title="Upload custom icon"
+            icon={<ImageIcon size={15} />}
+            onPick={uploadIconFile}
+          />
         </Group>
 
         {/* Group: blocks & misc */}
@@ -368,6 +439,62 @@ function ColorPicker({ title, icon, onPick, defaultColor = '#111827' }) {
         className="absolute inset-0 opacity-0 cursor-pointer"
       />
     </label>
+  );
+}
+
+function EmojiPicker({ title, icon, options, onPick }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDocClick = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [open]);
+
+  return (
+    <span ref={ref} className="relative" onMouseDown={(e) => e.preventDefault()}>
+      <IconBtn title={title} onClick={() => setOpen((o) => !o)}>{icon}</IconBtn>
+      {open && (
+        <div className="absolute z-30 mt-1 left-0 top-full bg-white border border-slate-200 rounded-lg shadow-lg p-2 grid grid-cols-10 gap-1 w-[280px] max-h-[200px] overflow-y-auto">
+          {options.map((emoji) => (
+            <button
+              key={emoji}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => { onPick(emoji); setOpen(false); }}
+              className="w-7 h-7 flex items-center justify-center text-base rounded hover:bg-slate-100"
+              title={emoji}
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      )}
+    </span>
+  );
+}
+
+function IconUploader({ title, icon, onPick }) {
+  const inputRef = useRef(null);
+  return (
+    <span onMouseDown={(e) => e.preventDefault()} className="inline-flex">
+      <IconBtn title={title} onClick={() => inputRef.current?.click()}>{icon}</IconBtn>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp,image/gif"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onPick(f);
+          e.target.value = '';
+        }}
+      />
+    </span>
   );
 }
 

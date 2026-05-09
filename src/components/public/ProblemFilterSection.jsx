@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronRight, MapPin, HeartPulse, Loader2 } from 'lucide-react';
+import { ChevronRight, MapPin, HeartPulse, Loader2, Star, Sparkles } from 'lucide-react';
 import api, { fileUrl } from '../../services/api';
 
 /**
@@ -51,16 +51,32 @@ export default function ProblemFilterSection() {
     return () => { cancelled = true; };
   }, [activeId, problems]);
 
-  // Derive unique cities + count from the packages list
+  // Derive unique cities + count + lowest price + average rating from the packages list
   const citiesForActive = useMemo(() => {
     const map = new Map();
     packagesForProblem.forEach((p) => {
       if (!p.city) return;
       const key = p.city.id;
-      if (!map.has(key)) map.set(key, { city: p.city, count: 0 });
-      map.get(key).count += 1;
+      if (!map.has(key)) {
+        map.set(key, {
+          city: p.city,
+          count: 0,
+          minPrice: Infinity,
+          maxRating: 0,
+          currency: p.currency || 'INR',
+          sample: p,
+        });
+      }
+      const entry = map.get(key);
+      entry.count += 1;
+      const price = Number(p.priceFrom) || 0;
+      if (price > 0 && price < entry.minPrice) entry.minPrice = price;
+      const rating = Number(p.rating) || 0;
+      if (rating > entry.maxRating) entry.maxRating = rating;
     });
-    return Array.from(map.values()).sort((a, b) => b.count - a.count);
+    return Array.from(map.values())
+      .map((e) => ({ ...e, minPrice: e.minPrice === Infinity ? 0 : e.minPrice }))
+      .sort((a, b) => b.count - a.count);
   }, [packagesForProblem]);
 
   const activeProblem = problems.find((p) => p.id === activeId);
@@ -160,36 +176,80 @@ export default function ProblemFilterSection() {
                       <p className="text-xs mt-1">Add packages tagged to this condition from the admin panel.</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {citiesForActive.map(({ city, count }) => (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
+                      {citiesForActive.map(({ city, count, minPrice, maxRating, currency }) => (
                         <button
                           key={city.id}
                           onClick={() =>
                             navigate(`/retreats?problem=${activeProblem.slug}&city=${city.slug}`)
                           }
-                          className="text-left group rounded-2xl overflow-hidden bg-surface-alt hover:shadow-card transition"
+                          className="text-left group bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
                         >
-                          <div className="aspect-[4/3] bg-slate-100 relative overflow-hidden">
+                          {/* Image */}
+                          <div className="aspect-[5/4] bg-slate-100 relative overflow-hidden">
                             {city.imageUrl ? (
                               <img
                                 src={fileUrl(city.imageUrl)}
                                 alt={city.name}
-                                className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
+                                className="w-full h-full object-cover group-hover:scale-110 transition duration-700"
                               />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center text-ink-muted">
-                                <MapPin />
+                              <div className="w-full h-full flex items-center justify-center text-ink-muted bg-gradient-to-br from-wellness/5 to-brand/10">
+                                <MapPin size={32} />
                               </div>
                             )}
-                            <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded-full bg-white/95 text-wellness font-semibold">
+                            {/* Bottom gradient for legibility */}
+                            <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/55 to-transparent" />
+
+                            {/* Top badges */}
+                            <span className="absolute top-3 left-3 text-[10px] px-2.5 py-1 rounded-full bg-white/95 backdrop-blur text-wellness font-bold uppercase tracking-wider shadow-sm">
                               {count} retreat{count > 1 ? 's' : ''}
                             </span>
-                          </div>
-                          <div className="p-3">
-                            <div className="font-semibold text-sm">{city.name}</div>
-                            {city.country && (
-                              <div className="text-xs text-ink-muted">{city.country}</div>
+                            {maxRating > 0 && (
+                              <span className="absolute top-3 right-3 text-[10px] px-2.5 py-1 rounded-full bg-white/95 backdrop-blur text-amber-700 font-bold flex items-center gap-1 shadow-sm">
+                                <Star size={10} className="fill-amber-500 text-amber-500" />
+                                {Number(maxRating).toFixed(1)}
+                              </span>
                             )}
+
+                            {/* Bottom-overlay city name */}
+                            <div className="absolute inset-x-0 bottom-0 p-4 text-white">
+                              <div className="font-display font-bold text-lg leading-tight drop-shadow">
+                                {city.name}
+                              </div>
+                              {city.country && (
+                                <div className="text-[11px] uppercase tracking-widest text-white/85 flex items-center gap-1">
+                                  <MapPin size={10} />
+                                  {city.country}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Body */}
+                          <div className="p-4">
+                            <div className="text-[11px] uppercase tracking-widest text-ink-muted flex items-center gap-1.5">
+                              <Sparkles size={12} className="text-wellness" />
+                              Helps with {activeProblem.name}
+                            </div>
+                            <div className="flex items-end justify-between mt-2.5">
+                              <div>
+                                {minPrice > 0 ? (
+                                  <>
+                                    <div className="text-[10px] text-ink-muted uppercase">From</div>
+                                    <div className="text-base font-bold text-wellness leading-tight">
+                                      {currency} {Number(minPrice).toLocaleString()}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="text-xs text-ink-muted">View retreats</div>
+                                )}
+                              </div>
+                              <span className="inline-flex items-center gap-1 text-xs font-semibold text-wellness group-hover:gap-2 transition-all">
+                                Explore
+                                <ChevronRight size={14} className="group-hover:translate-x-0.5 transition" />
+                              </span>
+                            </div>
                           </div>
                         </button>
                       ))}

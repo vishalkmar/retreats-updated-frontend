@@ -2,11 +2,16 @@ import { Link } from 'react-router-dom';
 import { MapPin, Star, Heart, Calendar, ShieldCheck, Award, Flame } from 'lucide-react';
 import { fileUrl } from '../../services/api';
 
+// shortDescription may now be rich-text HTML — strip tags for the card teaser.
+const stripHtml = (s) =>
+  (s || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+
 export default function PackageCard({ pkg }) {
   const reviewsLine =
     pkg.reviewCount > 0
       ? `${Number(pkg.rating).toFixed(2)} (${pkg.reviewCount} reviews)`
       : 'New';
+  const teaser = stripHtml(pkg.shortDescription);
 
   return (
     <article className="bg-white rounded-2xl shadow-card overflow-hidden flex flex-col md:flex-row hover:shadow-lg transition group">
@@ -73,9 +78,9 @@ export default function PackageCard({ pkg }) {
           )}
         </div>
 
-        {pkg.shortDescription && (
+        {teaser && (
           <p className="text-sm text-ink-muted mt-3 line-clamp-2 italic border-l-2 border-brand-light pl-3">
-            “{pkg.shortDescription}”
+            “{teaser}”
           </p>
         )}
 

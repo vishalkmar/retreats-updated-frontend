@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Plus, Edit, Trash2, Eye, EyeOff, Star, MapPin,
-  Package as PkgIcon, LayoutGrid, List as ListIcon,
+  Package as PkgIcon, LayoutGrid, List as ListIcon, Copy,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
@@ -10,10 +10,12 @@ import ConfirmDialog from '../../components/admin/ConfirmDialog.jsx';
 import SortableList, { DragHandle } from '../../components/admin/SortableList.jsx';
 
 export default function PackagesPage() {
+  const navigate = useNavigate();
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState(null);
+  const [duplicatingId, setDuplicatingId] = useState(null);
   const [view, setView] = useState('list');
 
   const load = useCallback(async () => {
@@ -54,6 +56,22 @@ export default function PackagesPage() {
       load();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Toggle failed');
+    }
+  };
+
+  const duplicate = async (p) => {
+    if (duplicatingId) return;
+    setDuplicatingId(p.id);
+    try {
+      const res = await api.post(`/packages/${p.id}/duplicate`);
+      const newId = res.data?.data?.package?.id;
+      toast.success('Package duplicated — opening for edit');
+      if (newId) navigate(`/admin/packages/${newId}/edit`);
+      else load();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Duplicate failed');
+    } finally {
+      setDuplicatingId(null);
     }
   };
 
@@ -193,6 +211,14 @@ export default function PackagesPage() {
                   <button onClick={() => toggle(p)} className="p-1.5 hover:bg-surface-alt rounded" title={p.isActive ? 'Unpublish' : 'Publish'}>
                     {p.isActive ? <Eye size={16} /> : <EyeOff size={16} />}
                   </button>
+                  <button
+                    onClick={() => duplicate(p)}
+                    disabled={duplicatingId === p.id}
+                    className="p-1.5 hover:bg-surface-alt rounded disabled:opacity-50"
+                    title="Duplicate"
+                  >
+                    <Copy size={16} />
+                  </button>
                   <Link
                     to={`/admin/packages/${p.id}/edit`}
                     className="p-1.5 hover:bg-surface-alt rounded"
@@ -281,6 +307,13 @@ export default function PackagesPage() {
                   >
                     {p.isActive ? <EyeOff size={14} /> : <Eye size={14} />}
                     {p.isActive ? 'Unpublish' : 'Publish'}
+                  </button>
+                  <button
+                    onClick={() => duplicate(p)}
+                    disabled={duplicatingId === p.id}
+                    className="flex-1 btn-ghost text-xs disabled:opacity-50"
+                  >
+                    <Copy size={14} /> Duplicate
                   </button>
                   <Link
                     to={`/admin/packages/${p.id}/edit`}
