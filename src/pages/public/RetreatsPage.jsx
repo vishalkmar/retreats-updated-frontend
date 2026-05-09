@@ -1,0 +1,311 @@
+import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Filter, X, ChevronDown } from 'lucide-react';
+import api from '../../services/api';
+import PackageCard from '../../components/public/PackageCard.jsx';
+
+const SORTS = [
+  { value: '', label: 'Recommended first' },
+  { value: 'price_asc', label: 'Price: low to high' },
+  { value: 'price_desc', label: 'Price: high to low' },
+  { value: 'rating', label: 'Highest rated' },
+  { value: 'newest', label: 'Newest' },
+];
+
+export default function RetreatsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [packages, setPackages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
+
+  const [cities, setCities] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [problems, setProblems] = useState([]);
+
+  const [filters, setFilters] = useState({
+    city: searchParams.get('city') || '',
+    category: searchParams.get('category') || '',
+    problem: searchParams.get('problem') || '',
+    sort: searchParams.get('sort') || '',
+    minPrice: searchParams.get('minPrice') || '',
+    maxPrice: searchParams.get('maxPrice') || '',
+    minDuration: searchParams.get('minDuration') || '',
+    maxDuration: searchParams.get('maxDuration') || '',
+    page: parseInt(searchParams.get('page') || '1', 10),
+  });
+
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Load taxonomies
+  useEffect(() => {
+    Promise.all([
+      api.get('/cities').then((r) => setCities(r.data?.data?.items || [])),
+      api.get('/categories').then((r) => setCategories(r.data?.data?.items || [])),
+      api.get('/problems').then((r) => setProblems(r.data?.data?.items || [])),
+    ]).catch(() => {});
+  }, []);
+
+  const queryString = useMemo(() => {
+    const params = {};
+    Object.entries(filters).forEach(([k, v]) => {
+      if (v !== '' && v !== undefined && v !== null) params[k] = v;
+    });
+    return params;
+  }, [filters]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/packages', { params: { ...queryString, limit: 12 } });
+      setPackages(res.data?.data?.items || []);
+      setPagination(res.data?.data?.pagination || { page: 1, pages: 1, total: 0 });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [queryString]);
+
+  useEffect(() => {
+    load();
+    const sp = new URLSearchParams();
+    Object.entries(queryString).forEach(([k, v]) => sp.set(k, v));
+    setSearchParams(sp, { replace: true });
+  }, [load, queryString, setSearchParams]);
+
+  const update = (k, v) => setFilters((f) => ({ ...f, [k]: v, page: 1 }));
+
+  const clearAll = () =>
+    setFilters({
+      city: '', category: '', problem: '', sort: '',
+      minPrice: '', maxPrice: '', minDuration: '', maxDuration: '', page: 1,
+    });
+
+  const hasFilters = ['city', 'category', 'problem', 'minPrice', 'maxPrice', 'minDuration', 'maxDuration']
+    .some((k) => filters[k]);
+
+  // Build a hero-ish header
+  const headerSubtitle = `${pagination.total || 0} retreats found${
+    filters.city ? ` in ${cities.find((c) => c.slug === filters.city)?.name || ''}` : ''
+  }`;
+
+  return (
+    <>
+      {/* Page header */}
+      <div className="bg-gradient-to-br from-brand to-wellness text-white">
+        <div className="container-app py-12 md:py-16">
+          <h1 className="text-3xl md:text-5xl font-display font-bold drop-shadow">
+            Wellness &amp; Yoga Retreats
+          </h1>
+          <p className="mt-2 opacity-90">{headerSubtitle}</p>
+        </div>
+      </div>
+
+      <div className="container-app py-8">
+        {/* Active filter chips */}
+        {hasFilters && (
+          <div className="flex flex-wrap items-center gap-2 mb-5">
+            {filters.city && (
+              <Chip label={`City: ${cities.find((c) => c.slug === filters.city)?.name || filters.city}`} onClear={() => update('city', '')} />
+            )}
+            {filters.category && (
+              <Chip label={`Category: ${categories.find((c) => c.slug === filters.category)?.name || filters.category}`} onClear={() => update('category', '')} />
+            )}
+            {filters.problem && (
+              <Chip label={`Problem: ${problems.find((c) => c.slug === filters.problem)?.name || filters.problem}`} onClear={() => update('problem', '')} />
+            )}
+            {filters.minPrice && <Chip label={`Min ${filters.minPrice}`} onClear={() => update('minPrice', '')} />}
+            {filters.maxPrice && <Chip label={`Max ${filters.maxPrice}`} onClear={() => update('maxPrice', '')} />}
+            <button onClick={clearAll} className="text-sm text-brand font-semibold hover:underline ml-2">
+              Clear all
+            </button>
+          </div>
+        )}
+
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Sidebar */}
+          <aside
+            className={`lg:w-72 shrink-0 ${filtersOpen ? 'block' : 'hidden lg:block'}`}
+          >
+            <div className="card p-5 sticky top-24">
+              <h3 className="font-display font-semibold mb-4 flex items-center justify-between">
+                <span>Filters</span>
+                <button onClick={() => setFiltersOpen(false)} className="lg:hidden text-ink-muted">
+                  <X size={18} />
+                </button>
+              </h3>
+
+              <FilterGroup label="Price" defaultOpen>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number" placeholder="Min" className="input"
+                    value={filters.minPrice}
+                    onChange={(e) => update('minPrice', e.target.value)}
+                  />
+                  <input
+                    type="number" placeholder="Max" className="input"
+                    value={filters.maxPrice}
+                    onChange={(e) => update('maxPrice', e.target.value)}
+                  />
+                </div>
+              </FilterGroup>
+
+              <FilterGroup label="Duration (days)">
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number" placeholder="Min" className="input"
+                    value={filters.minDuration}
+                    onChange={(e) => update('minDuration', e.target.value)}
+                  />
+                  <input
+                    type="number" placeholder="Max" className="input"
+                    value={filters.maxDuration}
+                    onChange={(e) => update('maxDuration', e.target.value)}
+                  />
+                </div>
+              </FilterGroup>
+
+              <FilterGroup label="Cities" defaultOpen>
+                <RadioList
+                  options={cities}
+                  value={filters.city}
+                  onChange={(v) => update('city', v)}
+                  field="slug"
+                />
+              </FilterGroup>
+
+              <FilterGroup label="Categories">
+                <RadioList
+                  options={categories}
+                  value={filters.category}
+                  onChange={(v) => update('category', v)}
+                  field="slug"
+                />
+              </FilterGroup>
+
+              <FilterGroup label="Problems / Conditions">
+                <RadioList
+                  options={problems}
+                  value={filters.problem}
+                  onChange={(v) => update('problem', v)}
+                  field="slug"
+                />
+              </FilterGroup>
+            </div>
+          </aside>
+
+          {/* Listing */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-4 gap-3">
+              <button
+                onClick={() => setFiltersOpen(true)}
+                className="lg:hidden btn-outline text-sm"
+              >
+                <Filter size={16} /> Filters
+              </button>
+              <div className="flex items-center gap-2 ml-auto">
+                <span className="text-sm text-ink-muted hidden sm:inline">Sort:</span>
+                <select
+                  className="input max-w-[220px]"
+                  value={filters.sort}
+                  onChange={(e) => update('sort', e.target.value)}
+                >
+                  {SORTS.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="space-y-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="h-56 bg-slate-100 rounded-2xl animate-pulse" />
+                ))}
+              </div>
+            ) : packages.length === 0 ? (
+              <div className="card p-12 text-center">
+                <p className="text-ink-muted">No retreats match your filters yet.</p>
+                {hasFilters && (
+                  <button onClick={clearAll} className="btn-outline mt-4">Clear filters</button>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-5">
+                {packages.map((p) => <PackageCard key={p.id} pkg={p} />)}
+              </div>
+            )}
+
+            {/* Pagination */}
+            {pagination.pages > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-8">
+                <button
+                  disabled={pagination.page <= 1}
+                  onClick={() => setFilters((f) => ({ ...f, page: f.page - 1 }))}
+                  className="btn-outline text-sm disabled:opacity-50"
+                >Previous</button>
+                <span className="text-sm">
+                  Page <strong>{pagination.page}</strong> / {pagination.pages}
+                </span>
+                <button
+                  disabled={pagination.page >= pagination.pages}
+                  onClick={() => setFilters((f) => ({ ...f, page: f.page + 1 }))}
+                  className="btn-outline text-sm disabled:opacity-50"
+                >Next</button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function Chip({ label, onClear }) {
+  return (
+    <span className="inline-flex items-center gap-1 px-3 py-1 text-sm bg-white border rounded-full">
+      {label}
+      <button onClick={onClear} className="text-ink-muted hover:text-red-600">
+        <X size={14} />
+      </button>
+    </span>
+  );
+}
+
+function FilterGroup({ label, defaultOpen = false, children }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="border-b last:border-b-0 py-3">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between text-sm font-semibold text-ink"
+      >
+        {label}
+        <ChevronDown size={16} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && <div className="pt-3">{children}</div>}
+    </div>
+  );
+}
+
+function RadioList({ options, value, onChange, field = 'slug' }) {
+  if (!options?.length) {
+    return <p className="text-xs text-ink-muted italic">None yet</p>;
+  }
+  return (
+    <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+      {options.map((o) => (
+        <label key={o.id} className="flex items-center gap-2 text-sm cursor-pointer hover:text-brand">
+          <input
+            type="radio"
+            checked={value === o[field]}
+            onChange={() => onChange(value === o[field] ? '' : o[field])}
+          />
+          <span className="flex-1 truncate">{o.name}</span>
+        </label>
+      ))}
+    </div>
+  );
+}

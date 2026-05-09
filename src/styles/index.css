@@ -1,0 +1,150 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Theme tokens use raw "r g b" values so Tailwind's `rgb(var(--token) / <alpha>)`
+  pattern works for opacity utilities. The Theme Management admin module updates
+  these CSS variables at runtime to recolor the entire app.
+*/
+:root {
+  /* Primary brand — wellness teal/green (replaced the previous blue) */
+  --brand: 13 148 136;          /* teal-600 */
+  --brand-light: 45 212 191;
+  --brand-dark: 15 118 110;
+
+  /* Wellness — alternative green for wellness-only sections */
+  --wellness: 16 185 129;       /* emerald-500 */
+  --wellness-light: 52 211 153;
+  --wellness-dark: 5 150 105;
+
+  --accent: 250 204 21;         /* yellow-400 — stars, highlights */
+
+  --ink: 17 24 39;              /* gray-900 */
+  --ink-muted: 100 116 139;     /* slate-500 */
+
+  --surface: 255 255 255;       /* white background */
+  --surface-alt: 248 250 252;   /* slate-50 */
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  color: rgb(var(--ink));
+  background: rgb(var(--surface));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5 {
+  font-family: 'Poppins', 'Inter', sans-serif;
+  font-weight: 700;
+  color: rgb(var(--ink));
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-brand text-white hover:bg-brand-dark shadow-soft;
+  }
+  .btn-wellness {
+    @apply btn bg-wellness text-white hover:bg-wellness-dark shadow-soft;
+  }
+  .btn-outline {
+    @apply btn border-2 border-brand text-brand hover:bg-brand hover:text-white;
+  }
+  .btn-ghost {
+    @apply btn text-ink hover:bg-surface-alt;
+  }
+  .input {
+    @apply w-full px-4 py-2.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand transition;
+  }
+  .label {
+    @apply block text-sm font-medium text-ink mb-1.5;
+  }
+  .card {
+    @apply bg-white rounded-2xl shadow-card overflow-hidden;
+  }
+  .container-app {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  .section {
+    @apply py-12 md:py-20;
+  }
+  .heading {
+    @apply text-3xl md:text-4xl font-bold tracking-tight;
+  }
+  .heading-accent {
+    @apply text-brand;
+  }
+  .heading-accent-wellness {
+    @apply text-wellness;
+  }
+}
+
+/* Hide scrollbar in horizontal carousels */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Blog article prose styles (renders admin-pasted HTML) */
+.blog-prose {
+  @apply text-base leading-relaxed text-ink;
+}
+.blog-prose > * + * { margin-top: 1.1rem; }
+.blog-prose h1 { @apply text-3xl md:text-4xl font-display font-bold mt-10 mb-4; }
+.blog-prose h2 { @apply text-2xl md:text-3xl font-display font-bold mt-8 mb-3; }
+.blog-prose h3 { @apply text-xl md:text-2xl font-display font-semibold mt-6 mb-2; }
+.blog-prose h4 { @apply text-lg font-semibold mt-5 mb-2; }
+.blog-prose p { @apply text-ink-muted; }
+.blog-prose a { @apply text-brand underline hover:text-brand-dark; }
+.blog-prose strong { @apply font-semibold text-ink; }
+.blog-prose ul { @apply list-disc pl-6 space-y-1.5 text-ink-muted; }
+.blog-prose ol { @apply list-decimal pl-6 space-y-1.5 text-ink-muted; }
+.blog-prose blockquote { @apply border-l-4 border-brand pl-5 italic text-ink-muted my-6; }
+.blog-prose img { @apply rounded-xl shadow-soft max-w-full my-6; }
+.blog-prose code {
+  @apply bg-surface-alt px-1.5 py-0.5 rounded text-sm font-mono;
+}
+.blog-prose pre {
+  @apply bg-ink text-white p-4 rounded-xl overflow-x-auto text-sm font-mono my-6;
+}
+.blog-prose hr { @apply my-8 border-slate-200; }
+
+/*
+  Rich-text prose — used by:
+   - the in-admin contentEditable surface (RichTextEditor)
+   - the public PackageDetailPage to render the saved HTML
+
+  Sharing the same class makes the WYSIWYG output match the live UI 1:1.
+*/
+.rich-prose {
+  @apply text-base leading-relaxed text-ink;
+}
+.rich-prose > * + * { margin-top: 0.85rem; }
+.rich-prose h1 { @apply text-2xl md:text-3xl font-display font-bold mt-6 mb-3; }
+.rich-prose h2 { @apply text-xl md:text-2xl font-display font-bold mt-5 mb-2; }
+.rich-prose h3 { @apply text-lg md:text-xl font-display font-semibold mt-4 mb-2; }
+.rich-prose h4 { @apply text-base font-semibold mt-3 mb-1; }
+.rich-prose p { @apply text-ink; }
+.rich-prose a { @apply text-brand underline hover:text-brand-dark; }
+.rich-prose strong { @apply font-semibold text-ink; }
+.rich-prose em { @apply italic; }
+.rich-prose ul { @apply list-disc pl-6 space-y-1.5; }
+.rich-prose ol { @apply list-decimal pl-6 space-y-1.5; }
+.rich-prose blockquote { @apply border-l-4 border-brand pl-4 italic text-ink-muted my-4; }
+.rich-prose code { @apply bg-surface-alt px-1.5 py-0.5 rounded text-sm font-mono; }
+.rich-prose pre { @apply bg-ink text-white p-4 rounded-xl overflow-x-auto text-sm font-mono my-4; }
+.rich-prose hr { @apply my-6 border-slate-200; }
+.rich-prose img { @apply rounded-lg max-w-full my-4; }
+
+/* Placeholder for empty contentEditable */
+.rich-prose:empty:before {
+  content: attr(data-placeholder);
+  color: rgb(var(--ink-muted));
+  pointer-events: none;
+}
