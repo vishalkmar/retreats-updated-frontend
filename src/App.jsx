@@ -27,6 +27,7 @@ import BlogsPage from './pages/admin/BlogsPage.jsx';
 import BlogFormPage from './pages/admin/BlogFormPage.jsx';
 import BlogCategoriesPage from './pages/admin/BlogCategoriesPage.jsx';
 import ReviewsPage from './pages/admin/ReviewsPage.jsx';
+import SiteDetailsPage from './pages/admin/SiteDetailsPage.jsx';
 
 export default function App() {
   return (
@@ -56,6 +57,7 @@ export default function App() {
         <Route path="website/hero" element={<HeroManagementPage />} />
         <Route path="website/header-links" element={<HeaderLinksPage />} />
         <Route path="website/theme" element={<ThemeManagementPage />} />
+        <Route path="website/site-details" element={<SiteDetailsPage />} />
         <Route path="content/cities" element={<CitiesPage />} />
         <Route path="content/categories" element={<CategoriesPage />} />
         <Route path="content/problems" element={<ProblemsPage />} />

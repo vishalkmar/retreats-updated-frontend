@@ -3,6 +3,7 @@ import ProblemFilterSection from '../../components/public/ProblemFilterSection.j
 import ActivityFilterSection from '../../components/public/ActivityFilterSection.jsx';
 import FeaturedRetreats from '../../components/public/FeaturedRetreats.jsx';
 import TestimonialsSection from '../../components/public/TestimonialsSection.jsx';
+import ClientReviewsSection from '../../components/public/ClientReviewsSection.jsx';
 import BlogsSection from '../../components/public/BlogsSection.jsx';
 
 export default function HomePage() {
@@ -13,6 +14,7 @@ export default function HomePage() {
       <FeaturedRetreats />
       <ProblemFilterSection />
       <ActivityFilterSection />
+      <ClientReviewsSection />
       <TestimonialsSection />
       <BlogsSection />
     </>

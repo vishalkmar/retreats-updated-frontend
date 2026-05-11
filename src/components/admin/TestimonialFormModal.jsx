@@ -5,10 +5,18 @@ import api, { fileUrl } from '../../services/api';
 import Dropzone from './Dropzone.jsx';
 
 const TYPES = [
-  { value: 'text', label: 'Text quote' },
+  { value: 'text', label: 'Text quote (no media)' },
   { value: 'image', label: 'Image + quote' },
   { value: 'gallery', label: 'Image gallery (carousel)' },
   { value: 'video', label: 'Video' },
+  { value: 'image_text', label: 'Image + text card' },
+  { value: 'video_text', label: 'Video + text card' },
+  { value: 'image_video', label: 'Image + video (mixed)' },
+];
+
+const DISPLAY_MODES = [
+  { value: 'carousel', label: 'Carousel' },
+  { value: 'grid', label: 'Grid / static cards' },
 ];
 
 const blank = {
@@ -21,6 +29,9 @@ const blank = {
   videoUrl: '',
   sortOrder: 0,
   isActive: true,
+  cardWidth: '',
+  cardHeight: '',
+  displayMode: 'carousel',
 };
 
 export default function TestimonialFormModal({ open, item, onClose, onSaved }) {
@@ -44,6 +55,9 @@ export default function TestimonialFormModal({ open, item, onClose, onSaved }) {
         videoUrl: item.videoUrl || '',
         sortOrder: item.sortOrder ?? 0,
         isActive: item.isActive ?? true,
+        cardWidth: item.cardWidth ?? '',
+        cardHeight: item.cardHeight ?? '',
+        displayMode: item.displayMode || 'carousel',
       });
     } else setForm(blank);
     setAvatar(null);
@@ -102,9 +116,9 @@ export default function TestimonialFormModal({ open, item, onClose, onSaved }) {
   };
 
   const expectsAuthor = form.type !== 'gallery';
-  const expectsContent = form.type === 'text' || form.type === 'image' || form.type === 'video';
-  const expectsVideoFields = form.type === 'video';
-  const expectsMediaGallery = form.type === 'image' || form.type === 'gallery';
+  const expectsContent = ['text', 'image', 'video', 'image_text', 'video_text'].includes(form.type);
+  const expectsVideoFields = ['video', 'video_text', 'image_video'].includes(form.type);
+  const expectsMediaGallery = ['image', 'gallery', 'image_text', 'image_video'].includes(form.type);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
@@ -274,6 +288,45 @@ export default function TestimonialFormModal({ open, item, onClose, onSaved }) {
               )}
             </div>
           )}
+
+          <div className="bg-surface-alt p-4 rounded-xl space-y-4">
+            <h4 className="font-semibold text-sm">Display settings</h4>
+            <div className="grid sm:grid-cols-3 gap-4">
+              <div>
+                <label className="label">Layout mode</label>
+                <select
+                  className="input"
+                  value={form.displayMode}
+                  onChange={(e) => change('displayMode', e.target.value)}
+                >
+                  {DISPLAY_MODES.map((d) => (
+                    <option key={d.value} value={d.value}>{d.label}</option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-ink-muted mt-1">How this card is shown on the public site.</p>
+              </div>
+              <div>
+                <label className="label">Card width (px)</label>
+                <input
+                  type="number" min={120} className="input"
+                  value={form.cardWidth}
+                  onChange={(e) => change('cardWidth', e.target.value)}
+                  placeholder="auto"
+                />
+                <p className="text-[11px] text-ink-muted mt-1">Leave blank for responsive default.</p>
+              </div>
+              <div>
+                <label className="label">Card height (px)</label>
+                <input
+                  type="number" min={120} className="input"
+                  value={form.cardHeight}
+                  onChange={(e) => change('cardHeight', e.target.value)}
+                  placeholder="auto"
+                />
+                <p className="text-[11px] text-ink-muted mt-1">Leave blank for responsive default.</p>
+              </div>
+            </div>
+          </div>
 
           <label className="flex items-center gap-2 text-sm">
             <input

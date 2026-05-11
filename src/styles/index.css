@@ -170,32 +170,27 @@ h1, h2, h3, h4, h5 {
   pointer-events: none;
 }
 
-/* Activity strip — center the slides horizontally so the row sits in the
-   middle of the section instead of starting from the left edge. Swiper's
-   centerInsufficientSlides handles centering when slides fit; this CSS adds
-   a small safety net plus visual polish (shadow on swiper buttons).
-*/
-.activity-strip .swiper-wrapper {
-  justify-content: center;
+/* Client review arc carousel — fade non-active side cards so the centre
+   card pops, and style the white pagination dots / nav arrows for the
+   teal background. */
+.client-review-arc .swiper-slide {
+  opacity: 0.55;
+  transition: opacity 250ms ease, transform 250ms ease;
 }
-@media (max-width: 640px) {
-  /* On narrow viewports, fall back to natural left-aligned scroll so the
-     last items aren't pushed off-screen. */
-  .activity-strip .swiper-wrapper {
-    justify-content: flex-start;
-  }
+.client-review-arc .swiper-slide-active {
+  opacity: 1;
+  transform: scale(1.04);
 }
-.activity-strip .swiper-button-prev,
-.activity-strip .swiper-button-next {
-  width: 36px;
-  height: 36px;
-  border-radius: 9999px;
+.cr-pagination .swiper-pagination-bullet {
+  width: 8px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.55);
+  opacity: 1;
+  margin: 0 3px !important;
+  transition: width 200ms ease, background 200ms ease;
+}
+.cr-pagination .swiper-pagination-bullet-active {
   background: white;
-  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.12);
-  color: rgb(var(--brand));
-}
-.activity-strip .swiper-button-prev::after,
-.activity-strip .swiper-button-next::after {
-  font-size: 14px;
-  font-weight: 700;
+  width: 22px;
+  border-radius: 9999px;
 }

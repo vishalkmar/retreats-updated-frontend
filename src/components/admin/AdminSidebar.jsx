@@ -18,6 +18,7 @@ import {
   FileText,
   BookOpen,
   Star,
+  Building2,
 } from 'lucide-react';
 import api from '../../services/api';
 
@@ -25,6 +26,7 @@ const websiteItems = [
   { to: '/admin/website/hero', label: 'Hero Sections', icon: Image },
   { to: '/admin/website/header-links', label: 'Header Links', icon: Globe },
   { to: '/admin/website/theme', label: 'Theme', icon: Palette },
+  { to: '/admin/website/site-details', label: 'Site Details', icon: Building2 },
 ];
 
 const contentItems = [
