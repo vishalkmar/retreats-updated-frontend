@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
-  Calendar, Clock, Tag, Share2, ArrowLeft, ChevronRight,
+  Calendar, Clock, Tag, Share2, ArrowLeft,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -81,7 +81,9 @@ export default function BlogDetailPage() {
             {blog.title}
           </h1>
           {blog.excerpt && (
-            <p className="mt-4 text-white/85 max-w-3xl text-base md:text-lg">{blog.excerpt}</p>
+            <p className="mt-4 text-white/85 max-w-3xl text-base md:text-lg">
+              {blog.excerpt.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()}
+            </p>
           )}
           <div className="mt-6 flex items-center gap-4 text-sm text-white/80 flex-wrap">
             {blog.publishedAt && (
@@ -99,9 +101,10 @@ export default function BlogDetailPage() {
         </div>
       </div>
 
-      <div className="container-app py-10 grid lg:grid-cols-12 gap-8">
-        {/* Article */}
-        <article className="lg:col-span-8">
+      <div className="container-app py-10">
+        {/* Article — full-width within container, capped to a comfortable reading
+            measure so long lines don't hurt legibility. */}
+        <article className="max-w-5xl mx-auto">
           {blog.content ? (
             <div
               className="blog-prose"
@@ -164,41 +167,6 @@ export default function BlogDetailPage() {
             </button>
           </div>
         </article>
-
-        {/* Sidebar — Related */}
-        <aside className="lg:col-span-4 space-y-4">
-          <div className="card p-5">
-            <h3 className="font-display font-semibold mb-4">Related reads</h3>
-            {related.length === 0 ? (
-              <p className="text-sm text-ink-muted">More articles coming soon.</p>
-            ) : (
-              <ul className="space-y-4">
-                {related.map((r) => (
-                  <li key={r.id}>
-                    <Link to={`/blogs/${r.slug}`} className="flex gap-3 group">
-                      <div className="w-20 h-20 rounded-lg bg-slate-100 overflow-hidden shrink-0">
-                        {r.featuredImage ? (
-                          <img src={fileUrl(r.featuredImage)} className="w-full h-full object-cover group-hover:scale-105 transition" alt="" />
-                        ) : null}
-                      </div>
-                      <div className="min-w-0">
-                        <h4 className="text-sm font-semibold leading-tight line-clamp-2 group-hover:text-brand transition">
-                          {r.title}
-                        </h4>
-                        <div className="text-xs text-ink-muted mt-1">
-                          {r.readMinutes} min read
-                        </div>
-                      </div>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <Link to="/blogs" className="text-sm text-brand font-semibold hover:underline mt-4 inline-flex items-center gap-1">
-              View all <ChevronRight size={14} />
-            </Link>
-          </div>
-        </aside>
       </div>
 
       {/* Footer related grid */}

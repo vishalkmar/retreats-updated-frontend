@@ -120,7 +120,12 @@ export default function BlogsPage() {
               <div className="p-4">
                 <h3 className="font-semibold leading-tight line-clamp-2">{b.title}</h3>
                 {b.excerpt && (
-                  <p className="text-xs text-ink-muted mt-2 line-clamp-2">{b.excerpt}</p>
+                  <p
+                    className="text-xs text-ink-muted mt-2 line-clamp-2"
+                    title={b.excerpt.replace(/<[^>]*>/g, ' ')}
+                  >
+                    {b.excerpt.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()}
+                  </p>
                 )}
                 <div className="flex items-center gap-3 text-xs text-ink-muted mt-3 flex-wrap">
                   {b.category && (

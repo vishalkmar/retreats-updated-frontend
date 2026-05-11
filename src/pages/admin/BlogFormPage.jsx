@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
 import Dropzone from '../../components/admin/Dropzone.jsx';
 import BlogScenesEditor from '../../components/admin/BlogScenesEditor.jsx';
+import RichTextEditor from '../../components/admin/RichTextEditor.jsx';
 
 const blank = {
   title: '', slug: '',
@@ -160,7 +161,7 @@ export default function BlogFormPage() {
       </div>
 
       <Section icon={FileText} title="Article">
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid sm:grid-cols-2 gap-x-6 gap-y-8">
           <div className="sm:col-span-2">
             <label className="label">Title *</label>
             <input
@@ -186,23 +187,26 @@ export default function BlogFormPage() {
           </div>
           <div className="sm:col-span-2">
             <label className="label">Excerpt</label>
-            <textarea
-              className="input" rows={2}
+            <RichTextEditor
               value={form.excerpt}
-              onChange={(e) => change('excerpt', e.target.value)}
-              placeholder="Short teaser shown in cards & search"
+              onChange={(v) => change('excerpt', v)}
+              placeholder="A short teaser shown in cards, search results and the article hero."
+              minHeight={140}
             />
+            <p className="text-[11px] text-ink-muted mt-1.5">
+              Plain text from this block is used in card previews — formatting still renders on the article page.
+            </p>
           </div>
           <div className="sm:col-span-2">
-            <label className="label">Content (HTML supported)</label>
-            <textarea
-              className="input font-mono text-sm" rows={14}
+            <label className="label">Content</label>
+            <RichTextEditor
               value={form.content}
-              onChange={(e) => change('content', e.target.value)}
-              placeholder="Write your article here. HTML tags like <h2>, <p>, <strong>, <em>, <ul>, <li>, <a>, <img> are supported."
+              onChange={(v) => change('content', v)}
+              placeholder="Write your article here — use the toolbar for headings, lists, links, images, icons and more."
+              minHeight={360}
             />
-            <p className="text-xs text-ink-muted mt-1">
-              Tip: paste rich content or use simple HTML. Single newlines become line breaks; blank lines between paragraphs.
+            <p className="text-[11px] text-ink-muted mt-1.5">
+              The rich editor below renders exactly as it appears here on the public site.
             </p>
           </div>
         </div>
@@ -244,7 +248,7 @@ export default function BlogFormPage() {
         </div>
       </Section>
 
-      <Section icon={Layers} title="Scenes (multi-section blog)" defaultOpen={false}>
+      <Section icon={Layers} title="Scenes (multi-section blog)" defaultOpen={true}>
         <p className="text-sm text-ink-muted">
           Break this blog into chapters — each scene has its own image, title and content,
           and renders one after another on the public detail page.

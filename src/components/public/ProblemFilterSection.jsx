@@ -288,7 +288,7 @@ function ProblemPackageCard({ pkg }) {
         <div className="mt-auto pt-4 flex items-center gap-2">
           <button
             onClick={() => navigate(`/retreats/${pkg.slug}`)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-ink text-white text-sm font-semibold hover:bg-wellness transition"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-wellness text-white text-sm font-semibold hover:bg-wellness-dark transition"
           >
             View Details <ArrowRight size={14} />
           </button>

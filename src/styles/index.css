@@ -194,3 +194,18 @@ h1, h2, h3, h4, h5 {
   width: 22px;
   border-radius: 9999px;
 }
+
+/* Video testimonials band — pagination dots on the dark panel */
+.vb-pagination .swiper-pagination-bullet {
+  width: 8px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.35);
+  opacity: 1;
+  margin: 0 3px !important;
+  transition: width 200ms ease, background 200ms ease;
+}
+.vb-pagination .swiper-pagination-bullet-active {
+  background: white;
+  width: 22px;
+  border-radius: 9999px;
+}

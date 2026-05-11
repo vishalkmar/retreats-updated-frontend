@@ -4,6 +4,7 @@ import ActivityFilterSection from '../../components/public/ActivityFilterSection
 import FeaturedRetreats from '../../components/public/FeaturedRetreats.jsx';
 import TestimonialsSection from '../../components/public/TestimonialsSection.jsx';
 import ClientReviewsSection from '../../components/public/ClientReviewsSection.jsx';
+import VideoTestimonialsBand from '../../components/public/VideoTestimonialsBand.jsx';
 import BlogsSection from '../../components/public/BlogsSection.jsx';
 
 export default function HomePage() {
@@ -13,6 +14,7 @@ export default function HomePage() {
       <CityCarousel />
       <FeaturedRetreats />
       <ProblemFilterSection />
+      <VideoTestimonialsBand />
       <ActivityFilterSection />
       <ClientReviewsSection />
       <TestimonialsSection />

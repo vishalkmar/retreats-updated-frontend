@@ -3,6 +3,10 @@ import { Calendar, Clock, FileText, Share2, ArrowRight, Eye } from 'lucide-react
 import toast from 'react-hot-toast';
 import { fileUrl } from '../../services/api';
 
+// Excerpt may now contain rich-text HTML — strip tags for plain card teasers.
+const stripHtml = (s) =>
+  (s || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+
 /*
   BlogCard — Holidays-Seychelles inspired
    - "double-border" outer shell with soft padding
@@ -50,7 +54,7 @@ export default function BlogCard({ blog, variant = 'default', index }) {
             {blog.title}
           </h2>
           {blog.excerpt && (
-            <p className="mt-2 text-white/85 max-w-2xl line-clamp-2">{blog.excerpt}</p>
+            <p className="mt-2 text-white/85 max-w-2xl line-clamp-2">{stripHtml(blog.excerpt)}</p>
           )}
           <div className="mt-4 flex items-center gap-4 text-xs text-white/80">
             {blog.publishedAt && (
@@ -109,7 +113,7 @@ export default function BlogCard({ blog, variant = 'default', index }) {
 
         {blog.excerpt && (
           <p className="text-sm text-ink-muted mt-2 line-clamp-3 leading-relaxed">
-            {blog.excerpt}
+            {stripHtml(blog.excerpt)}
           </p>
         )}
 
@@ -134,7 +138,7 @@ export default function BlogCard({ blog, variant = 'default', index }) {
         <div className="mt-4 flex items-center gap-2">
           <Link
             to={`/blogs/${blog.slug}`}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-ink text-white text-sm font-semibold hover:bg-brand transition"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-wellness text-white text-sm font-semibold hover:bg-wellness-dark transition"
           >
             View Details <ArrowRight size={14} />
           </Link>

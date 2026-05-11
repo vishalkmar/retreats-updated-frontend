@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, BookOpen, Sparkles } from 'lucide-react';
 import api from '../../services/api';
 import BlogCard from './BlogCard.jsx';
 
@@ -20,22 +20,54 @@ export default function BlogsSection() {
   if (!loading && !blogs.length) return null;
 
   return (
-    <section className="py-12 md:py-16">
-      <div className="container-app">
-        <div className="flex items-end justify-between mb-8 gap-3">
-          <div>
-            <h2 className="heading">From our <span className="heading-accent">Journal</span></h2>
-            <p className="text-ink-muted mt-2">Wellness tips, travel stories, retreat reflections.</p>
+    <section className="relative py-16 md:py-20 overflow-hidden">
+      {/* Soft watercolor blobs */}
+      <div
+        aria-hidden
+        className="absolute -top-10 -left-10 w-72 h-72 rounded-full bg-brand/10 blur-3xl pointer-events-none"
+      />
+      <div
+        aria-hidden
+        className="absolute -bottom-10 -right-10 w-80 h-80 rounded-full bg-wellness/10 blur-3xl pointer-events-none"
+      />
+
+      <div className="container-app relative">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12">
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] font-bold text-brand bg-brand/10 px-3 py-1.5 rounded-full mb-4">
+              <Sparkles size={12} /> From the journal
+            </div>
+            <h2 className="text-3xl md:text-5xl font-display font-bold leading-tight text-ink">
+              Stories, guides &{' '}
+              <span className="relative inline-block">
+                <span className="relative z-10 text-brand">retreat reflections</span>
+                <span
+                  aria-hidden
+                  className="absolute left-0 right-0 -bottom-1 h-2 bg-wellness/25 rounded-full"
+                />
+              </span>
+            </h2>
+            <p className="text-ink-muted mt-4 text-base md:text-lg leading-relaxed">
+              Wellness tips, travel stories and reflections from our travellers and hosts —
+              read before you go, or savour after you return.
+            </p>
           </div>
-          <Link to="/blogs" className="text-sm text-brand font-semibold hover:underline inline-flex items-center gap-1 whitespace-nowrap">
-            All articles <ChevronRight size={14} />
+
+          <Link
+            to="/blogs"
+            className="self-start md:self-end inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-wellness text-white text-sm font-semibold hover:bg-wellness-dark transition shrink-0"
+          >
+            <BookOpen size={16} />
+            All articles
+            <ChevronRight size={16} />
           </Link>
         </div>
 
         {loading ? (
           <div className="grid md:grid-cols-3 gap-6">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-72 bg-slate-100 rounded-2xl animate-pulse" />
+              <div key={i} className="h-80 bg-slate-100 rounded-2xl animate-pulse" />
             ))}
           </div>
         ) : (

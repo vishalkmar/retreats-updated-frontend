@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import {
   Plus, Edit, Trash2, Eye, EyeOff, Star, Quote,
   Image as ImageIcon, Video, Layers, MessageSquare, Loader2,
+  Palette, Save, RotateCcw,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
@@ -43,6 +44,7 @@ const formatDate = (d) =>
   d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
 export default function TestimonialsPage() {
+  const [tab, setTab] = useState('reviews');
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState('');
@@ -88,11 +90,33 @@ export default function TestimonialsPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-display font-bold">Reviews</h1>
-        <p className="text-ink-muted text-sm">Manage your reviews</p>
+      <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-display font-bold">Testimonials</h1>
+          <p className="text-ink-muted text-sm">Manage your reviews and how each testimonial section looks.</p>
+        </div>
+        <div className="inline-flex bg-surface-alt rounded-lg p-1 text-sm">
+          <button
+            onClick={() => setTab('reviews')}
+            className={`px-4 py-1.5 rounded-md inline-flex items-center gap-1.5 transition ${
+              tab === 'reviews' ? 'bg-white shadow-soft text-brand' : 'text-ink-muted hover:text-ink'
+            }`}
+          >
+            <MessageSquare size={14} /> Reviews
+          </button>
+          <button
+            onClick={() => setTab('theme')}
+            className={`px-4 py-1.5 rounded-md inline-flex items-center gap-1.5 transition ${
+              tab === 'theme' ? 'bg-white shadow-soft text-brand' : 'text-ink-muted hover:text-ink'
+            }`}
+          >
+            <Palette size={14} /> Section Theme
+          </button>
+        </div>
       </div>
 
+      {tab === 'theme' && <SectionThemeManager />}
+      {tab === 'reviews' && (
       <div className="card overflow-hidden">
         {/* Header bar */}
         <div className="px-6 py-5 border-b flex items-center justify-between gap-3 flex-wrap">
@@ -244,6 +268,7 @@ export default function TestimonialsPage() {
           </div>
         )}
       </div>
+      )}
 
       <TestimonialFormModal
         open={showForm}
@@ -260,6 +285,184 @@ export default function TestimonialsPage() {
         onConfirm={confirmDelete}
         onClose={() => setDeleteId(null)}
       />
+    </div>
+  );
+}
+
+/* ------------- Section Theme Manager ------------- */
+const SECTIONS = [
+  {
+    key: 'clientReviews',
+    label: '"What our clients say" — Arc carousel',
+    note: 'Reviews shown above the testimonials band on the homepage.',
+  },
+  {
+    key: 'videoBand',
+    label: 'Video testimonials band',
+    note: 'Dark band with video portrait cards (above "Find by activity").',
+  },
+  {
+    key: 'testimonialsCarousel',
+    label: 'Testimonials carousel band',
+    note: 'Curated marketing testimonials in carousel mode.',
+  },
+  {
+    key: 'testimonialsGrid',
+    label: 'Testimonials static grid',
+    note: 'Curated marketing testimonials in static grid mode.',
+  },
+];
+
+const DEFAULTS = {
+  clientReviews:        { bg: '#ffffff', card: '#ffffff', text: '#0f172a', accent: '#0d9488' },
+  videoBand:            { bg: '#0f172a', card: '#1e293b', text: '#ffffff', accent: '#0d9488' },
+  testimonialsCarousel: { bg: '#f8fafc', card: '#ffffff', text: '#0f172a', accent: '#0d9488' },
+  testimonialsGrid:     { bg: '#f8fafc', card: '#ffffff', text: '#0f172a', accent: '#0d9488' },
+};
+
+function SectionThemeManager() {
+  const [themes, setThemes] = useState(DEFAULTS);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/section-themes');
+      const remote = res.data?.data?.themes || {};
+      const next = {};
+      Object.keys(DEFAULTS).forEach((k) => {
+        next[k] = { ...DEFAULTS[k], ...(remote[k] || {}) };
+      });
+      setThemes(next);
+    } catch (err) {
+      toast.error('Failed to load themes');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const setField = (sec, key, value) => {
+    setThemes((s) => ({ ...s, [sec]: { ...s[sec], [key]: value } }));
+  };
+
+  const reset = (sec) => setThemes((s) => ({ ...s, [sec]: { ...DEFAULTS[sec] } }));
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api.put('/section-themes', themes);
+      toast.success('Section themes saved');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Save failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 size={28} className="animate-spin text-brand" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      {SECTIONS.map((sec) => {
+        const t = themes[sec.key] || DEFAULTS[sec.key];
+        return (
+          <div key={sec.key} className="card p-5">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <h3 className="font-display font-semibold">{sec.label}</h3>
+                <p className="text-xs text-ink-muted mt-0.5">{sec.note}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => reset(sec.key)}
+                className="text-xs text-ink-muted hover:text-ink inline-flex items-center gap-1 px-2 py-1 rounded hover:bg-surface-alt"
+                title="Reset to default colors"
+              >
+                <RotateCcw size={12} /> Reset
+              </button>
+            </div>
+
+            <div className="grid sm:grid-cols-4 gap-4">
+              <ColorField label="Background" value={t.bg} onChange={(v) => setField(sec.key, 'bg', v)} />
+              <ColorField label="Card" value={t.card} onChange={(v) => setField(sec.key, 'card', v)} />
+              <ColorField label="Text" value={t.text} onChange={(v) => setField(sec.key, 'text', v)} />
+              <ColorField label="Accent" value={t.accent} onChange={(v) => setField(sec.key, 'accent', v)} />
+            </div>
+
+            {/* Live preview */}
+            <div
+              className="mt-4 rounded-xl p-4"
+              style={{ background: t.bg, color: t.text }}
+            >
+              <div
+                className="rounded-lg p-4 border"
+                style={{
+                  background: t.card,
+                  color: t.text,
+                  borderColor: t.accent + '55',
+                }}
+              >
+                <div className="flex gap-0.5 mb-2">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Star key={s} size={12} className="fill-amber-400 text-amber-400" />
+                  ))}
+                </div>
+                <p className="text-xs italic" style={{ opacity: 0.8 }}>
+                  "Live preview — sample review text with your chosen card colour and text colour."
+                </p>
+                <div
+                  className="mt-2 inline-block text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full"
+                  style={{ background: t.accent, color: t.card }}
+                >
+                  Accent
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      <div className="sticky bottom-4 flex justify-end">
+        <button
+          type="button"
+          onClick={save}
+          disabled={saving}
+          className="btn-primary shadow-card"
+        >
+          <Save size={16} /> {saving ? 'Saving…' : 'Save section themes'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ColorField({ label, value, onChange }) {
+  return (
+    <div>
+      <label className="label">{label}</label>
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          className="w-12 h-10 rounded cursor-pointer border"
+          value={value || '#ffffff'}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        <input
+          type="text"
+          className="input flex-1 font-mono text-xs uppercase"
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="#FFFFFF"
+        />
+      </div>
     </div>
   );
 }

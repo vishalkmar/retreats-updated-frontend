@@ -7,6 +7,7 @@ import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 
 import api, { fileUrl } from '../../services/api';
+import useSectionThemes from '../../hooks/useSectionThemes.js';
 
 /**
  * Public testimonials section.
@@ -19,12 +20,17 @@ import api, { fileUrl } from '../../services/api';
  * responsive sizing when set.
  */
 export default function TestimonialsSection() {
+  const themes = useSectionThemes();
+  const carouselTheme = themes.testimonialsCarousel;
+  const gridTheme = themes.testimonialsGrid;
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [playing, setPlaying] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
+    // Fetch all active testimonials, then filter client-side so we can
+    // honour the "empty placements = legacy default" rule.
     api.get('/testimonials')
       .then((res) => { if (!cancelled) setItems(res.data?.data?.items || []); })
       .catch(() => {})
@@ -33,10 +39,28 @@ export default function TestimonialsSection() {
   }, []);
 
   const { carouselItems, gridItems } = useMemo(() => {
-    const sorted = [...items].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    // Only include testimonials placed in "home_clients_say" or "home_grid"
+    // (or with empty placements + non-video type, which falls back here).
+    const filtered = items.filter((t) => {
+      const placements = Array.isArray(t.placements) ? t.placements : [];
+      if (placements.length === 0) {
+        const isVideo = ['video', 'video_text', 'image_video'].includes(t.type);
+        return !isVideo;
+      }
+      return placements.some((p) => p === 'home_clients_say' || p === 'home_grid');
+    });
+    const sorted = [...filtered].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
     return {
-      carouselItems: sorted.filter((t) => (t.displayMode || 'carousel') === 'carousel'),
-      gridItems: sorted.filter((t) => t.displayMode === 'grid'),
+      carouselItems: sorted.filter((t) => {
+        const placements = Array.isArray(t.placements) ? t.placements : [];
+        if (placements.includes('home_grid') && !placements.includes('home_clients_say')) return false;
+        return (t.displayMode || 'carousel') === 'carousel';
+      }),
+      gridItems: sorted.filter((t) => {
+        const placements = Array.isArray(t.placements) ? t.placements : [];
+        if (placements.includes('home_grid')) return true;
+        return t.displayMode === 'grid';
+      }),
     };
   }, [items]);
 
@@ -55,10 +79,10 @@ export default function TestimonialsSection() {
   return (
     <>
       {carouselItems.length > 0 && (
-        <CarouselBand items={carouselItems} onPlayVideo={setPlaying} />
+        <CarouselBand items={carouselItems} onPlayVideo={setPlaying} theme={carouselTheme} />
       )}
       {gridItems.length > 0 && (
-        <GridBand items={gridItems} onPlayVideo={setPlaying} />
+        <GridBand items={gridItems} onPlayVideo={setPlaying} theme={gridTheme} />
       )}
       {playing && <VideoPlayerModal item={playing} onClose={() => setPlaying(null)} />}
     </>
@@ -66,16 +90,15 @@ export default function TestimonialsSection() {
 }
 
 /* ---------- Carousel band ---------- */
-function CarouselBand({ items, onPlayVideo }) {
+function CarouselBand({ items, onPlayVideo, theme }) {
   return (
-    <section className="relative py-16 md:py-24 bg-wellness text-white overflow-hidden">
-      <div
-        className="absolute bottom-0 left-0 right-0 h-16 bg-white"
-        style={{ clipPath: 'polygon(0 100%, 100% 100%, 100% 0, 0 60%)' }}
-      />
+    <section
+      className="relative py-16 md:py-24 overflow-hidden"
+      style={{ background: theme.bg, color: theme.text }}
+    >
       <div className="container-app relative z-10">
         <div className="text-center mb-10">
-          <h2 className="text-3xl md:text-4xl font-display font-bold drop-shadow">
+          <h2 className="text-3xl md:text-4xl font-display font-bold" style={{ color: theme.text }}>
             What Our Clients Say
           </h2>
         </div>
@@ -99,16 +122,22 @@ function CarouselBand({ items, onPlayVideo }) {
         >
           {items.map((t) => (
             <SwiperSlide key={t.id} className="!h-auto">
-              <TestimonialCard t={t} onPlayVideo={onPlayVideo} />
+              <TestimonialCard t={t} onPlayVideo={onPlayVideo} theme={theme} />
             </SwiperSlide>
           ))}
         </Swiper>
 
         <div className="flex items-center justify-center gap-3 mt-2">
-          <button className="tt-prev w-10 h-10 rounded-full bg-white text-wellness flex items-center justify-center shadow hover:scale-105 transition">
+          <button
+            className="tt-prev w-10 h-10 rounded-full flex items-center justify-center shadow hover:scale-105 transition"
+            style={{ background: theme.card, color: theme.accent }}
+          >
             <ChevronLeft size={18} />
           </button>
-          <button className="tt-next w-10 h-10 rounded-full bg-white text-wellness flex items-center justify-center shadow hover:scale-105 transition">
+          <button
+            className="tt-next w-10 h-10 rounded-full flex items-center justify-center shadow hover:scale-105 transition"
+            style={{ background: theme.card, color: theme.accent }}
+          >
             <ChevronRight size={18} />
           </button>
         </div>
@@ -118,22 +147,25 @@ function CarouselBand({ items, onPlayVideo }) {
 }
 
 /* ---------- Static grid band ---------- */
-function GridBand({ items, onPlayVideo }) {
+function GridBand({ items, onPlayVideo, theme }) {
   return (
-    <section className="py-12 md:py-16 bg-surface-alt">
+    <section
+      className="py-12 md:py-16"
+      style={{ background: theme.bg, color: theme.text }}
+    >
       <div className="container-app">
         <div className="text-center mb-10">
-          <h2 className="heading">
-            Stories from <span className="heading-accent-wellness">our travellers</span>
+          <h2 className="text-3xl md:text-4xl font-display font-bold" style={{ color: theme.text }}>
+            Stories from <span style={{ color: theme.accent }}>our travellers</span>
           </h2>
-          <p className="text-ink-muted mt-3 max-w-xl mx-auto">
+          <p className="mt-3 max-w-xl mx-auto" style={{ color: theme.text, opacity: 0.7 }}>
             Real experiences shared by people who lived them.
           </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 justify-items-center">
           {items.map((t) => (
-            <TestimonialCard key={t.id} t={t} onPlayVideo={onPlayVideo} flat />
+            <TestimonialCard key={t.id} t={t} onPlayVideo={onPlayVideo} flat theme={theme} />
           ))}
         </div>
       </div>
@@ -142,12 +174,26 @@ function GridBand({ items, onPlayVideo }) {
 }
 
 /* ---------- Single dynamic card — adapts to type ---------- */
-function TestimonialCard({ t, onPlayVideo, flat }) {
+function TestimonialCard({ t, onPlayVideo, flat, theme }) {
   const customStyle = {};
   if (t.cardWidth) customStyle.width = `${t.cardWidth}px`;
   if (t.cardHeight) customStyle.minHeight = `${t.cardHeight}px`;
+  // Admin-controlled padding/margin apply uniformly to all four sides of the
+  // outer card (the article itself), not to the inner body. Inline style wins
+  // over Tailwind p-* / m-* utilities, so this overrides defaults cleanly.
+  if (t.cardPadding !== null && t.cardPadding !== undefined) customStyle.padding = `${t.cardPadding}px`;
+  if (t.cardMargin !== null && t.cardMargin !== undefined) customStyle.margin = `${t.cardMargin}px`;
+  // Theme colours come from /api/section-themes — keep them on the card
+  // background and inner text so admin colour picks flow through.
+  if (theme?.card) customStyle.background = theme.card;
+  if (theme?.text) customStyle.color = theme.text;
 
-  const baseClasses = `${flat ? 'bg-white' : 'bg-white text-ink'} rounded-2xl shadow-card overflow-hidden h-full flex flex-col w-full max-w-md`;
+  // Media-bearing cards need overflow-hidden so the inner image/video gets
+  // clipped to the rounded card corners. The text-only card does NOT use
+  // overflow-hidden, otherwise the avatar circle (which deliberately sits at
+  // the top edge of the card) gets sliced off.
+  const baseClasses = `rounded-2xl shadow-card overflow-hidden h-full flex flex-col w-full max-w-md`;
+  const textBaseClasses = `rounded-2xl shadow-card h-full flex flex-col w-full max-w-md`;
 
   // Type → renderer
   switch (t.type) {
@@ -199,10 +245,15 @@ function TestimonialCard({ t, onPlayVideo, flat }) {
     case 'text':
     default:
       return (
-        <article className={`${baseClasses} p-6`} style={customStyle}>
+        // p-6 is the default outer card padding; an admin-supplied cardPadding
+        // value in customStyle overrides it (inline style wins).
+        <article
+          className={`${textBaseClasses} ${customStyle.padding ? '' : 'p-6'}`}
+          style={customStyle}
+        >
           {t.authorAvatar && (
-            <div className="-mt-12 mb-3 mx-auto">
-              <div className="w-16 h-16 rounded-full ring-4 ring-white shadow-lg overflow-hidden bg-slate-100">
+            <div className="mb-4 mx-auto">
+              <div className="w-16 h-16 rounded-full ring-2 ring-wellness/25 shadow-md overflow-hidden bg-slate-100">
                 <img src={fileUrl(t.authorAvatar)} alt={t.authorName || ''} className="w-full h-full object-cover" />
               </div>
             </div>
