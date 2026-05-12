@@ -28,6 +28,9 @@ import BlogFormPage from './pages/admin/BlogFormPage.jsx';
 import BlogCategoriesPage from './pages/admin/BlogCategoriesPage.jsx';
 import ReviewsPage from './pages/admin/ReviewsPage.jsx';
 import SiteDetailsPage from './pages/admin/SiteDetailsPage.jsx';
+import AuditorsPage from './pages/admin/AuditorsPage.jsx';
+import OfficersPage from './pages/admin/OfficersPage.jsx';
+import SignedPropertiesPage from './pages/admin/SignedPropertiesPage.jsx';
 
 export default function App() {
   return (
@@ -71,6 +74,9 @@ export default function App() {
         <Route path="blogs/new" element={<BlogFormPage />} />
         <Route path="blogs/:id/edit" element={<BlogFormPage />} />
         <Route path="reviews" element={<ReviewsPage />} />
+        <Route path="pwa/auditors" element={<AuditorsPage />} />
+        <Route path="pwa/officers" element={<OfficersPage />} />
+        <Route path="pwa/signed-properties" element={<SignedPropertiesPage />} />
       </Route>
     </Routes>
   );

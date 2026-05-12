@@ -19,6 +19,10 @@ import {
   BookOpen,
   Star,
   Building2,
+  Smartphone,
+  UserCog,
+  ShieldCheck,
+  FileCheck2,
 } from 'lucide-react';
 import api from '../../services/api';
 
@@ -37,9 +41,16 @@ const contentItems = [
   { to: '/admin/content/blog-categories', label: 'Blog Categories', icon: BookOpen },
 ];
 
+const pwaItems = [
+  { to: '/admin/pwa/auditors', label: 'Auditors', icon: UserCog },
+  { to: '/admin/pwa/officers', label: 'Officers', icon: ShieldCheck },
+  { to: '/admin/pwa/signed-properties', label: 'Signed Property', icon: FileCheck2 },
+];
+
 export default function AdminSidebar({ open, onClose }) {
   const [websiteOpen, setWebsiteOpen] = useState(true);
   const [contentOpen, setContentOpen] = useState(true);
+  const [pwaOpen, setPwaOpen] = useState(true);
   const [pendingReviews, setPendingReviews] = useState(0);
 
   // Poll pending review count once on mount + when window refocuses
@@ -158,6 +169,29 @@ export default function AdminSidebar({ open, onClose }) {
           {contentOpen && (
             <div className="ml-3 pl-3 border-l border-white/10 space-y-1">
               {contentItems.map((item) => (
+                <NavLink key={item.to} to={item.to} className={linkClass}>
+                  <item.icon size={16} /> {item.label}
+                </NavLink>
+              ))}
+            </div>
+          )}
+
+          <button
+            onClick={() => setPwaOpen(!pwaOpen)}
+            className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-white/10 hover:text-white transition mt-2"
+          >
+            <span className="flex items-center gap-3">
+              <Smartphone size={18} /> Audit PWA
+            </span>
+            <ChevronDown
+              size={16}
+              className={`transition-transform ${pwaOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
+
+          {pwaOpen && (
+            <div className="ml-3 pl-3 border-l border-white/10 space-y-1">
+              {pwaItems.map((item) => (
                 <NavLink key={item.to} to={item.to} className={linkClass}>
                   <item.icon size={16} /> {item.label}
                 </NavLink>
