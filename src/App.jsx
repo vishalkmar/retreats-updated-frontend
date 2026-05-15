@@ -7,6 +7,11 @@ import ProtectedRoute from './components/admin/ProtectedRoute.jsx';
 import HomePage from './pages/public/HomePage.jsx';
 import RetreatsPage from './pages/public/RetreatsPage.jsx';
 import PackageDetailPage from './pages/public/PackageDetailPage.jsx';
+import HotelsListPage from './pages/public/HotelsListPage.jsx';
+import HotelDetailPage from './pages/public/HotelDetailPage.jsx';
+import RoomDetailPage from './pages/public/RoomDetailPage.jsx';
+import EventsListPage from './pages/public/EventsListPage.jsx';
+import EventDetailPage from './pages/public/EventDetailPage.jsx';
 import BlogsListPage from './pages/public/BlogsListPage.jsx';
 import BlogDetailPage from './pages/public/BlogDetailPage.jsx';
 import NotFoundPage from './pages/public/NotFoundPage.jsx';
@@ -20,6 +25,21 @@ import CitiesPage from './pages/admin/CitiesPage.jsx';
 import CategoriesPage from './pages/admin/CategoriesPage.jsx';
 import ProblemsPage from './pages/admin/ProblemsPage.jsx';
 import ActivitiesPage from './pages/admin/ActivitiesPage.jsx';
+import AreasPage from './pages/admin/AreasPage.jsx';
+import CulturesPage from './pages/admin/CulturesPage.jsx';
+import LocationsPage from './pages/admin/LocationsPage.jsx';
+import FacilitiesPage from './pages/admin/FacilitiesPage.jsx';
+import RoomViewsPage from './pages/admin/RoomViewsPage.jsx';
+import NearbyPlacesPage from './pages/admin/NearbyPlacesPage.jsx';
+import HotelsPage from './pages/admin/HotelsPage.jsx';
+import HotelFormPage from './pages/admin/HotelFormPage.jsx';
+import AvailableRoomsPage from './pages/admin/AvailableRoomsPage.jsx';
+import AvailableRoomFormPage from './pages/admin/AvailableRoomFormPage.jsx';
+import AddOnActivitiesPage from './pages/admin/AddOnActivitiesPage.jsx';
+import AddOnActivityFormPage from './pages/admin/AddOnActivityFormPage.jsx';
+import EventTypesPage from './pages/admin/EventTypesPage.jsx';
+import EventsPage from './pages/admin/EventsPage.jsx';
+import EventFormPage from './pages/admin/EventFormPage.jsx';
 import PackagesPage from './pages/admin/PackagesPage.jsx';
 import PackageFormPage from './pages/admin/PackageFormPage.jsx';
 import TestimonialsPage from './pages/admin/TestimonialsPage.jsx';
@@ -40,6 +60,11 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/retreats" element={<RetreatsPage />} />
         <Route path="/retreats/:slug" element={<PackageDetailPage />} />
+        <Route path="/hotels" element={<HotelsListPage />} />
+        <Route path="/hotels/:slug" element={<HotelDetailPage />} />
+        <Route path="/hotels/:hotelSlug/rooms/:roomSlug" element={<RoomDetailPage />} />
+        <Route path="/events" element={<EventsListPage />} />
+        <Route path="/events/:slug" element={<EventDetailPage />} />
         <Route path="/blogs" element={<BlogsListPage />} />
         <Route path="/blogs/:slug" element={<BlogDetailPage />} />
         <Route path="*" element={<NotFoundPage />} />
@@ -65,7 +90,26 @@ export default function App() {
         <Route path="content/categories" element={<CategoriesPage />} />
         <Route path="content/problems" element={<ProblemsPage />} />
         <Route path="content/activities" element={<ActivitiesPage />} />
+        <Route path="content/areas" element={<AreasPage />} />
+        <Route path="content/cultures" element={<CulturesPage />} />
         <Route path="content/blog-categories" element={<BlogCategoriesPage />} />
+        <Route path="hotels-config/locations" element={<LocationsPage />} />
+        <Route path="hotels-config/facilities" element={<FacilitiesPage />} />
+        <Route path="hotels-config/room-views" element={<RoomViewsPage />} />
+        <Route path="hotels-config/nearby-places" element={<NearbyPlacesPage />} />
+        <Route path="hotels" element={<HotelsPage />} />
+        <Route path="hotels/new" element={<HotelFormPage />} />
+        <Route path="hotels/:id/edit" element={<HotelFormPage />} />
+        <Route path="rooms" element={<AvailableRoomsPage />} />
+        <Route path="rooms/new" element={<AvailableRoomFormPage />} />
+        <Route path="rooms/:id/edit" element={<AvailableRoomFormPage />} />
+        <Route path="add-ons" element={<AddOnActivitiesPage />} />
+        <Route path="add-ons/new" element={<AddOnActivityFormPage />} />
+        <Route path="add-ons/:id/edit" element={<AddOnActivityFormPage />} />
+        <Route path="content/event-types" element={<EventTypesPage />} />
+        <Route path="events" element={<EventsPage />} />
+        <Route path="events/new" element={<EventFormPage />} />
+        <Route path="events/:id/edit" element={<EventFormPage />} />
         <Route path="packages" element={<PackagesPage />} />
         <Route path="packages/new" element={<PackageFormPage />} />
         <Route path="packages/:id/edit" element={<PackageFormPage />} />

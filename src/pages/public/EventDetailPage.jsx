@@ -1,0 +1,435 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import {
+  MapPin, Calendar, Clock, Heart, Share2, Trophy,
+  Shield, ShieldCheck, ChevronDown, Users,
+} from 'lucide-react';
+import toast from 'react-hot-toast';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Thumbs, Pagination } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/thumbs';
+import 'swiper/css/pagination';
+
+import api, { fileUrl } from '../../services/api';
+
+function formatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+export default function EventDetailPage() {
+  const { slug } = useParams();
+  const [event, setEvent] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [thumbsSwiper, setThumbsSwiper] = useState(null);
+
+  // Slot state (only meaningful for sport events)
+  const [selectedSport, setSelectedSport] = useState('');
+  const [selectedDate, setSelectedDate] = useState('');
+  const [slots, setSlots] = useState([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    api.get(`/events/${slug}`)
+      .then((res) => {
+        if (cancelled) return;
+        const e = res.data?.data?.event;
+        setEvent(e);
+        const firstSport = (e?.sports || [])[0]?.name || '';
+        setSelectedSport(firstSport);
+        setSelectedDate(e?.eventDate || '');
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [slug]);
+
+  const isSportEvent = !!event?.eventType?.isSport;
+
+  // Fetch slots when sport / date changes
+  useEffect(() => {
+    if (!isSportEvent || !event?.id) return;
+    setSlotsLoading(true);
+    const params = {};
+    if (selectedDate) params.date = selectedDate;
+    if (selectedSport) params.sportName = selectedSport;
+    api.get(`/events/${event.id}/slots`, { params })
+      .then((r) => setSlots(r.data?.data?.items || []))
+      .catch(() => setSlots([]))
+      .finally(() => setSlotsLoading(false));
+  }, [isSportEvent, event?.id, selectedDate, selectedSport]);
+
+  const onShare = () => {
+    if (navigator.share) {
+      navigator.share({ title: event?.name, url: window.location.href }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast.success('Link copied to clipboard');
+    }
+  };
+
+  const bookSlot = async (slotId) => {
+    try {
+      await api.post(`/events/slots/${slotId}/book`);
+      toast.success('Slot booked! Confirmation will be sent shortly.');
+      // refresh slots
+      const params = {};
+      if (selectedDate) params.date = selectedDate;
+      if (selectedSport) params.sportName = selectedSport;
+      const r = await api.get(`/events/${event.id}/slots`, { params });
+      setSlots(r.data?.data?.items || []);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Booking failed');
+    }
+  };
+
+  // Generate date list for date picker — from eventDate to endDate (inclusive)
+  const availableDates = useMemo(() => {
+    if (!event?.eventDate) return [];
+    const from = new Date(event.eventDate);
+    const to = event.endDate ? new Date(event.endDate) : from;
+    const out = [];
+    const d = new Date(from);
+    while (d <= to && out.length < 60) {
+      out.push(d.toISOString().slice(0, 10));
+      d.setDate(d.getDate() + 1);
+    }
+    return out;
+  }, [event?.eventDate, event?.endDate]);
+
+  if (loading) {
+    return (
+      <div className="container-app py-12">
+        <div className="h-96 bg-slate-100 rounded-2xl animate-pulse" />
+      </div>
+    );
+  }
+
+  if (!event) {
+    return (
+      <div className="container-app section text-center">
+        <h1 className="heading">Event not found</h1>
+        <Link to="/events" className="btn-primary mt-6 inline-flex">Browse all events</Link>
+      </div>
+    );
+  }
+
+  const galleryImages = [
+    ...(event.mainImage ? [{ id: 'main', url: event.mainImage }] : []),
+    ...(event.gallery || []),
+  ];
+
+  return (
+    <>
+      <div className="bg-surface-alt">
+        <div className="container-app py-6">
+          <div className="grid lg:grid-cols-3 gap-5">
+            {/* Gallery */}
+            <div className="lg:col-span-2">
+              {galleryImages.length > 0 ? (
+                <div className="rounded-2xl overflow-hidden bg-slate-100">
+                  <Swiper
+                    modules={[Navigation, Thumbs, Pagination]}
+                    navigation
+                    thumbs={{ swiper: thumbsSwiper && !thumbsSwiper.destroyed ? thumbsSwiper : null }}
+                    pagination={{ clickable: true }}
+                    className="aspect-[16/10]"
+                  >
+                    {galleryImages.map((g) => (
+                      <SwiperSlide key={g.id}>
+                        <img src={fileUrl(g.url)} alt="" className="w-full h-full object-cover" />
+                      </SwiperSlide>
+                    ))}
+                  </Swiper>
+
+                  {galleryImages.length > 1 && (
+                    <Swiper
+                      modules={[Thumbs]}
+                      onSwiper={setThumbsSwiper}
+                      slidesPerView={6}
+                      spaceBetween={6}
+                      watchSlidesProgress
+                      className="px-2 py-2"
+                    >
+                      {galleryImages.map((g) => (
+                        <SwiperSlide key={g.id} className="cursor-pointer">
+                          <img
+                            src={fileUrl(g.url)}
+                            alt=""
+                            className="aspect-square object-cover rounded-md"
+                          />
+                        </SwiperSlide>
+                      ))}
+                    </Swiper>
+                  )}
+                </div>
+              ) : (
+                <div className="aspect-[16/10] rounded-2xl bg-slate-100 flex items-center justify-center text-ink-muted">
+                  <Calendar size={48} />
+                </div>
+              )}
+            </div>
+
+            {/* Side panel */}
+            <div className="space-y-4">
+              <div className="card p-5">
+                <div className="flex items-center gap-2 mb-2">
+                  {event.eventType?.name && (
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                      isSportEvent ? 'bg-emerald-500 text-white' : 'bg-brand/10 text-brand'
+                    }`}>
+                      {isSportEvent && <Trophy size={10} className="inline mr-1" />}
+                      {event.eventType.name.toUpperCase()}
+                    </span>
+                  )}
+                  {event.isFeatured && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400 text-amber-900 font-semibold">
+                      FEATURED
+                    </span>
+                  )}
+                </div>
+
+                <h1 className="text-2xl font-display font-bold leading-tight">{event.name}</h1>
+
+                <div className="space-y-2 mt-4 text-sm">
+                  {event.location?.name && (
+                    <div className="flex items-center gap-2 text-ink-muted">
+                      <MapPin size={14} /> {event.location.name}
+                      {event.location.country && `, ${event.location.country}`}
+                    </div>
+                  )}
+                  {event.eventDate && (
+                    <div className="flex items-center gap-2 text-ink-muted">
+                      <Calendar size={14} /> {formatDate(event.eventDate)}
+                      {event.endDate && event.endDate !== event.eventDate && ` → ${formatDate(event.endDate)}`}
+                    </div>
+                  )}
+                  {(event.startTime || event.endTime) && (
+                    <div className="flex items-center gap-2 text-ink-muted">
+                      <Clock size={14} /> {event.startTime || '—'}{event.endTime ? ` – ${event.endTime}` : ''}
+                    </div>
+                  )}
+                  {(event.minAge || event.maxAge) && (
+                    <div className="flex items-center gap-2 text-ink-muted">
+                      <Users size={14} /> Age {event.minAge || 0}–{event.maxAge || '∞'}
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-5 border-t pt-4">
+                  <div className="text-xs text-ink-muted">From</div>
+                  <div>
+                    <span className="text-3xl font-bold text-brand">
+                      {event.currency} {Number(event.price).toLocaleString()}
+                    </span>
+                    {event.priceOriginal && Number(event.priceOriginal) > Number(event.price) && (
+                      <span className="ml-2 line-through text-ink-muted">
+                        {Number(event.priceOriginal).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {!isSportEvent && (
+                  <button
+                    type="button"
+                    className="btn-primary w-full mt-4"
+                    onClick={() => toast.success('Booking flow coming soon')}
+                  >
+                    Book now
+                  </button>
+                )}
+                {isSportEvent && (
+                  <a href="#book" className="btn-primary w-full mt-4">
+                    <Trophy size={16} /> Pick a slot
+                  </a>
+                )}
+
+                <div className="flex items-center gap-3 mt-3 text-xs text-ink-muted">
+                  <button onClick={onShare} className="inline-flex items-center gap-1 hover:text-brand">
+                    <Share2 size={14} /> Share
+                  </button>
+                  <button className="inline-flex items-center gap-1 hover:text-brand">
+                    <Heart size={14} /> Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="container-app py-8 space-y-6">
+        {/* Highlights */}
+        {event.highlightsRich && (
+          <Section title="Highlights">
+            <div className="rich-prose" dangerouslySetInnerHTML={{ __html: event.highlightsRich }} />
+          </Section>
+        )}
+
+        {/* About */}
+        {event.aboutRich && (
+          <Section title="About this event">
+            <div className="rich-prose" dangerouslySetInnerHTML={{ __html: event.aboutRich }} />
+          </Section>
+        )}
+
+        {/* Slot booking (sport events only) */}
+        {isSportEvent && (
+          <div id="book" className="scroll-mt-24">
+            <Section icon={Trophy} title="Pick a sport & slot">
+              {/* Sport picker */}
+              {event.sports?.length > 1 && (
+                <div className="mb-4">
+                  <div className="text-xs font-medium text-ink-muted mb-2">Sport</div>
+                  <div className="flex flex-wrap gap-2">
+                    {event.sports.map((s, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setSelectedSport(s.name)}
+                        className={`px-4 py-2 rounded-full border text-sm transition ${
+                          selectedSport === s.name
+                            ? 'bg-brand text-white border-brand'
+                            : 'bg-white border-slate-200 hover:border-brand'
+                        }`}
+                      >
+                        {s.name}
+                        {s.defaultPrice ? (
+                          <span className="ml-2 opacity-80 text-xs">
+                            {event.currency} {Number(s.defaultPrice).toLocaleString()}
+                          </span>
+                        ) : null}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Date picker */}
+              {availableDates.length > 0 && (
+                <div className="mb-4">
+                  <div className="text-xs font-medium text-ink-muted mb-2">Date</div>
+                  <div className="flex flex-wrap gap-2 overflow-x-auto">
+                    {availableDates.map((d) => {
+                      const dt = new Date(d);
+                      const active = selectedDate === d;
+                      return (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => setSelectedDate(d)}
+                          className={`px-3 py-2 rounded-lg border text-center min-w-[68px] transition ${
+                            active
+                              ? 'bg-brand text-white border-brand'
+                              : 'bg-white border-slate-200 hover:border-brand'
+                          }`}
+                        >
+                          <div className="text-[10px] uppercase">
+                            {dt.toLocaleDateString(undefined, { weekday: 'short' })}
+                          </div>
+                          <div className="text-sm font-bold">
+                            {dt.toLocaleDateString(undefined, { day: '2-digit' })}
+                          </div>
+                          <div className="text-[10px] opacity-80">
+                            {dt.toLocaleDateString(undefined, { month: 'short' })}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Slots grid */}
+              <div className="mt-4">
+                <div className="text-xs font-medium text-ink-muted mb-2">Available hour slots</div>
+                {slotsLoading ? (
+                  <div className="text-sm text-ink-muted">Loading slots…</div>
+                ) : slots.length === 0 ? (
+                  <div className="card p-6 text-center text-sm text-ink-muted">
+                    No slots available for this selection.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                    {slots.map((s) => {
+                      const full = s.bookedCount >= s.capacity;
+                      const disabled = full || !s.isActive;
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => bookSlot(s.id)}
+                          className={`p-3 rounded-lg border text-left transition ${
+                            disabled
+                              ? 'bg-slate-50 border-slate-200 text-ink-muted cursor-not-allowed'
+                              : 'bg-white border-slate-200 hover:border-brand hover:shadow-soft'
+                          }`}
+                        >
+                          <div className="font-semibold text-sm">{s.startTime} – {s.endTime}</div>
+                          <div className="text-[11px] text-ink-muted mt-0.5">
+                            {full ? 'Fully booked' : `${s.capacity - s.bookedCount} left`}
+                          </div>
+                          {s.price && (
+                            <div className="text-brand text-xs font-semibold mt-1">
+                              {event.currency} {Number(s.price).toLocaleString()}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </Section>
+          </div>
+        )}
+
+        {/* Map */}
+        {event.mapEmbedHtml && (
+          <Section title="Location on map">
+            <div
+              className="rounded-2xl overflow-hidden border [&_iframe]:w-full [&_iframe]:h-[400px] [&_iframe]:border-0"
+              dangerouslySetInnerHTML={{ __html: event.mapEmbedHtml }}
+            />
+          </Section>
+        )}
+
+        {/* Terms & privacy */}
+        {(event.termsConditions || event.privacyPolicy) && (
+          <div className="grid md:grid-cols-2 gap-5">
+            {event.termsConditions && (
+              <Section icon={Shield} title="Terms & conditions" compact>
+                <div className="rich-prose text-sm" dangerouslySetInnerHTML={{ __html: event.termsConditions }} />
+              </Section>
+            )}
+            {event.privacyPolicy && (
+              <Section icon={ShieldCheck} title="Privacy policy" compact>
+                <div className="rich-prose text-sm" dangerouslySetInnerHTML={{ __html: event.privacyPolicy }} />
+              </Section>
+            )}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function Section({ icon: Icon, title, children, compact }) {
+  return (
+    <section className={`card ${compact ? 'p-4' : 'p-6'}`}>
+      <h3 className="font-display font-semibold text-lg mb-3 flex items-center gap-2">
+        {Icon && <Icon size={18} className="text-brand" />}
+        {title}
+      </h3>
+      {children}
+    </section>
+  );
+}

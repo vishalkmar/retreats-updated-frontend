@@ -29,12 +29,13 @@ const blankForm = {
   name: '', slug: '',
   shortDescription: '', description: '',
   videoUrl: '',
-  cityId: '', locationDetail: '',
+  cityId: '', locationId: '', locationDetail: '',
   durationDays: 1, durationNights: 0, timing: '',
   availableAllYear: true, startDate: '', endDate: '',
   minGroupSize: 1, maxGroupSize: 30,
   priceFrom: 0, priceOriginal: '', currency: 'INR',
-  freeCancellation: true, isGoldHost: false, isFeatured: false, isActive: true,
+  freeCancellation: true, isGoldHost: false,
+  isFeatured: false, isPopular: false, isActive: true,
   richContent: '',
   highlightsRich: '', inclusionsRich: '', exclusionsRich: '',
   termsConditions: '', refundsPolicy: '', cancellationPolicy: '',
@@ -48,6 +49,7 @@ const blankForm = {
   metaTitle: '', metaDescription: '',
   sortOrder: 0,
   categoryIds: [], problemIds: [], activityIds: [],
+  nearbyPlaceIds: [], areaIds: [], cultureIds: [],
 };
 
 function Section({ icon: Icon, title, children, defaultOpen = true }) {
@@ -88,24 +90,36 @@ export default function PackageFormPage() {
   const [replaceGallery, setReplaceGallery] = useState(false);
 
   const [cities, setCities] = useState([]);
+  const [locationsList, setLocationsList] = useState([]);
   const [categories, setCategories] = useState([]);
   const [problems, setProblems] = useState([]);
   const [activities, setActivities] = useState([]);
+  const [nearbyPlaces, setNearbyPlaces] = useState([]);
+  const [areas, setAreas] = useState([]);
+  const [cultures, setCultures] = useState([]);
 
   // Load taxonomies
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const [c, cat, p, act] = await Promise.all([
+        const [c, loc, cat, p, act, np, ar, cu] = await Promise.all([
           api.get('/cities/all'),
+          api.get('/locations/all'),
           api.get('/categories/all'),
           api.get('/problems/all'),
           api.get('/activities/all'),
+          api.get('/nearby-places/all'),
+          api.get('/areas/all'),
+          api.get('/cultures/all'),
         ]);
         setCities(c.data.data.items);
+        setLocationsList(loc.data.data.items);
         setCategories(cat.data.data.items);
         setProblems(p.data.data.items);
         setActivities(act.data.data.items);
+        setNearbyPlaces(np.data.data.items);
+        setAreas(ar.data.data.items);
+        setCultures(cu.data.data.items);
       } catch (err) {
         toast.error('Failed to load taxonomies');
       }
@@ -128,6 +142,7 @@ export default function PackageFormPage() {
         description: p.description || '',
         videoUrl: p.videoUrl || '',
         cityId: p.cityId || '',
+        locationId: p.locationId || '',
         locationDetail: p.locationDetail || '',
         durationDays: p.durationDays ?? 1,
         durationNights: p.durationNights ?? 0,
@@ -143,6 +158,7 @@ export default function PackageFormPage() {
         freeCancellation: p.freeCancellation ?? true,
         isGoldHost: !!p.isGoldHost,
         isFeatured: !!p.isFeatured,
+        isPopular: !!p.isPopular,
         isActive: p.isActive ?? true,
         richContent: p.richContent || '',
         highlightsRich: p.highlightsRich || '',
@@ -170,6 +186,9 @@ export default function PackageFormPage() {
         categoryIds: (p.categories || []).map((c) => c.id),
         problemIds: (p.problems || []).map((c) => c.id),
         activityIds: (p.activities || []).map((c) => c.id),
+        nearbyPlaceIds: (p.nearbyPlaces || []).map((c) => c.id),
+        areaIds: (p.areas || []).map((c) => c.id),
+        cultureIds: (p.cultures || []).map((c) => c.id),
       });
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to load package');
@@ -388,7 +407,20 @@ export default function PackageFormPage() {
       <Section icon={MapPin} title="Location & timing">
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
-            <label className="label">City</label>
+            <label className="label">Location (shared with Hotels)</label>
+            <select className="input" value={form.locationId} onChange={(e) => change('locationId', e.target.value)}>
+              <option value="">— select —</option>
+              {locationsList.map((l) => (
+                <option key={l.id} value={l.id}>{l.name}{l.country ? `, ${l.country}` : ''}</option>
+              ))}
+            </select>
+            <p className="text-[11px] text-ink-muted mt-1">
+              Manage in{' '}
+              <Link to="/admin/hotels-config/locations" className="text-brand hover:underline">Locations</Link>
+            </p>
+          </div>
+          <div>
+            <label className="label">City (legacy)</label>
             <select className="input" value={form.cityId} onChange={(e) => change('cityId', e.target.value)}>
               <option value="">— select —</option>
               {cities.map((c) => (
@@ -396,8 +428,8 @@ export default function PackageFormPage() {
               ))}
             </select>
           </div>
-          <div>
-            <label className="label">Location detail</label>
+          <div className="sm:col-span-2">
+            <label className="label">Location detail (free text)</label>
             <input
               className="input"
               value={form.locationDetail}
@@ -508,7 +540,7 @@ export default function PackageFormPage() {
       </Section>
 
       {/* Taxonomies */}
-      <Section icon={Tag} title="Categories, problems & activities">
+      <Section icon={Tag} title="Categories, problems, activities, areas, cultures, nearby places">
         <div>
           <label className="label">Categories</label>
           <MultiSelectChips
@@ -534,6 +566,45 @@ export default function PackageFormPage() {
             value={form.activityIds}
             onChange={(v) => change('activityIds', v)}
           />
+        </div>
+        <div>
+          <label className="label">Areas</label>
+          <MultiSelectChips
+            options={areas}
+            value={form.areaIds}
+            onChange={(v) => change('areaIds', v)}
+            color="brand"
+          />
+          <p className="text-[11px] text-ink-muted mt-1.5">
+            Manage in{' '}
+            <Link to="/admin/content/areas" className="text-brand hover:underline">Areas</Link>
+          </p>
+        </div>
+        <div>
+          <label className="label">Cultures</label>
+          <MultiSelectChips
+            options={cultures}
+            value={form.cultureIds}
+            onChange={(v) => change('cultureIds', v)}
+            color="wellness"
+          />
+          <p className="text-[11px] text-ink-muted mt-1.5">
+            Manage in{' '}
+            <Link to="/admin/content/cultures" className="text-brand hover:underline">Cultures</Link>
+          </p>
+        </div>
+        <div>
+          <label className="label">Nearby places (for "nearest things" filter)</label>
+          <MultiSelectChips
+            options={nearbyPlaces}
+            value={form.nearbyPlaceIds}
+            onChange={(v) => change('nearbyPlaceIds', v)}
+            color="brand"
+          />
+          <p className="text-[11px] text-ink-muted mt-1.5">
+            Manage in{' '}
+            <Link to="/admin/hotels-config/nearby-places" className="text-brand hover:underline">Nearby places</Link>
+          </p>
         </div>
       </Section>
 
@@ -773,6 +844,13 @@ export default function PackageFormPage() {
               onChange={(e) => change('isFeatured', e.target.checked)}
             />
             Featured
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox" checked={form.isPopular}
+              onChange={(e) => change('isPopular', e.target.checked)}
+            />
+            Popular
           </label>
           <label className="flex items-center gap-2 text-sm">
             <input

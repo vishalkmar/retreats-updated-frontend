@@ -5,11 +5,11 @@ import api from '../../services/api';
 import { usePageHero } from './PageHero.jsx';
 
 const fallbackLinks = [
-  { label: 'Explore', path: '/retreats' },
+  { label: 'Hotels', path: '/hotels' },
+  { label: 'Packages', path: '/retreats' },
+  { label: 'Events', path: '/events' },
   { label: 'About', path: '/about' },
   { label: 'Help', path: '/help' },
-  { label: 'Wishlists', path: '/wishlists' },
-  { label: 'Add Retreat', path: '/add-retreat' },
 ];
 
 export default function Header() {

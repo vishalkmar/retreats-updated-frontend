@@ -23,6 +23,15 @@ import {
   UserCog,
   ShieldCheck,
   FileCheck2,
+  Hotel as HotelIcon,
+  Wifi,
+  Mountain,
+  Landmark,
+  Bed,
+  Map as MapIcon,
+  Sparkles,
+  CalendarDays,
+  Trophy,
 } from 'lucide-react';
 import api from '../../services/api';
 
@@ -38,6 +47,9 @@ const contentItems = [
   { to: '/admin/content/categories', label: 'Categories', icon: Tag },
   { to: '/admin/content/problems', label: 'Problems', icon: HeartPulse },
   { to: '/admin/content/activities', label: 'Activities', icon: Activity },
+  { to: '/admin/content/areas', label: 'Areas', icon: MapIcon },
+  { to: '/admin/content/cultures', label: 'Cultures', icon: Sparkles },
+  { to: '/admin/content/event-types', label: 'Event Types', icon: Trophy },
   { to: '/admin/content/blog-categories', label: 'Blog Categories', icon: BookOpen },
 ];
 
@@ -47,10 +59,18 @@ const pwaItems = [
   { to: '/admin/pwa/signed-properties', label: 'Signed Property', icon: FileCheck2 },
 ];
 
+const hotelConfigItems = [
+  { to: '/admin/hotels-config/locations', label: 'Locations', icon: MapPin },
+  { to: '/admin/hotels-config/facilities', label: 'Facilities', icon: Wifi },
+  { to: '/admin/hotels-config/room-views', label: 'Room Views', icon: Mountain },
+  { to: '/admin/hotels-config/nearby-places', label: 'Nearby Places', icon: Landmark },
+];
+
 export default function AdminSidebar({ open, onClose }) {
   const [websiteOpen, setWebsiteOpen] = useState(true);
   const [contentOpen, setContentOpen] = useState(true);
   const [pwaOpen, setPwaOpen] = useState(true);
+  const [hotelConfigOpen, setHotelConfigOpen] = useState(true);
   const [pendingReviews, setPendingReviews] = useState(0);
 
   // Poll pending review count once on mount + when window refocuses
@@ -106,6 +126,22 @@ export default function AdminSidebar({ open, onClose }) {
 
           <NavLink to="/admin/packages" className={linkClass}>
             <PkgIcon size={18} /> Packages
+          </NavLink>
+
+          <NavLink to="/admin/hotels" className={linkClass}>
+            <HotelIcon size={18} /> Hotels
+          </NavLink>
+
+          <NavLink to="/admin/rooms" className={linkClass}>
+            <Bed size={18} /> Available Rooms
+          </NavLink>
+
+          <NavLink to="/admin/add-ons" className={linkClass}>
+            <Sparkles size={18} /> Add-on Activities
+          </NavLink>
+
+          <NavLink to="/admin/events" className={linkClass}>
+            <CalendarDays size={18} /> Events
           </NavLink>
 
           <NavLink to="/admin/reviews" className={linkClass}>
@@ -169,6 +205,29 @@ export default function AdminSidebar({ open, onClose }) {
           {contentOpen && (
             <div className="ml-3 pl-3 border-l border-white/10 space-y-1">
               {contentItems.map((item) => (
+                <NavLink key={item.to} to={item.to} className={linkClass}>
+                  <item.icon size={16} /> {item.label}
+                </NavLink>
+              ))}
+            </div>
+          )}
+
+          <button
+            onClick={() => setHotelConfigOpen(!hotelConfigOpen)}
+            className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-white/10 hover:text-white transition mt-2"
+          >
+            <span className="flex items-center gap-3">
+              <HotelIcon size={18} /> Hotel Configuration
+            </span>
+            <ChevronDown
+              size={16}
+              className={`transition-transform ${hotelConfigOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
+
+          {hotelConfigOpen && (
+            <div className="ml-3 pl-3 border-l border-white/10 space-y-1">
+              {hotelConfigItems.map((item) => (
                 <NavLink key={item.to} to={item.to} className={linkClass}>
                   <item.icon size={16} /> {item.label}
                 </NavLink>

@@ -1,0 +1,247 @@
+import { useEffect, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import {
+  MapPin, Bed, Maximize2, Users, ArrowLeft, Share2, Heart,
+  Wifi, Mountain,
+} from 'lucide-react';
+import toast from 'react-hot-toast';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Thumbs, Pagination } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/thumbs';
+import 'swiper/css/pagination';
+
+import api, { fileUrl } from '../../services/api';
+
+export default function RoomDetailPage() {
+  const { hotelSlug, roomSlug } = useParams();
+  const [room, setRoom] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [thumbsSwiper, setThumbsSwiper] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    api.get('/rooms/by-slug', { params: { hotelSlug, roomSlug } })
+      .then((res) => { if (!cancelled) setRoom(res.data?.data?.room); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [hotelSlug, roomSlug]);
+
+  const onShare = () => {
+    if (navigator.share) {
+      navigator.share({ title: room?.name, url: window.location.href }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast.success('Link copied to clipboard');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="container-app py-12">
+        <div className="h-96 bg-slate-100 rounded-2xl animate-pulse" />
+      </div>
+    );
+  }
+
+  if (!room) {
+    return (
+      <div className="container-app section text-center">
+        <h1 className="heading">Room not found</h1>
+        <Link to={`/hotels/${hotelSlug}`} className="btn-primary mt-6 inline-flex">
+          Back to hotel
+        </Link>
+      </div>
+    );
+  }
+
+  const galleryImages = [
+    ...(room.mainImage ? [{ id: 'main', url: room.mainImage }] : []),
+    ...(room.gallery || []),
+  ];
+
+  return (
+    <>
+      <div className="bg-surface-alt">
+        <div className="container-app py-4">
+          <Link
+            to={`/hotels/${hotelSlug}#rooms`}
+            className="inline-flex items-center gap-2 text-sm text-ink-muted hover:text-brand"
+          >
+            <ArrowLeft size={14} /> Back to {room.hotel?.name || 'hotel'}
+          </Link>
+        </div>
+
+        <div className="container-app pb-6">
+          <div className="grid lg:grid-cols-3 gap-5">
+            {/* Gallery */}
+            <div className="lg:col-span-2">
+              {galleryImages.length > 0 ? (
+                <div className="rounded-2xl overflow-hidden bg-slate-100">
+                  <Swiper
+                    modules={[Navigation, Thumbs, Pagination]}
+                    navigation
+                    thumbs={{ swiper: thumbsSwiper && !thumbsSwiper.destroyed ? thumbsSwiper : null }}
+                    pagination={{ clickable: true }}
+                    className="aspect-[16/10]"
+                  >
+                    {galleryImages.map((g) => (
+                      <SwiperSlide key={g.id}>
+                        <img src={fileUrl(g.url)} alt="" className="w-full h-full object-cover" />
+                      </SwiperSlide>
+                    ))}
+                  </Swiper>
+
+                  {galleryImages.length > 1 && (
+                    <Swiper
+                      modules={[Thumbs]}
+                      onSwiper={setThumbsSwiper}
+                      slidesPerView={6}
+                      spaceBetween={6}
+                      watchSlidesProgress
+                      className="px-2 py-2"
+                    >
+                      {galleryImages.map((g) => (
+                        <SwiperSlide key={g.id} className="cursor-pointer">
+                          <img
+                            src={fileUrl(g.url)}
+                            alt=""
+                            className="aspect-square object-cover rounded-md"
+                          />
+                        </SwiperSlide>
+                      ))}
+                    </Swiper>
+                  )}
+                </div>
+              ) : (
+                <div className="aspect-[16/10] rounded-2xl bg-slate-100 flex items-center justify-center text-ink-muted">
+                  <Bed size={48} />
+                </div>
+              )}
+            </div>
+
+            {/* Booking card */}
+            <div className="space-y-4">
+              <div className="card p-5">
+                <h1 className="text-2xl font-display font-bold leading-tight">{room.name}</h1>
+                {room.hotel && (
+                  <Link
+                    to={`/hotels/${room.hotel.slug}`}
+                    className="text-sm text-brand hover:underline mt-1 inline-flex items-center gap-1"
+                  >
+                    <MapPin size={12} /> {room.hotel.name}
+                  </Link>
+                )}
+
+                <div className="grid grid-cols-3 gap-3 mt-4 text-xs">
+                  <Spec icon={Maximize2} label="Size" value={room.roomSize || '—'} />
+                  <Spec icon={Users} label="Guests" value={`Up to ${room.maxOccupancy}`} />
+                  <Spec icon={Bed} label="Type" value="Private room" />
+                </div>
+
+                <div className="mt-5 border-t pt-4">
+                  <div className="text-xs text-ink-muted">Per night</div>
+                  <div>
+                    <span className="text-3xl font-bold text-brand">
+                      {room.currency} {Number(room.price).toLocaleString()}
+                    </span>
+                    {room.priceOriginal && Number(room.priceOriginal) > Number(room.price) && (
+                      <span className="ml-2 line-through text-ink-muted">
+                        {Number(room.priceOriginal).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-ink-muted mt-0.5">+ taxes & fees</div>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn-primary w-full mt-4"
+                  onClick={() => toast.success('Booking flow coming soon')}
+                >
+                  Book this room
+                </button>
+
+                <div className="flex items-center gap-3 mt-3 text-xs text-ink-muted">
+                  <button onClick={onShare} className="inline-flex items-center gap-1 hover:text-brand">
+                    <Share2 size={14} /> Share
+                  </button>
+                  <button className="inline-flex items-center gap-1 hover:text-brand">
+                    <Heart size={14} /> Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="container-app py-8 space-y-6">
+        {/* Views */}
+        {room.views?.length > 0 && (
+          <Section icon={Mountain} title="Room views">
+            <div className="flex flex-wrap gap-2">
+              {room.views.map((v) => (
+                <span key={v.id} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-wellness/10 text-wellness text-sm">
+                  {v.name}
+                </span>
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {/* Facilities */}
+        {room.facilities?.length > 0 && (
+          <Section icon={Wifi} title="Room facilities">
+            <div className="flex flex-wrap gap-2">
+              {room.facilities.map((f) => (
+                <span key={f.id} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-brand/10 text-brand text-sm">
+                  {f.name}
+                </span>
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {/* Highlights */}
+        {room.highlightsRich && (
+          <Section title="Highlights">
+            <div className="rich-prose" dangerouslySetInnerHTML={{ __html: room.highlightsRich }} />
+          </Section>
+        )}
+
+        {/* Description */}
+        {room.descriptionRich && (
+          <Section title="About this room">
+            <div className="rich-prose" dangerouslySetInnerHTML={{ __html: room.descriptionRich }} />
+          </Section>
+        )}
+      </div>
+    </>
+  );
+}
+
+function Section({ icon: Icon, title, children }) {
+  return (
+    <section className="card p-6">
+      <h3 className="font-display font-semibold text-lg mb-3 flex items-center gap-2">
+        {Icon && <Icon size={18} className="text-brand" />}
+        {title}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+function Spec({ icon: Icon, label, value }) {
+  return (
+    <div className="text-center">
+      <Icon size={16} className="mx-auto text-ink-muted" />
+      <div className="text-[10px] uppercase tracking-wide text-ink-muted mt-1">{label}</div>
+      <div className="text-sm font-medium mt-0.5">{value}</div>
+    </div>
+  );
+}

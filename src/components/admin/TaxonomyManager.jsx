@@ -285,7 +285,10 @@ function TaxonomyFormModal({ open, item, resource, labels, extraFields, onClose,
       sortOrder: item?.sortOrder ?? 0,
       isActive: item?.isActive ?? true,
     };
-    extraFields.forEach((f) => { base[f.name] = item?.[f.name] || ''; });
+    extraFields.forEach((f) => {
+      if (f.type === 'checkbox') base[f.name] = !!item?.[f.name];
+      else base[f.name] = item?.[f.name] || '';
+    });
     setForm(base);
     setFile(null);
   }, [item, open, extraFields]);
@@ -341,18 +344,33 @@ function TaxonomyFormModal({ open, item, resource, labels, extraFields, onClose,
             />
           </div>
 
-          {extraFields.map((f) => (
-            <div key={f.name}>
-              <label className="label">{f.label}</label>
-              <input
-                type={f.type || 'text'}
-                className="input"
-                placeholder={f.placeholder}
-                value={form[f.name] || ''}
-                onChange={(e) => setForm({ ...form, [f.name]: e.target.value })}
-              />
-            </div>
-          ))}
+          {extraFields.map((f) => {
+            if (f.type === 'checkbox') {
+              return (
+                <label key={f.name} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={!!form[f.name]}
+                    onChange={(e) => setForm({ ...form, [f.name]: e.target.checked })}
+                  />
+                  <span className="text-sm">{f.label}</span>
+                  {f.help && <span className="text-[11px] text-ink-muted ml-1">— {f.help}</span>}
+                </label>
+              );
+            }
+            return (
+              <div key={f.name}>
+                <label className="label">{f.label}</label>
+                <input
+                  type={f.type || 'text'}
+                  className="input"
+                  placeholder={f.placeholder}
+                  value={form[f.name] || ''}
+                  onChange={(e) => setForm({ ...form, [f.name]: e.target.value })}
+                />
+              </div>
+            );
+          })}
 
           <div>
             <label className="label">Description</label>

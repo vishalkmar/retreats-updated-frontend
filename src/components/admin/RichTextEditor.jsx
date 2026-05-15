@@ -56,6 +56,21 @@ const OL_STYLES = [
   { label: 'I, II, III …', value: 'upper-roman' },
 ];
 
+const LINE_HEIGHTS = [
+  { label: 'Tight  (1.0)', value: '1' },
+  { label: 'Snug  (1.15)', value: '1.15' },
+  { label: 'Normal (1.4)', value: '1.4' },
+  { label: 'Relaxed (1.6)', value: '1.6' },
+  { label: 'Loose (1.8)', value: '1.8' },
+  { label: 'Double (2.0)', value: '2' },
+  { label: 'Extra (2.5)', value: '2.5' },
+];
+
+const BLOCK_TAGS = new Set([
+  'P', 'DIV', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
+  'BLOCKQUOTE', 'PRE', 'UL', 'OL', 'TD', 'TH',
+]);
+
 const ICON_PRESETS = [
   '✓', '✗', '★', '✦', '✿', '❀', '☀', '☾', '☘', '❤',
   '🌿', '🌸', '🍃', '🌺', '🪷', '🧘', '🧘‍♀️', '🧘‍♂️', '🕉', '☮',
@@ -128,6 +143,32 @@ export default function RichTextEditor({
     r.selectNodeContents(span);
     sel.addRange(r);
     emit();
+  };
+
+  // Apply an inline style to the nearest block ancestor of the current selection
+  // (P / H1–H6 / LI / DIV / BLOCKQUOTE). Falls back to wrapping the selection in
+  // a span if no block ancestor is found. Used for properties like line-height
+  // that are paragraph-level rather than character-level.
+  const setBlockStyle = (styleProp, styleValue) => {
+    focusEditor();
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    let node = sel.anchorNode;
+    if (node && node.nodeType === Node.TEXT_NODE) node = node.parentNode;
+    while (
+      node &&
+      node !== editorRef.current &&
+      !BLOCK_TAGS.has(node.tagName)
+    ) {
+      node = node.parentNode;
+    }
+    if (node && node !== editorRef.current) {
+      node.style[styleProp] = styleValue;
+      emit();
+      return;
+    }
+    // No block ancestor found — fall back to wrapping the selection
+    wrapSelection(styleProp, styleValue);
   };
 
   // Find the nearest <ul> or <ol> that contains the current selection and
@@ -250,6 +291,13 @@ export default function RichTextEditor({
             options={FORMAT_BLOCKS}
             onPick={(v) => setBlock(v)}
             width={100}
+          />
+          <Select
+            title="Line height (applies to the current paragraph)"
+            placeholder="Line"
+            options={LINE_HEIGHTS}
+            onPick={(v) => setBlockStyle('lineHeight', v)}
+            width={92}
           />
         </Group>
 
