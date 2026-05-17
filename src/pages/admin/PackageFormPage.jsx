@@ -13,6 +13,7 @@ import CheckboxChips from '../../components/admin/CheckboxChips.jsx';
 import { ItineraryEditor, FaqEditor } from '../../components/admin/KeyValueListEditor.jsx';
 import Dropzone from '../../components/admin/Dropzone.jsx';
 import RichTextEditor from '../../components/admin/RichTextEditor.jsx';
+import usePersistedForm from '../../hooks/usePersistedForm.js';
 
 const MEAL_OPTIONS = ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Drinks', 'Tea / Coffee'];
 const DIET_OPTIONS = [
@@ -79,7 +80,14 @@ export default function PackageFormPage() {
   const editing = !!id;
   const navigate = useNavigate();
 
-  const [form, setForm] = useState(blankForm);
+  const {
+    value: form,
+    setValue: setForm,
+    hydrateFromServer,
+    clearDraft,
+    discardDraft,
+    hasDraft,
+  } = usePersistedForm(`package-form:${id || 'new'}`, blankForm);
   const [pkg, setPkg] = useState(null);
   const [loading, setLoading] = useState(editing);
   const [submitting, setSubmitting] = useState(false);
@@ -135,7 +143,7 @@ export default function PackageFormPage() {
       const res = await api.get(`/packages/admin/${id}`);
       const p = res.data.data.package;
       setPkg(p);
-      setForm({
+      hydrateFromServer({
         name: p.name || '',
         slug: p.slug || '',
         shortDescription: p.shortDescription || '',
@@ -224,9 +232,11 @@ export default function PackageFormPage() {
       if (editing) {
         await api.put(`/packages/${id}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
         toast.success('Package saved');
+        clearDraft();
       } else {
         const res = await api.post('/packages', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
         toast.success('Package created');
+        clearDraft();
         navigate(`/admin/packages/${res.data.data.package.id}/edit`, { replace: true });
         return;
       }
@@ -282,9 +292,21 @@ export default function PackageFormPage() {
             )}
           </div>
         </div>
-        <button disabled={submitting} className="btn-primary">
-          <Save size={16} /> {submitting ? 'Saving…' : 'Save package'}
-        </button>
+        <div className="flex items-center gap-2">
+          {hasDraft && (
+            <button
+              type="button"
+              onClick={() => { if (confirm('Discard unsaved draft and reset the form?')) discardDraft(); }}
+              className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100"
+              title="Restore the form to a clean state — discards any unsaved changes"
+            >
+              Discard draft
+            </button>
+          )}
+          <button disabled={submitting} className="btn-primary">
+            <Save size={16} /> {submitting ? 'Saving…' : 'Save package'}
+          </button>
+        </div>
       </div>
 
       {/* Basic */}

@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
 import Dropzone from '../../components/admin/Dropzone.jsx';
 import RichTextEditor from '../../components/admin/RichTextEditor.jsx';
+import usePersistedForm from '../../hooks/usePersistedForm.js';
 
 const blankForm = {
   name: '', slug: '',
@@ -55,7 +56,14 @@ export default function EventFormPage() {
   const editing = !!id;
   const navigate = useNavigate();
 
-  const [form, setForm] = useState(blankForm);
+  const {
+    value: form,
+    setValue: setForm,
+    hydrateFromServer,
+    clearDraft,
+    discardDraft,
+    hasDraft,
+  } = usePersistedForm(`event-form:${id || 'new'}`, blankForm);
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(editing);
   const [submitting, setSubmitting] = useState(false);
@@ -81,7 +89,7 @@ export default function EventFormPage() {
       const res = await api.get(`/events/admin/${id}`);
       const e = res.data.data.event;
       setEvent(e);
-      setForm({
+      hydrateFromServer({
         name: e.name || '',
         slug: e.slug || '',
         eventTypeId: e.eventTypeId || '',
@@ -141,9 +149,11 @@ export default function EventFormPage() {
       if (editing) {
         await api.put(`/events/${id}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
         toast.success('Event saved');
+        clearDraft();
       } else {
         const res = await api.post('/events', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
         toast.success('Event created');
+        clearDraft();
         navigate(`/admin/events/${res.data.data.event.id}/edit`, { replace: true });
         return;
       }
@@ -198,9 +208,20 @@ export default function EventFormPage() {
             )}
           </div>
         </div>
-        <button disabled={submitting} className="btn-primary">
-          <Save size={16} /> {submitting ? 'Saving…' : 'Save event'}
-        </button>
+        <div className="flex items-center gap-2">
+          {hasDraft && (
+            <button
+              type="button"
+              onClick={() => { if (confirm('Discard unsaved draft and reset the form?')) discardDraft(); }}
+              className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100"
+            >
+              Discard draft
+            </button>
+          )}
+          <button disabled={submitting} className="btn-primary">
+            <Save size={16} /> {submitting ? 'Saving…' : 'Save event'}
+          </button>
+        </div>
       </div>
 
       <Section icon={Tag} title="Basic info">

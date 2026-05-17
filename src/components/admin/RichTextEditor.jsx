@@ -56,14 +56,23 @@ const OL_STYLES = [
   { label: 'I, II, III …', value: 'upper-roman' },
 ];
 
+// MS Word style line-spacing presets — same values, same wording.
 const LINE_HEIGHTS = [
-  { label: 'Tight  (1.0)', value: '1' },
-  { label: 'Snug  (1.15)', value: '1.15' },
-  { label: 'Normal (1.4)', value: '1.4' },
-  { label: 'Relaxed (1.6)', value: '1.6' },
-  { label: 'Loose (1.8)', value: '1.8' },
-  { label: 'Double (2.0)', value: '2' },
-  { label: 'Extra (2.5)', value: '2.5' },
+  { label: '1.0',  value: '1' },
+  { label: '1.15', value: '1.15' },
+  { label: '1.5',  value: '1.5' },
+  { label: '2.0',  value: '2' },
+  { label: '2.5',  value: '2.5' },
+  { label: '3.0',  value: '3' },
+];
+
+// Paragraph spacing presets — vertical distance ABOVE and BELOW a paragraph.
+const PARAGRAPH_SPACING = [
+  { label: 'None',    value: '0' },
+  { label: 'Small',   value: '4px' },
+  { label: 'Medium',  value: '10px' },
+  { label: 'Large',   value: '18px' },
+  { label: 'X-Large', value: '28px' },
 ];
 
 const BLOCK_TAGS = new Set([
@@ -293,11 +302,21 @@ export default function RichTextEditor({
             width={100}
           />
           <Select
-            title="Line height (applies to the current paragraph)"
-            placeholder="Line"
+            title="Line spacing — distance between lines inside a paragraph (MS Word style)"
+            placeholder="↕ Line"
             options={LINE_HEIGHTS}
             onPick={(v) => setBlockStyle('lineHeight', v)}
-            width={92}
+            width={86}
+          />
+          <Select
+            title="Paragraph spacing — distance above and below the paragraph"
+            placeholder="¶ Spacing"
+            options={PARAGRAPH_SPACING}
+            onPick={(v) => {
+              setBlockStyle('marginTop', v);
+              setBlockStyle('marginBottom', v);
+            }}
+            width={108}
           />
         </Group>
 

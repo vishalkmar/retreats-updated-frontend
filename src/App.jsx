@@ -12,6 +12,7 @@ import HotelDetailPage from './pages/public/HotelDetailPage.jsx';
 import RoomDetailPage from './pages/public/RoomDetailPage.jsx';
 import EventsListPage from './pages/public/EventsListPage.jsx';
 import EventDetailPage from './pages/public/EventDetailPage.jsx';
+import AddOnDetailPage from './pages/public/AddOnDetailPage.jsx';
 import BlogsListPage from './pages/public/BlogsListPage.jsx';
 import BlogDetailPage from './pages/public/BlogDetailPage.jsx';
 import NotFoundPage from './pages/public/NotFoundPage.jsx';
@@ -40,6 +41,8 @@ import AddOnActivityFormPage from './pages/admin/AddOnActivityFormPage.jsx';
 import EventTypesPage from './pages/admin/EventTypesPage.jsx';
 import EventsPage from './pages/admin/EventsPage.jsx';
 import EventFormPage from './pages/admin/EventFormPage.jsx';
+import PromoBannersPage from './pages/admin/PromoBannersPage.jsx';
+import PromoBannerFormPage from './pages/admin/PromoBannerFormPage.jsx';
 import PackagesPage from './pages/admin/PackagesPage.jsx';
 import PackageFormPage from './pages/admin/PackageFormPage.jsx';
 import TestimonialsPage from './pages/admin/TestimonialsPage.jsx';
@@ -65,6 +68,7 @@ export default function App() {
         <Route path="/hotels/:hotelSlug/rooms/:roomSlug" element={<RoomDetailPage />} />
         <Route path="/events" element={<EventsListPage />} />
         <Route path="/events/:slug" element={<EventDetailPage />} />
+        <Route path="/add-ons/:slug" element={<AddOnDetailPage />} />
         <Route path="/blogs" element={<BlogsListPage />} />
         <Route path="/blogs/:slug" element={<BlogDetailPage />} />
         <Route path="*" element={<NotFoundPage />} />
@@ -110,6 +114,10 @@ export default function App() {
         <Route path="events" element={<EventsPage />} />
         <Route path="events/new" element={<EventFormPage />} />
         <Route path="events/:id/edit" element={<EventFormPage />} />
+        <Route path="website/promo-banners" element={<PromoBannersPage />} />
+        <Route path="promo-banners" element={<PromoBannersPage />} />
+        <Route path="promo-banners/new" element={<PromoBannerFormPage />} />
+        <Route path="promo-banners/:id/edit" element={<PromoBannerFormPage />} />
         <Route path="packages" element={<PackagesPage />} />
         <Route path="packages/new" element={<PackageFormPage />} />
         <Route path="packages/:id/edit" element={<PackageFormPage />} />

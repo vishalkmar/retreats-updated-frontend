@@ -9,6 +9,7 @@ import api, { fileUrl } from '../../services/api';
 import { FaqEditor } from '../../components/admin/KeyValueListEditor.jsx';
 import Dropzone from '../../components/admin/Dropzone.jsx';
 import RichTextEditor from '../../components/admin/RichTextEditor.jsx';
+import usePersistedForm from '../../hooks/usePersistedForm.js';
 
 const blankForm = {
   name: '', slug: '',
@@ -48,7 +49,14 @@ export default function AddOnActivityFormPage() {
   const editing = !!id;
   const navigate = useNavigate();
 
-  const [form, setForm] = useState(blankForm);
+  const {
+    value: form,
+    setValue: setForm,
+    hydrateFromServer,
+    clearDraft,
+    discardDraft,
+    hasDraft,
+  } = usePersistedForm(`addon-form:${id || 'new'}`, blankForm);
   const [activity, setActivity] = useState(null);
   const [loading, setLoading] = useState(editing);
   const [submitting, setSubmitting] = useState(false);
@@ -70,7 +78,7 @@ export default function AddOnActivityFormPage() {
       const res = await api.get(`/add-ons/admin/${id}`);
       const a = res.data.data.activity;
       setActivity(a);
-      setForm({
+      hydrateFromServer({
         name: a.name || '',
         slug: a.slug || '',
         locationId: a.locationId || '',
@@ -119,9 +127,11 @@ export default function AddOnActivityFormPage() {
       if (editing) {
         await api.put(`/add-ons/${id}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
         toast.success('Activity saved');
+        clearDraft();
       } else {
         const res = await api.post('/add-ons', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
         toast.success('Activity created');
+        clearDraft();
         navigate(`/admin/add-ons/${res.data.data.activity.id}/edit`, { replace: true });
         return;
       }
@@ -166,9 +176,20 @@ export default function AddOnActivityFormPage() {
             {editing ? 'Edit Add-on Activity' : 'New Add-on Activity'}
           </h1>
         </div>
-        <button disabled={submitting} className="btn-primary">
-          <Save size={16} /> {submitting ? 'Saving…' : 'Save activity'}
-        </button>
+        <div className="flex items-center gap-2">
+          {hasDraft && (
+            <button
+              type="button"
+              onClick={() => { if (confirm('Discard unsaved draft and reset the form?')) discardDraft(); }}
+              className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100"
+            >
+              Discard draft
+            </button>
+          )}
+          <button disabled={submitting} className="btn-primary">
+            <Save size={16} /> {submitting ? 'Saving…' : 'Save activity'}
+          </button>
+        </div>
       </div>
 
       <Section icon={Tag} title="Basic info">

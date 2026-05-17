@@ -31,6 +31,7 @@ import {
   Map as MapIcon,
   Sparkles,
   CalendarDays,
+  Megaphone,
   Trophy,
 } from 'lucide-react';
 import api from '../../services/api';
@@ -40,6 +41,7 @@ const websiteItems = [
   { to: '/admin/website/header-links', label: 'Header Links', icon: Globe },
   { to: '/admin/website/theme', label: 'Theme', icon: Palette },
   { to: '/admin/website/site-details', label: 'Site Details', icon: Building2 },
+  { to: '/admin/website/promo-banners', label: 'Promo Banners', icon: Megaphone },
 ];
 
 const contentItems = [

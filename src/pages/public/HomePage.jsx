@@ -1,5 +1,7 @@
 import SearchTabs from '../../components/public/SearchTabs.jsx';
 import HomeResultsTabs from '../../components/public/HomeResultsTabs.jsx';
+import PersonalisedRecommendationCTA from '../../components/public/PersonalisedRecommendationCTA.jsx';
+import PromoBannerSection from '../../components/public/PromoBannerSection.jsx';
 import TestimonialsSection from '../../components/public/TestimonialsSection.jsx';
 import ClientReviewsSection from '../../components/public/ClientReviewsSection.jsx';
 import VideoTestimonialsBand from '../../components/public/VideoTestimonialsBand.jsx';
@@ -14,7 +16,9 @@ export default function HomePage() {
           filtered Hotels/Packages/Events when search params are present. */}
       <SearchTabs />
       <HomeResultsTabs />
+      <PersonalisedRecommendationCTA />
       <VideoTestimonialsBand />
+      <PromoBannerSection page="home" position="below-video-testimonials" />
       <ClientReviewsSection />
       <TestimonialsSection />
       <BlogsSection />

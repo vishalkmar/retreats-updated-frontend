@@ -9,6 +9,7 @@ import api, { fileUrl } from '../../services/api';
 import MultiSelectChips from '../../components/admin/MultiSelectChips.jsx';
 import Dropzone from '../../components/admin/Dropzone.jsx';
 import RichTextEditor from '../../components/admin/RichTextEditor.jsx';
+import usePersistedForm from '../../hooks/usePersistedForm.js';
 
 const blankForm = {
   hotelId: '',
@@ -50,10 +51,17 @@ export default function AvailableRoomFormPage() {
   const editing = !!id;
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({
-    ...blankForm,
-    hotelId: presetHotelId || '',
-  });
+  const {
+    value: form,
+    setValue: setForm,
+    hydrateFromServer,
+    clearDraft,
+    discardDraft,
+    hasDraft,
+  } = usePersistedForm(
+    `room-form:${id || `new-${presetHotelId || 'noid'}`}`,
+    { ...blankForm, hotelId: presetHotelId || '' }
+  );
   const [room, setRoom] = useState(null);
   const [loading, setLoading] = useState(editing);
   const [submitting, setSubmitting] = useState(false);
@@ -91,7 +99,7 @@ export default function AvailableRoomFormPage() {
       const res = await api.get(`/rooms/admin/${id}`);
       const r = res.data.data.room;
       setRoom(r);
-      setForm({
+      hydrateFromServer({
         hotelId: r.hotelId || '',
         name: r.name || '',
         slug: r.slug || '',
@@ -142,9 +150,11 @@ export default function AvailableRoomFormPage() {
       if (editing) {
         await api.put(`/rooms/${id}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
         toast.success('Room saved');
+        clearDraft();
       } else {
         const res = await api.post('/rooms', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
         toast.success('Room created');
+        clearDraft();
         navigate(`/admin/rooms/${res.data.data.room.id}/edit`, { replace: true });
         return;
       }
@@ -203,9 +213,20 @@ export default function AvailableRoomFormPage() {
             )}
           </div>
         </div>
-        <button disabled={submitting} className="btn-primary">
-          <Save size={16} /> {submitting ? 'Saving…' : 'Save room'}
-        </button>
+        <div className="flex items-center gap-2">
+          {hasDraft && (
+            <button
+              type="button"
+              onClick={() => { if (confirm('Discard unsaved draft and reset the form?')) discardDraft(); }}
+              className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100"
+            >
+              Discard draft
+            </button>
+          )}
+          <button disabled={submitting} className="btn-primary">
+            <Save size={16} /> {submitting ? 'Saving…' : 'Save room'}
+          </button>
+        </div>
       </div>
 
       {/* Hotel + Basic */}

@@ -229,6 +229,22 @@ export default function HomeResultsTabs() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState({ hotels: false, packages: false, events: false });
 
+  // Slider max — auto-expands to the highest price seen across hotels/packages/
+  // events. Never shrinks (would jiggle when user filters), rounded up to the
+  // nearest 5k for clean tick values.
+  const [dataMaxPrice, setDataMaxPrice] = useState(50000);
+  useEffect(() => {
+    const prices = [
+      ...hotels.map((x) => Number(x.priceFrom) || 0),
+      ...packages.map((x) => Number(x.priceFrom) || 0),
+      ...events.map((x) => Number(x.price) || 0),
+    ];
+    if (!prices.length) return;
+    const peak = Math.max(...prices);
+    const rounded = Math.max(5000, Math.ceil(peak / 5000) * 5000);
+    setDataMaxPrice((cur) => (rounded > cur ? rounded : cur));
+  }, [hotels, packages, events]);
+
   // Pre-fetch all three so the "All" tab + tab switching is instant.
   useEffect(() => {
     let cancelled = false;
@@ -391,6 +407,8 @@ export default function HomeResultsTabs() {
             areasList={areasList}
             culturesList={culturesList}
             nearbyPlacesList={nearbyPlacesList}
+            // Dynamic price ceiling from loaded data
+            priceMax={dataMaxPrice}
             // Reset
             onClearAll={clearAll}
             hasSearch={hasSearch}
@@ -569,6 +587,7 @@ function FilterSidebar({
   facilitiesList = [], activitiesList = [], problemsList = [],
   categoriesList = [], areasList = [], culturesList = [],
   nearbyPlacesList = [],
+  priceMax = 50000,
   onClearAll, hasSearch,
   open, onClose,
 }) {
@@ -677,20 +696,20 @@ function FilterSidebar({
             </FilterBlock>
           )}
 
-          {/* Price range — applies to all */}
+          {/* Price range — slider scales to the highest live price */}
           <FilterBlock label="Price">
             <PriceRangeSlider
               min={0}
-              max={100000}
+              max={priceMax}
               step={500}
               value={[
                 filters.minPrice !== '' ? Number(filters.minPrice) : 0,
-                filters.maxPrice !== '' ? Number(filters.maxPrice) : 100000,
+                filters.maxPrice !== '' ? Number(filters.maxPrice) : priceMax,
               ]}
               onChange={([lo, hi]) => onChange({
                 ...filters,
                 minPrice: lo === 0 ? '' : String(lo),
-                maxPrice: hi === 100000 ? '' : String(hi),
+                maxPrice: hi === priceMax ? '' : String(hi),
               })}
             />
           </FilterBlock>

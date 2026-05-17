@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import {
   Star, MapPin, Heart, Share2, Play,
   Wifi, Landmark, Shield, ShieldCheck, ChevronDown, Bed, Maximize2,
-  Sparkles,
+  Sparkles, Hotel as HotelSuggestIcon,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -23,6 +23,7 @@ export default function HotelDetailPage() {
   const [hotel, setHotel] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [addOns, setAddOns] = useState([]);
+  const [similarHotels, setSimilarHotels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [thumbsSwiper, setThumbsSwiper] = useState(null);
   const [showVideo, setShowVideo] = useState(false);
@@ -45,6 +46,16 @@ export default function HotelDetailPage() {
           const params = h.location?.slug ? { location: h.location.slug, limit: 6 } : { featured: 'true', limit: 6 };
           api.get('/add-ons', { params })
             .then((r) => { if (!cancelled) setAddOns(r.data?.data?.items || []); })
+            .catch(() => {});
+
+          // Similar hotels — prefer same-location, exclude the current one.
+          const simParams = h.location?.slug ? { location: h.location.slug, limit: 12 } : { limit: 12 };
+          api.get('/hotels', { params: simParams })
+            .then((r) => {
+              if (cancelled) return;
+              const all = r.data?.data?.items || [];
+              setSimilarHotels(all.filter((x) => x.id !== h.id).slice(0, 8));
+            })
             .catch(() => {});
         }
       })
@@ -306,12 +317,44 @@ export default function HotelDetailPage() {
         {/* Suggested add-ons */}
         {addOns.length > 0 && (
           <Section icon={Sparkles} title="Suggested add-on activities">
-            <p className="text-sm text-ink-muted -mt-1 mb-4">
-              Make your stay more memorable with these popular extras.
-            </p>
+            <div className="flex items-end justify-between mb-4 -mt-1">
+              <p className="text-sm text-ink-muted">
+                Make your stay more memorable with these popular extras.
+              </p>
+              <Link
+                to={hotel.location?.slug ? `/add-ons?location=${hotel.location.slug}` : '/add-ons'}
+                className="text-sm text-brand font-semibold hover:underline whitespace-nowrap"
+              >
+                View all →
+              </Link>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {addOns.map((a) => (
                 <AddOnCard key={a.id} addOn={a} />
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {/* Similar hotels */}
+        {similarHotels.length > 0 && (
+          <Section icon={HotelSuggestIcon} title="Other hotels you may like">
+            <div className="flex items-end justify-between mb-4 -mt-1">
+              <p className="text-sm text-ink-muted">
+                {hotel.location?.name
+                  ? `More stays in ${hotel.location.name}.`
+                  : 'Hand-picked stays from our collection.'}
+              </p>
+              <Link
+                to={hotel.location?.slug ? `/hotels?location=${hotel.location.slug}` : '/hotels'}
+                className="text-sm text-brand font-semibold hover:underline whitespace-nowrap"
+              >
+                View all hotels →
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {similarHotels.map((h) => (
+                <SimilarHotelCard key={h.id} hotel={h} />
               ))}
             </div>
           </Section>
@@ -423,10 +466,64 @@ function FaqItem({ q, a }) {
   );
 }
 
+function SimilarHotelCard({ hotel }) {
+  return (
+    <Link
+      to={`/hotels/${hotel.slug}`}
+      className="card group block overflow-hidden hover:shadow-lg transition"
+    >
+      <div className="aspect-[16/10] bg-slate-100 relative overflow-hidden">
+        {hotel.primaryImage ? (
+          <img
+            src={fileUrl(hotel.primaryImage)}
+            alt={hotel.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-ink-muted">
+            <HotelSuggestIcon size={28} />
+          </div>
+        )}
+        {hotel.starRating ? (
+          <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded-full bg-white/95 text-amber-700 font-semibold">
+            {'★'.repeat(hotel.starRating)}
+          </span>
+        ) : null}
+        {Number(hotel.rating) > 0 && (
+          <span className="absolute top-2 right-2 bg-emerald-600 text-white font-bold rounded px-1.5 py-0.5 text-[11px]">
+            {Number(hotel.rating).toFixed(1)}
+          </span>
+        )}
+      </div>
+      <div className="p-3">
+        <h4 className="font-semibold leading-tight line-clamp-2 group-hover:text-brand transition">
+          {hotel.name}
+        </h4>
+        {hotel.location?.name && (
+          <div className="text-xs text-ink-muted mt-1 flex items-center gap-1">
+            <MapPin size={11} /> {hotel.location.name}
+          </div>
+        )}
+        <div className="mt-2 flex items-baseline gap-1.5">
+          <span className="text-base font-bold text-brand">
+            {hotel.currency} {Number(hotel.priceFrom).toLocaleString()}
+          </span>
+          {hotel.priceOriginal && Number(hotel.priceOriginal) > Number(hotel.priceFrom) && (
+            <span className="line-through text-ink-muted text-xs">
+              {Number(hotel.priceOriginal).toLocaleString()}
+            </span>
+          )}
+          <span className="text-[10px] text-ink-muted ml-auto">/ night</span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 function AddOnCard({ addOn }) {
   return (
-    <div className="card overflow-hidden hover:shadow-lg transition group">
-      <div className="aspect-[16/10] bg-slate-100 relative">
+    <article className="card overflow-hidden hover:shadow-lg transition group">
+      <Link to={`/add-ons/${addOn.slug}`} className="block aspect-[16/10] bg-slate-100 relative overflow-hidden">
         {addOn.mainImage ? (
           <img
             src={fileUrl(addOn.mainImage)}
@@ -443,9 +540,13 @@ function AddOnCard({ addOn }) {
             POPULAR
           </span>
         )}
-      </div>
+      </Link>
       <div className="p-4">
-        <h4 className="font-semibold leading-tight line-clamp-2">{addOn.name}</h4>
+        <Link to={`/add-ons/${addOn.slug}`} className="block">
+          <h4 className="font-semibold leading-tight line-clamp-2 hover:text-brand transition">
+            {addOn.name}
+          </h4>
+        </Link>
         {addOn.location?.name && (
           <div className="text-xs text-ink-muted mt-1 flex items-center gap-1">
             <MapPin size={11} /> {addOn.location.name}
@@ -468,16 +569,24 @@ function AddOnCard({ addOn }) {
             )}
             <div className="text-[10px] text-ink-muted">per person</div>
           </div>
-          <button
-            type="button"
-            className="btn-outline text-xs whitespace-nowrap"
-            onClick={() => toast.success('Add to booking — coming soon')}
-          >
-            + Add
-          </button>
+          <div className="flex flex-col gap-1.5">
+            <Link
+              to={`/add-ons/${addOn.slug}`}
+              className="btn-outline text-xs whitespace-nowrap"
+            >
+              Details
+            </Link>
+            <button
+              type="button"
+              className="btn-primary text-xs whitespace-nowrap"
+              onClick={() => toast.success('Booking flow coming soon')}
+            >
+              Book
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </article>
   );
 }
 

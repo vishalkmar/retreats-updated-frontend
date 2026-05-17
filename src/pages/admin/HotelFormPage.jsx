@@ -11,6 +11,7 @@ import MultiSelectChips from '../../components/admin/MultiSelectChips.jsx';
 import { FaqEditor } from '../../components/admin/KeyValueListEditor.jsx';
 import Dropzone from '../../components/admin/Dropzone.jsx';
 import RichTextEditor from '../../components/admin/RichTextEditor.jsx';
+import usePersistedForm from '../../hooks/usePersistedForm.js';
 
 const VIDEO_TYPES = [
   { value: '', label: '— Auto detect —' },
@@ -76,7 +77,14 @@ export default function HotelFormPage() {
   const editing = !!id;
   const navigate = useNavigate();
 
-  const [form, setForm] = useState(blankForm);
+  const {
+    value: form,
+    setValue: setForm,
+    hydrateFromServer,
+    clearDraft,
+    discardDraft,
+    hasDraft,
+  } = usePersistedForm(`hotel-form:${id || 'new'}`, blankForm);
   const [hotel, setHotel] = useState(null);
   const [loading, setLoading] = useState(editing);
   const [submitting, setSubmitting] = useState(false);
@@ -119,7 +127,7 @@ export default function HotelFormPage() {
       const res = await api.get(`/hotels/admin/${id}`);
       const h = res.data.data.hotel;
       setHotel(h);
-      setForm({
+      hydrateFromServer({
         name: h.name || '',
         slug: h.slug || '',
         shortDescription: h.shortDescription || '',
@@ -182,9 +190,11 @@ export default function HotelFormPage() {
       if (editing) {
         await api.put(`/hotels/${id}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
         toast.success('Hotel saved');
+        clearDraft();
       } else {
         const res = await api.post('/hotels', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
         toast.success('Hotel created');
+        clearDraft();
         navigate(`/admin/hotels/${res.data.data.hotel.id}/edit`, { replace: true });
         return;
       }
@@ -248,6 +258,15 @@ export default function HotelFormPage() {
             >
               Manage rooms →
             </Link>
+          )}
+          {hasDraft && (
+            <button
+              type="button"
+              onClick={() => { if (confirm('Discard unsaved draft and reset the form?')) discardDraft(); }}
+              className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100"
+            >
+              Discard draft
+            </button>
           )}
           <button disabled={submitting} className="btn-primary">
             <Save size={16} /> {submitting ? 'Saving…' : 'Save hotel'}
