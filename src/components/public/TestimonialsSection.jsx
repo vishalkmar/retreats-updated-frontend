@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Star, ChevronLeft, ChevronRight, Quote, Play, X } from 'lucide-react';
+import { Star, ChevronLeft, ChevronRight, Quote, Play, X, Sparkles } from 'lucide-react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Navigation, Pagination } from 'swiper/modules';
 import 'swiper/css';
@@ -91,16 +91,36 @@ export default function TestimonialsSection() {
 
 /* ---------- Carousel band ---------- */
 function CarouselBand({ items, onPlayVideo, theme }) {
+  const headingColor = readableText(theme.bg);
+  const mutedHeading = headingColor === '#ffffff' ? 'rgba(255,255,255,0.78)' : 'rgba(15,23,42,0.68)';
+
   return (
     <section
       className="relative py-16 md:py-24 overflow-hidden"
       style={{ background: theme.bg, color: theme.text }}
     >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.18),transparent_32%),linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px)] bg-[size:auto,44px_44px,44px_44px]" />
       <div className="container-app relative z-10">
-        <div className="text-center mb-10">
-          <h2 className="text-3xl md:text-4xl font-display font-bold" style={{ color: theme.text }}>
-            What Our Clients Say
+        <div className="text-center mb-12 max-w-3xl mx-auto">
+          <div
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-[11px] uppercase tracking-[0.24em] font-black mb-5"
+            style={{ background: `${headingColor}18`, color: headingColor }}
+          >
+            <Sparkles size={13} />
+            Traveller voices
+          </div>
+          <h2
+            className="text-4xl md:text-5xl lg:text-6xl font-display font-black leading-[1.05]"
+            style={{ color: headingColor }}
+          >
+            Stories That Made The Journey Worth It
           </h2>
+          <p
+            className="mt-4 text-base md:text-lg leading-relaxed max-w-2xl mx-auto"
+            style={{ color: mutedHeading }}
+          >
+            Real words from guests who found calmer stays, kinder hosts and wellness breaks that felt personal.
+          </p>
         </div>
 
         <Swiper
@@ -118,7 +138,7 @@ function CarouselBand({ items, onPlayVideo, theme }) {
           autoplay={{ delay: 4500, disableOnInteraction: false }}
           pagination={{ clickable: true }}
           navigation={{ prevEl: '.tt-prev', nextEl: '.tt-next' }}
-          className="pb-12"
+          className="testimonial-premium-carousel !pb-14 !overflow-visible"
         >
           {items.map((t) => (
             <SwiperSlide key={t.id} className="!h-auto">
@@ -129,13 +149,13 @@ function CarouselBand({ items, onPlayVideo, theme }) {
 
         <div className="flex items-center justify-center gap-3 mt-2">
           <button
-            className="tt-prev w-10 h-10 rounded-full flex items-center justify-center shadow hover:scale-105 transition"
+            className="tt-prev w-11 h-11 rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition"
             style={{ background: theme.card, color: theme.accent }}
           >
             <ChevronLeft size={18} />
           </button>
           <button
-            className="tt-next w-10 h-10 rounded-full flex items-center justify-center shadow hover:scale-105 transition"
+            className="tt-next w-11 h-11 rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition"
             style={{ background: theme.card, color: theme.accent }}
           >
             <ChevronRight size={18} />
@@ -192,8 +212,8 @@ function TestimonialCard({ t, onPlayVideo, flat, theme }) {
   // clipped to the rounded card corners. The text-only card does NOT use
   // overflow-hidden, otherwise the avatar circle (which deliberately sits at
   // the top edge of the card) gets sliced off.
-  const baseClasses = `rounded-2xl shadow-card overflow-hidden h-full flex flex-col w-full max-w-md`;
-  const textBaseClasses = `rounded-2xl shadow-card h-full flex flex-col w-full max-w-md`;
+  const baseClasses = `rounded-[1.45rem] shadow-[0_24px_60px_rgba(15,23,42,0.15)] overflow-hidden h-full flex flex-col w-full max-w-md border border-white/70 transition hover:-translate-y-1 hover:shadow-[0_30px_80px_rgba(15,23,42,0.20)]`;
+  const textBaseClasses = `rounded-[1.45rem] shadow-[0_24px_60px_rgba(15,23,42,0.15)] h-full flex flex-col w-full max-w-md border border-white/70 transition hover:-translate-y-1 hover:shadow-[0_30px_80px_rgba(15,23,42,0.20)]`;
 
   // Type → renderer
   switch (t.type) {
@@ -248,32 +268,35 @@ function TestimonialCard({ t, onPlayVideo, flat, theme }) {
         // p-6 is the default outer card padding; an admin-supplied cardPadding
         // value in customStyle overrides it (inline style wins).
         <article
-          className={`${textBaseClasses} ${customStyle.padding ? '' : 'p-6'}`}
+          className={`${textBaseClasses} ${customStyle.padding ? '' : 'px-7 py-8'} text-center items-center`}
           style={customStyle}
         >
           {t.authorAvatar && (
-            <div className="mb-4 mx-auto">
-              <div className="w-16 h-16 rounded-full ring-2 ring-wellness/25 shadow-md overflow-hidden bg-slate-100">
+            <div className="mb-4 mx-auto relative">
+              <div className="w-20 h-20 rounded-full ring-4 ring-brand/15 shadow-md overflow-hidden bg-slate-100">
                 <img src={fileUrl(t.authorAvatar)} alt={t.authorName || ''} className="w-full h-full object-cover" />
               </div>
+              <span className="absolute -right-1 bottom-1 w-8 h-8 rounded-full bg-orange-400 text-white flex items-center justify-center shadow-md">
+                <Star size={15} className="fill-current" />
+              </span>
             </div>
           )}
           {t.rating && (
             <div className="flex items-center justify-center gap-0.5 text-amber-400 mb-3">
               {Array.from({ length: t.rating }).map((_, i) => (
-                <Star key={i} size={14} className="fill-amber-400" />
+                <Star key={i} size={15} className="fill-amber-400" />
               ))}
             </div>
           )}
           {t.content && (
-            <blockquote className="text-sm text-ink-muted text-center italic leading-relaxed flex-1">
-              <Quote size={20} className="text-wellness/30 mx-auto mb-2" />
+            <blockquote className="text-[14px] text-ink-muted text-center italic leading-7 flex-1 max-w-[28rem]">
+              <Quote size={28} className="text-wellness/30 mx-auto mb-2" />
               {t.content}
             </blockquote>
           )}
           {t.authorName && (
-            <div className="mt-4 pt-3 border-t text-center">
-              <div className="font-semibold">{t.authorName}</div>
+            <div className="mt-6 pt-4 border-t text-center w-full">
+              <div className="font-black text-ink">{t.authorName}</div>
               {t.authorTitle && <div className="text-xs text-ink-muted">{t.authorTitle}</div>}
             </div>
           )}
@@ -371,6 +394,20 @@ function CardBody({ t }) {
       )}
     </div>
   );
+}
+
+function readableText(hex) {
+  if (!hex || typeof hex !== 'string') return '#ffffff';
+  const clean = hex.replace('#', '').trim();
+  if (![3, 6].includes(clean.length)) return '#ffffff';
+  const full = clean.length === 3
+    ? clean.split('').map((c) => c + c).join('')
+    : clean;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.62 ? '#0f172a' : '#ffffff';
 }
 
 /* ---------- Video player modal ---------- */

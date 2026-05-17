@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Play, ArrowRight, X, Volume2, VolumeX, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Play, ArrowRight, X, Volume2, VolumeX, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination } from 'swiper/modules';
 import 'swiper/css';
@@ -55,36 +55,48 @@ export default function VideoTestimonialsBand() {
   return (
     <section className="container-app py-12 md:py-16">
       <div
-        className="relative rounded-[2rem] overflow-hidden p-1.5 md:p-2 shadow-xl"
-        style={{ background: t.bg, color: t.text }}
+        className="relative rounded-[2rem] overflow-hidden p-[5px] shadow-[0_28px_80px_rgba(15,23,42,0.16)]"
+        style={{
+          background: `linear-gradient(135deg, ${t.accent}, ${t.bg} 36%, ${t.text})`,
+          color: t.text,
+        }}
       >
-        <div className="absolute inset-0 rounded-[2rem] pointer-events-none ring-1 ring-white/15" />
-
         <div
-          className="relative rounded-[1.75rem] p-6 md:p-10"
+          className="relative rounded-[1.7rem] overflow-hidden p-6 md:p-10 lg:p-12"
           style={{
-            background: `linear-gradient(135deg, ${t.bg} 0%, ${t.card} 100%)`,
+            background: `linear-gradient(135deg, ${t.bg} 0%, ${t.card} 54%, ${t.bg} 100%)`,
           }}
         >
+          <div className="absolute inset-0 opacity-[0.11] bg-[linear-gradient(rgba(255,255,255,0.85)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.85)_1px,transparent_1px)] bg-[size:42px_42px]" />
+          <div className="absolute inset-0 pointer-events-none ring-1 ring-inset ring-white/20 rounded-[1.7rem]" />
+
           {/* Header */}
-          <div className="mb-8 md:mb-10">
-            <h2 className="text-3xl md:text-5xl font-display font-bold leading-tight max-w-2xl" style={{ color: t.text }}>
-              <span style={{ color: t.accent }}>{heroCount}</span> happy retreaters feel the magic
+          <div className="relative z-10 mb-8 md:mb-10 max-w-3xl">
+            <div
+              className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[11px] font-black uppercase tracking-[0.22em] mb-4"
+              style={{ background: `${t.text}18`, color: t.text }}
+            >
+              <Sparkles size={13} />
+              Guest video stories
+            </div>
+            <h2 className="text-3xl md:text-5xl lg:text-6xl font-display font-black leading-[1.02]" style={{ color: t.text }}>
+              <span style={{ color: t.accent }}>{heroCount}</span> retreat stories,
+              <br className="hidden sm:block" /> real wellness moments
             </h2>
-            <p className="mt-3 text-sm md:text-base" style={{ color: t.text, opacity: 0.7 }}>
-              See what our guests have to say about their experience.
+            <p className="mt-4 text-sm md:text-base max-w-xl leading-relaxed" style={{ color: t.text, opacity: 0.78 }}>
+              Watch quick guest clips from stays, yoga escapes and healing journeys booked through us.
             </p>
           </div>
 
           {/* Video cards — carousel if > 3, plain row when exactly 3 or fewer */}
           {items.length <= 3 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {items.map((item) => (
                 <AutoVideoCard key={item.id} t={item} theme={t} onPlay={setPlaying} />
               ))}
             </div>
           ) : (
-            <div className="relative">
+            <div className="relative z-10">
               <Swiper
                 modules={[Navigation, Pagination]}
                 spaceBetween={20}
@@ -108,15 +120,15 @@ export default function VideoTestimonialsBand() {
           )}
 
           {/* Footer — link on the left, carousel controls on the right when carousel-mode */}
-          <div className="mt-10 flex items-center justify-between gap-4 flex-wrap">
+          <div className="relative z-10 mt-10 flex items-center justify-between gap-4 flex-wrap">
             <Link
               to="/retreats"
-              className="inline-flex items-center gap-2 text-sm font-semibold group"
+              className="inline-flex items-center gap-2 text-sm font-black group"
               style={{ color: t.text, opacity: 0.85 }}
             >
-              Check our success stories
+              Explore wellness stories
               <span
-                className="w-8 h-8 rounded-full flex items-center justify-center transition"
+                className="w-8 h-8 rounded-full flex items-center justify-center transition group-hover:translate-x-0.5"
                 style={{ background: t.text + '1A' }}
               >
                 <ArrowRight size={14} />
@@ -215,8 +227,12 @@ function AutoVideoCard({ t, theme, onPlay }) {
     <button
       type="button"
       onClick={() => url && onPlay({ url, poster, ...t })}
-      className="group relative block w-full rounded-2xl overflow-hidden aspect-[3/4] text-left transition hover:-translate-y-1 hover:shadow-2xl ring-1 ring-white/10"
-      style={{ background: theme.card, ...style }}
+      className="group relative block w-full rounded-[1.45rem] overflow-hidden aspect-[3/4] text-left transition hover:-translate-y-1.5 hover:shadow-2xl ring-1 ring-white/20"
+      style={{
+        background: theme.card,
+        boxShadow: '0 18px 45px rgba(15, 23, 42, 0.18)',
+        ...style,
+      }}
     >
       {/* Autoplay layer — three modes depending on source:
            1. Uploaded / direct MP4 → muted <video autoPlay loop>
@@ -262,6 +278,7 @@ function AutoVideoCard({ t, theme, onPlay }) {
 
       {/* Bottom gradient for legibility — taller now so quote text reads */}
       <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/90 via-black/55 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 pointer-events-none ring-1 ring-inset ring-white/15 rounded-[1.45rem]" />
 
       {/* Muted-pill hint */}
       {(canInlineVideo || youtubeId || vimeoId) && (
@@ -273,7 +290,7 @@ function AutoVideoCard({ t, theme, onPlay }) {
       {/* Big play overlay — opens full-screen with sound */}
       {url && (
         <span
-          className="absolute top-3 left-3 w-11 h-11 rounded-full ring-2 ring-white/70 bg-black/40 backdrop-blur flex items-center justify-center transition group-hover:bg-wellness group-hover:ring-wellness pointer-events-none"
+          className="absolute top-3 left-3 w-12 h-12 rounded-full ring-2 ring-white/70 bg-black/45 backdrop-blur flex items-center justify-center transition group-hover:bg-wellness group-hover:ring-wellness pointer-events-none"
         >
           <Play size={16} className="text-white fill-white ml-0.5" />
         </span>

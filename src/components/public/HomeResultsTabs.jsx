@@ -15,6 +15,7 @@ const TABS = [
     key: 'all',
     label: 'All',
     sublabel: 'Everything',
+    tooltip: 'All in one place: hotels, packages and events together.',
     icon: Sparkles,
     gradient: 'from-brand to-wellness',
   },
@@ -22,6 +23,7 @@ const TABS = [
     key: 'hotels',
     label: 'Hotels',
     sublabel: 'Stays',
+    tooltip: 'Browse wellness hotels and retreat stays.',
     icon: HotelIcon,
     gradient: 'from-sky-500 to-indigo-500',
   },
@@ -29,6 +31,7 @@ const TABS = [
     key: 'packages',
     label: 'Packages',
     sublabel: 'Retreats',
+    tooltip: 'Browse curated wellness and healing packages.',
     icon: PkgIcon,
     gradient: 'from-emerald-500 to-teal-600',
   },
@@ -36,6 +39,7 @@ const TABS = [
     key: 'events',
     label: 'Events',
     sublabel: 'Experiences',
+    tooltip: 'Browse wellness events and local experiences.',
     icon: CalendarDays,
     gradient: 'from-amber-500 to-orange-500',
   },
@@ -232,18 +236,37 @@ export default function HomeResultsTabs() {
   // Slider max — auto-expands to the highest price seen across hotels/packages/
   // events. Never shrinks (would jiggle when user filters), rounded up to the
   // nearest 5k for clean tick values.
-  const [dataMaxPrice, setDataMaxPrice] = useState(50000);
+  const [dataMaxPrice, setDataMaxPrice] = useState(5000);
   useEffect(() => {
     const prices = [
-      ...hotels.map((x) => Number(x.priceFrom) || 0),
-      ...packages.map((x) => Number(x.priceFrom) || 0),
-      ...events.map((x) => Number(x.price) || 0),
+      ...hotels.map((x) => Number(x.priceFrom || x.priceOriginal) || 0),
+      ...packages.map((x) => Number(x.priceFrom || x.priceOriginal) || 0),
+      ...events.map((x) => Number(x.price || x.priceFrom || x.priceOriginal) || 0),
     ];
     if (!prices.length) return;
     const peak = Math.max(...prices);
     const rounded = Math.max(5000, Math.ceil(peak / 5000) * 5000);
     setDataMaxPrice((cur) => (rounded > cur ? rounded : cur));
   }, [hotels, packages, events]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const extractPrice = (item) => Number(item?.priceFrom || item?.priceOriginal || item?.price || 0) || 0;
+    Promise.allSettled([
+      api.get('/hotels', { params: { limit: 200 } }),
+      api.get('/packages', { params: { limit: 200 } }),
+      api.get('/events', { params: { limit: 200 } }),
+    ]).then((results) => {
+      if (cancelled) return;
+      const allItems = results.flatMap((res) => (
+        res.status === 'fulfilled' ? (res.value?.data?.data?.items || []) : []
+      ));
+      const peak = Math.max(0, ...allItems.map(extractPrice));
+      const rounded = Math.max(5000, Math.ceil(peak / 5000) * 5000);
+      setDataMaxPrice(rounded);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   // Pre-fetch all three so the "All" tab + tab switching is instant.
   useEffect(() => {
@@ -331,6 +354,8 @@ export default function HomeResultsTabs() {
               <button
                 key={t.key}
                 type="button"
+                title={t.tooltip}
+                aria-label={t.tooltip}
                 onClick={() => setActiveTab(t.key)}
                 className="group flex flex-col items-center focus:outline-none"
               >
