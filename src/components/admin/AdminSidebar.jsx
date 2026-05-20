@@ -33,6 +33,7 @@ import {
   CalendarDays,
   Megaphone,
   Trophy,
+  Users as UsersIcon,
 } from 'lucide-react';
 import api from '../../services/api';
 
@@ -42,6 +43,7 @@ const websiteItems = [
   { to: '/admin/website/theme', label: 'Theme', icon: Palette },
   { to: '/admin/website/site-details', label: 'Site Details', icon: Building2 },
   { to: '/admin/website/promo-banners', label: 'Promo Banners', icon: Megaphone },
+  { to: '/admin/website/featured-tabs', label: 'Featured Tabs', icon: Layers },
 ];
 
 const contentItems = [
@@ -78,7 +80,9 @@ export default function AdminSidebar({ open, onClose }) {
   // Poll pending review count once on mount + when window refocuses
   useEffect(() => {
     const fetchPending = () => {
-      api.get('/packages/admin/reviews', { params: { status: 'pending', limit: 1 } })
+      // Unified review endpoint — pendingCount sums pending across all entity
+      // types (packages + events + hotels) so the sidebar badge is accurate.
+      api.get('/reviews/admin/list', { params: { status: 'pending', limit: 1 } })
         .then((res) => setPendingReviews(res.data?.data?.pendingCount || 0))
         .catch(() => {});
     };
@@ -130,6 +134,10 @@ export default function AdminSidebar({ open, onClose }) {
             <PkgIcon size={18} /> Packages
           </NavLink>
 
+          <NavLink to="/admin/trainers" className={linkClass}>
+            <UsersIcon size={18} /> Trainer Profiles
+          </NavLink>
+
           <NavLink to="/admin/hotels" className={linkClass}>
             <HotelIcon size={18} /> Hotels
           </NavLink>
@@ -166,6 +174,10 @@ export default function AdminSidebar({ open, onClose }) {
 
           <NavLink to="/admin/blogs" className={linkClass}>
             <FileText size={18} /> Blogs
+          </NavLink>
+
+          <NavLink to="/admin/checklist" className={linkClass}>
+            <ShieldCheck size={18} /> Trust Checklist
           </NavLink>
 
           <button

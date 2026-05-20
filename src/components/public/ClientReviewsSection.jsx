@@ -14,7 +14,7 @@ export default function ClientReviewsSection() {
 
   useEffect(() => {
     let cancelled = false;
-    api.get('/packages/reviews/public', { params: { limit: 18 } })
+    api.get('/reviews/featured', { params: { limit: 18 } })
       .then((res) => {
         if (!cancelled) setReviews(res.data?.data?.items || []);
       })
@@ -129,7 +129,7 @@ function ReviewCard({ review }) {
       <div className="w-full border-t border-slate-200 mt-7 pt-5">
         <div className="font-black text-lg text-slate-900">{name}</div>
         <div className="text-sm text-slate-500 truncate mt-0.5">
-          {review.package?.name || review.city?.name || 'Verified guest'}
+          {review.entity?.name || 'Verified guest'}
         </div>
       </div>
     </article>

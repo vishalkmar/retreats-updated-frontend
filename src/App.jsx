@@ -45,6 +45,10 @@ import PromoBannersPage from './pages/admin/PromoBannersPage.jsx';
 import PromoBannerFormPage from './pages/admin/PromoBannerFormPage.jsx';
 import PackagesPage from './pages/admin/PackagesPage.jsx';
 import PackageFormPage from './pages/admin/PackageFormPage.jsx';
+import TrainersPage from './pages/admin/TrainersPage.jsx';
+import TrainerFormPage from './pages/admin/TrainerFormPage.jsx';
+import ChecklistPage from './pages/admin/ChecklistPage.jsx';
+import FeaturedTabsPage from './pages/admin/FeaturedTabsPage.jsx';
 import TestimonialsPage from './pages/admin/TestimonialsPage.jsx';
 import BlogsPage from './pages/admin/BlogsPage.jsx';
 import BlogFormPage from './pages/admin/BlogFormPage.jsx';
@@ -121,6 +125,11 @@ export default function App() {
         <Route path="packages" element={<PackagesPage />} />
         <Route path="packages/new" element={<PackageFormPage />} />
         <Route path="packages/:id/edit" element={<PackageFormPage />} />
+        <Route path="trainers" element={<TrainersPage />} />
+        <Route path="trainers/new" element={<TrainerFormPage />} />
+        <Route path="trainers/:id/edit" element={<TrainerFormPage />} />
+        <Route path="checklist" element={<ChecklistPage />} />
+        <Route path="website/featured-tabs" element={<FeaturedTabsPage />} />
         <Route path="testimonials" element={<TestimonialsPage />} />
         <Route path="blogs" element={<BlogsPage />} />
         <Route path="blogs/new" element={<BlogFormPage />} />

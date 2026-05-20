@@ -16,19 +16,24 @@ export default function PackageCard({ pkg }) {
       ? `${Number(pkg.rating).toFixed(1)} (${pkg.reviewCount} reviews)`
       : 'New';
 
-  // Discount percent if priceOriginal is meaningfully higher
   const orig = Number(pkg.priceOriginal || 0);
   const now = Number(pkg.priceFrom || 0);
   const discountPct = orig > now && orig > 0 ? Math.round(((orig - now) / orig) * 100) : 0;
 
   const locLabel = pkg.location?.name || pkg.city?.name || pkg.locationDetail;
+  const detailHref = `/retreats/${pkg.slug}`;
 
   return (
-    <article className="bg-white rounded-2xl shadow-card overflow-hidden flex flex-col md:flex-row hover:shadow-lg transition group">
+    <article className="relative bg-white rounded-2xl shadow-card overflow-hidden flex flex-col md:flex-row hover:shadow-lg transition group">
+      {/* Ghost link covers the whole card; interactive children sit above it. */}
       <Link
-        to={`/retreats/${pkg.slug}`}
-        className="relative md:w-72 h-56 md:h-auto shrink-0 bg-slate-100 overflow-hidden"
-      >
+        to={detailHref}
+        aria-label={`View ${pkg.name}`}
+        tabIndex={-1}
+        className="absolute inset-0 z-10"
+      />
+
+      <div className="relative md:w-72 h-56 md:h-auto shrink-0 bg-slate-100 overflow-hidden">
         {pkg.primaryImage ? (
           <img
             src={fileUrl(pkg.primaryImage)}
@@ -41,8 +46,7 @@ export default function PackageCard({ pkg }) {
           </div>
         )}
 
-        {/* Top-left stacked badges */}
-        <div className="absolute top-3 left-3 flex flex-col gap-1.5 items-start">
+        <div className="absolute top-3 left-3 flex flex-col gap-1.5 items-start z-20">
           {discountPct > 0 && (
             <span className="inline-flex items-center gap-1 bg-rose-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow">
               <BadgePercent size={11} /> {discountPct}% OFF
@@ -60,38 +64,35 @@ export default function PackageCard({ pkg }) {
           )}
         </div>
 
-        {/* Top-right badge */}
         {pkg.isGoldHost && (
-          <span className="absolute top-3 right-3 bg-amber-100 text-amber-800 text-[10px] font-semibold px-2 py-1 rounded-full inline-flex items-center gap-1 border border-amber-300">
+          <span className="absolute top-3 right-3 bg-amber-100 text-amber-800 text-[10px] font-semibold px-2 py-1 rounded-full inline-flex items-center gap-1 border border-amber-300 z-20">
             <Award size={12} /> Gold host
           </span>
         )}
 
         <button
-          className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow"
+          type="button"
+          className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow z-20"
           aria-label="Save to wishlist"
-          onClick={(e) => e.preventDefault()}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
         >
           <Heart size={16} />
         </button>
 
-        {/* Bottom-left rating overlay (if reviews) */}
         {Number(pkg.rating) > 0 && (
-          <div className="absolute bottom-3 left-3 inline-flex items-center gap-1 bg-emerald-600 text-white text-xs font-bold rounded-md px-2 py-1 shadow">
+          <div className="absolute bottom-3 left-3 inline-flex items-center gap-1 bg-emerald-600 text-white text-xs font-bold rounded-md px-2 py-1 shadow z-20">
             <Star size={11} className="fill-white" /> {Number(pkg.rating).toFixed(1)}
             {pkg.reviewCount > 0 && (
               <span className="opacity-90 font-normal">· {pkg.reviewCount}</span>
             )}
           </div>
         )}
-      </Link>
+      </div>
 
       <div className="flex-1 p-5 flex flex-col">
-        <Link to={`/retreats/${pkg.slug}`} className="block">
-          <h3 className="font-display font-semibold text-lg leading-snug hover:text-brand transition line-clamp-2">
-            {pkg.name}
-          </h3>
-        </Link>
+        <h3 className="font-display font-semibold text-lg leading-snug group-hover:text-brand transition line-clamp-2">
+          {pkg.name}
+        </h3>
 
         {locLabel && (
           <div className="text-sm text-ink-muted mt-1 flex items-center gap-1">
@@ -99,7 +100,6 @@ export default function PackageCard({ pkg }) {
           </div>
         )}
 
-        {/* Quick stats row */}
         <div className="text-xs text-ink-muted mt-2 flex items-center gap-3 flex-wrap">
           {(pkg.durationDays > 0 || pkg.durationNights > 0) && (
             <span className="inline-flex items-center gap-1 bg-brand/5 text-brand px-2 py-0.5 rounded-full font-medium">
@@ -117,7 +117,6 @@ export default function PackageCard({ pkg }) {
           )}
         </div>
 
-        {/* Trust signals */}
         <div className="text-xs mt-1.5 flex items-center gap-3 flex-wrap">
           {pkg.interestedCount > 0 && (
             <span className="inline-flex items-center gap-1 text-amber-600">
@@ -137,7 +136,6 @@ export default function PackageCard({ pkg }) {
           </p>
         )}
 
-        {/* Chips row — categories + activities (mixed, capped at 5) */}
         {(pkg.categories?.length > 0 || pkg.activities?.length > 0) && (
           <div className="flex flex-wrap gap-1.5 mt-3">
             {(pkg.categories || []).slice(0, 3).map((c) => (
@@ -174,11 +172,19 @@ export default function PackageCard({ pkg }) {
             <div className="text-[10px] text-ink-muted">+ taxes · {reviewsLine}</div>
           </div>
 
-          <div className="flex gap-2">
-            <Link to={`/retreats/${pkg.slug}`} className="btn-outline text-sm py-2 px-4">
+          <div className="relative z-20 flex gap-2">
+            <Link
+              to={detailHref}
+              onClick={(e) => e.stopPropagation()}
+              className="btn-outline text-sm py-2 px-4"
+            >
               Details
             </Link>
-            <Link to={`/retreats/${pkg.slug}#book`} className="btn-primary text-sm py-2 px-5">
+            <Link
+              to={`${detailHref}#book`}
+              onClick={(e) => e.stopPropagation()}
+              className="btn-primary text-sm py-2 px-5"
+            >
               Book Now
             </Link>
           </div>

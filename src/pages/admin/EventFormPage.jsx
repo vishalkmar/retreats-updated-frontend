@@ -10,6 +10,7 @@ import api, { fileUrl } from '../../services/api';
 import Dropzone from '../../components/admin/Dropzone.jsx';
 import RichTextEditor from '../../components/admin/RichTextEditor.jsx';
 import usePersistedForm from '../../hooks/usePersistedForm.js';
+import DatePicker from '../../components/common/DatePicker.jsx';
 
 const blankForm = {
   name: '', slug: '',
@@ -291,19 +292,19 @@ export default function EventFormPage() {
           </div>
           <div>
             <label className="label flex items-center gap-1"><Calendar size={12} /> Event date</label>
-            <input
-              type="date" className="input"
+            <DatePicker
               value={form.eventDate}
-              onChange={(e) => change('eventDate', e.target.value)}
+              onChange={(v) => change('eventDate', v)}
+              placeholder="Pick the event date"
             />
           </div>
           <div>
             <label className="label">End date (multi-day)</label>
-            <input
-              type="date" className="input"
+            <DatePicker
               value={form.endDate}
               min={form.eventDate || undefined}
-              onChange={(e) => change('endDate', e.target.value)}
+              onChange={(v) => change('endDate', v)}
+              placeholder="Optional — for multi-day"
             />
           </div>
           <div>
@@ -630,11 +631,13 @@ function SlotManager({ eventId, sports, currency }) {
             <option key={i} value={s.name}>{s.name}</option>
           ) : null)}
         </select>
-        <input
-          type="date" className="input col-span-3"
-          value={draft.slotDate}
-          onChange={(e) => setDraft({ ...draft, slotDate: e.target.value })}
-        />
+        <div className="col-span-3">
+          <DatePicker
+            value={draft.slotDate}
+            onChange={(v) => setDraft({ ...draft, slotDate: v })}
+            placeholder="Slot date"
+          />
+        </div>
         <input
           type="time" className="input col-span-2"
           value={draft.startTime}

@@ -1,4 +1,5 @@
 import SearchTabs from '../../components/public/SearchTabs.jsx';
+import AuditChecklistSection from '../../components/public/AuditChecklistSection.jsx';
 import HomeResultsTabs from '../../components/public/HomeResultsTabs.jsx';
 import PersonalisedRecommendationCTA from '../../components/public/PersonalisedRecommendationCTA.jsx';
 import PromoBannerSection from '../../components/public/PromoBannerSection.jsx';
@@ -12,9 +13,10 @@ export default function HomePage() {
     <>
       {/* Hero is rendered by <PageHero/> in PublicLayout. Search bar sits
           right below it (with a negative top margin to overlap the hero edge).
-          HomeResultsTabs shows either featured items (default) OR location-
-          filtered Hotels/Packages/Events when search params are present. */}
+          AuditChecklistSection sits between the search bar and the featured
+          retreats grid — it's our trust-and-safety strip. */}
       <SearchTabs />
+      <AuditChecklistSection />
       <HomeResultsTabs />
       <PersonalisedRecommendationCTA />
       <VideoTestimonialsBand />

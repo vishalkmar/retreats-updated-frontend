@@ -11,11 +11,21 @@ function formatDate(iso) {
 
 export default function EventCard({ event, variant = 'horizontal' }) {
   const isSport = !!event.eventType?.isSport;
+  const detailHref = `/events/${event.slug}`;
+  const Overlay = (
+    <Link
+      to={detailHref}
+      aria-label={`View ${event.name}`}
+      tabIndex={-1}
+      className="absolute inset-0 z-10"
+    />
+  );
 
   if (variant === 'vertical') {
     return (
-      <article className="bg-white rounded-2xl shadow-card overflow-hidden hover:shadow-lg transition group">
-        <Link to={`/events/${event.slug}`} className="relative block aspect-[16/10] bg-slate-100">
+      <article className="relative bg-white rounded-2xl shadow-card overflow-hidden hover:shadow-lg transition group">
+        {Overlay}
+        <div className="relative aspect-[16/10] bg-slate-100">
           {event.mainImage ? (
             <img
               src={fileUrl(event.mainImage)}
@@ -28,26 +38,27 @@ export default function EventCard({ event, variant = 'horizontal' }) {
             </div>
           )}
           {event.isFeatured && (
-            <span className="absolute top-3 left-3 bg-amber-400 text-amber-900 text-[10px] font-bold px-2 py-1 rounded-full">
+            <span className="absolute top-3 left-3 bg-amber-400 text-amber-900 text-[10px] font-bold px-2 py-1 rounded-full z-20">
               FEATURED
             </span>
           )}
           {isSport && (
-            <span className="absolute top-3 right-3 bg-emerald-500 text-white text-[10px] font-bold px-2 py-1 rounded-full inline-flex items-center gap-1">
+            <span className="absolute top-3 right-3 bg-emerald-500 text-white text-[10px] font-bold px-2 py-1 rounded-full inline-flex items-center gap-1 z-20">
               <Trophy size={10} /> SLOT BOOKING
             </span>
           )}
-        </Link>
+        </div>
         <div className="p-4">
-          <Body event={event} isSport={isSport} />
+          <Body event={event} isSport={isSport} detailHref={detailHref} />
         </div>
       </article>
     );
   }
 
   return (
-    <article className="bg-white rounded-2xl shadow-card overflow-hidden flex flex-col md:flex-row hover:shadow-lg transition group">
-      <Link to={`/events/${event.slug}`} className="relative md:w-64 h-56 md:h-auto shrink-0 bg-slate-100">
+    <article className="relative bg-white rounded-2xl shadow-card overflow-hidden flex flex-col md:flex-row hover:shadow-lg transition group">
+      {Overlay}
+      <div className="relative md:w-64 h-56 md:h-auto shrink-0 bg-slate-100">
         {event.mainImage ? (
           <img
             src={fileUrl(event.mainImage)}
@@ -60,39 +71,38 @@ export default function EventCard({ event, variant = 'horizontal' }) {
           </div>
         )}
         {event.isFeatured && (
-          <span className="absolute top-3 left-3 bg-amber-400 text-amber-900 text-[10px] font-bold px-2 py-1 rounded-full">
+          <span className="absolute top-3 left-3 bg-amber-400 text-amber-900 text-[10px] font-bold px-2 py-1 rounded-full z-20">
             FEATURED
           </span>
         )}
         {isSport && (
-          <span className="absolute top-3 right-3 bg-emerald-500 text-white text-[10px] font-bold px-2 py-1 rounded-full inline-flex items-center gap-1">
+          <span className="absolute top-3 right-3 bg-emerald-500 text-white text-[10px] font-bold px-2 py-1 rounded-full inline-flex items-center gap-1 z-20">
             <Trophy size={10} /> SLOT BOOKING
           </span>
         )}
         <button
-          className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow"
+          type="button"
+          className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow z-20"
           aria-label="Save to wishlist"
-          onClick={(e) => e.preventDefault()}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
         >
           <Heart size={16} />
         </button>
-      </Link>
+      </div>
 
       <div className="flex-1 p-5 flex flex-col">
-        <Body event={event} isSport={isSport} expanded />
+        <Body event={event} isSport={isSport} detailHref={detailHref} expanded />
       </div>
     </article>
   );
 }
 
-function Body({ event, isSport, expanded }) {
+function Body({ event, isSport, detailHref, expanded }) {
   return (
     <>
-      <Link to={`/events/${event.slug}`} className="block">
-        <h3 className="font-display font-semibold text-lg leading-snug hover:text-brand transition line-clamp-2">
-          {event.name}
-        </h3>
-      </Link>
+      <h3 className="font-display font-semibold text-lg leading-snug group-hover:text-brand transition line-clamp-2">
+        {event.name}
+      </h3>
 
       <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-muted mt-1">
         {event.location?.name && (
@@ -140,11 +150,19 @@ function Body({ event, isSport, expanded }) {
             <div className="text-[11px] text-ink-muted">Age {event.minAge || 0}–{event.maxAge || '∞'}</div>
           )}
         </div>
-        <div className="flex flex-col gap-2 items-stretch">
-          <Link to={`/events/${event.slug}`} className="btn-outline text-xs whitespace-nowrap">
+        <div className="relative z-20 flex flex-col gap-2 items-stretch">
+          <Link
+            to={detailHref}
+            onClick={(e) => e.stopPropagation()}
+            className="btn-outline text-xs whitespace-nowrap"
+          >
             Details
           </Link>
-          <Link to={`/events/${event.slug}#book`} className="btn-primary text-xs whitespace-nowrap">
+          <Link
+            to={`${detailHref}#book`}
+            onClick={(e) => e.stopPropagation()}
+            className="btn-primary text-xs whitespace-nowrap"
+          >
             {isSport ? 'Book slot' : 'Book now'}
           </Link>
         </div>

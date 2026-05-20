@@ -13,13 +13,18 @@ const stripHtml = (s) =>
    - inner image is itself rounded
    - numbered/category badge tucked over title
    - "View Details" pill + Share button row
+
+  Whole-card click: ghost overlay <Link> covers the card; share button + sub-
+  links sit above it with `relative z-20`.
 */
 
 export default function BlogCard({ blog, variant = 'default', index }) {
+  const detailHref = `/blogs/${blog.slug}`;
+
   const onShare = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    const url = `${window.location.origin}/blogs/${blog.slug}`;
+    const url = `${window.location.origin}${detailHref}`;
     if (navigator.share) {
       navigator.share({ title: blog.title, url }).catch(() => {});
     } else {
@@ -29,9 +34,10 @@ export default function BlogCard({ blog, variant = 'default', index }) {
   };
 
   if (variant === 'large') {
+    // The large variant is already a single Link wrapper — keep it as-is.
     return (
       <Link
-        to={`/blogs/${blog.slug}`}
+        to={detailHref}
         className="block relative rounded-3xl overflow-hidden group min-h-[420px] bg-slate-200 ring-1 ring-slate-200"
       >
         {blog.featuredImage ? (
@@ -74,28 +80,32 @@ export default function BlogCard({ blog, variant = 'default', index }) {
   }
 
   return (
-    <article className="group rounded-3xl bg-white p-3 ring-1 ring-slate-200 shadow-soft hover:shadow-lg hover:ring-brand/40 transition duration-300">
-      {/* Inner card with its own rounded image */}
-      <Link to={`/blogs/${blog.slug}`} className="block">
-        <div className="relative rounded-2xl overflow-hidden aspect-[16/10] bg-slate-100">
-          {blog.featuredImage ? (
-            <img
-              src={fileUrl(blog.featuredImage)}
-              alt={blog.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-ink-muted bg-gradient-to-br from-brand-light/20 to-wellness-light/20">
-              <FileText size={36} />
-            </div>
-          )}
-          {blog.category && (
-            <span className="absolute top-3 left-3 text-[10px] uppercase tracking-widest bg-white/95 backdrop-blur text-brand px-2.5 py-1 rounded-full font-semibold shadow">
-              {blog.category.name}
-            </span>
-          )}
-        </div>
-      </Link>
+    <article className="relative group rounded-3xl bg-white p-3 ring-1 ring-slate-200 shadow-soft hover:shadow-lg hover:ring-brand/40 transition duration-300">
+      <Link
+        to={detailHref}
+        aria-label={`Read ${blog.title}`}
+        tabIndex={-1}
+        className="absolute inset-0 z-10 rounded-3xl"
+      />
+
+      <div className="relative rounded-2xl overflow-hidden aspect-[16/10] bg-slate-100">
+        {blog.featuredImage ? (
+          <img
+            src={fileUrl(blog.featuredImage)}
+            alt={blog.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-ink-muted bg-gradient-to-br from-brand-light/20 to-wellness-light/20">
+            <FileText size={36} />
+          </div>
+        )}
+        {blog.category && (
+          <span className="absolute top-3 left-3 text-[10px] uppercase tracking-widest bg-white/95 backdrop-blur text-brand px-2.5 py-1 rounded-full font-semibold shadow z-20">
+            {blog.category.name}
+          </span>
+        )}
+      </div>
 
       <div className="px-3 pt-4 pb-3">
         <div className="flex items-start gap-3">
@@ -104,11 +114,9 @@ export default function BlogCard({ blog, variant = 'default', index }) {
               {index + 1}
             </span>
           )}
-          <Link to={`/blogs/${blog.slug}`} className="flex-1 min-w-0">
-            <h3 className="font-display font-semibold text-lg leading-snug line-clamp-2 group-hover:text-brand transition">
-              {blog.title}
-            </h3>
-          </Link>
+          <h3 className="flex-1 min-w-0 font-display font-semibold text-lg leading-snug line-clamp-2 group-hover:text-brand transition">
+            {blog.title}
+          </h3>
         </div>
 
         {blog.excerpt && (
@@ -135,14 +143,16 @@ export default function BlogCard({ blog, variant = 'default', index }) {
           )}
         </div>
 
-        <div className="mt-4 flex items-center gap-2">
+        <div className="relative z-20 mt-4 flex items-center gap-2">
           <Link
-            to={`/blogs/${blog.slug}`}
+            to={detailHref}
+            onClick={(e) => e.stopPropagation()}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-wellness text-white text-sm font-semibold hover:bg-wellness-dark transition"
           >
             View Details <ArrowRight size={14} />
           </Link>
           <button
+            type="button"
             onClick={onShare}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border-2 border-slate-200 text-ink hover:border-brand hover:text-brand text-sm font-semibold transition"
           >

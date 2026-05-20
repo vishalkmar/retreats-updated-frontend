@@ -14,6 +14,7 @@ import { ItineraryEditor, FaqEditor } from '../../components/admin/KeyValueListE
 import Dropzone from '../../components/admin/Dropzone.jsx';
 import RichTextEditor from '../../components/admin/RichTextEditor.jsx';
 import usePersistedForm from '../../hooks/usePersistedForm.js';
+import DatePicker from '../../components/common/DatePicker.jsx';
 
 const MEAL_OPTIONS = ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Drinks', 'Tea / Coffee'];
 const DIET_OPTIONS = [
@@ -51,6 +52,7 @@ const blankForm = {
   sortOrder: 0,
   categoryIds: [], problemIds: [], activityIds: [],
   nearbyPlaceIds: [], areaIds: [], cultureIds: [],
+  trainerIds: [],
 };
 
 function Section({ icon: Icon, title, children, defaultOpen = true }) {
@@ -105,12 +107,13 @@ export default function PackageFormPage() {
   const [nearbyPlaces, setNearbyPlaces] = useState([]);
   const [areas, setAreas] = useState([]);
   const [cultures, setCultures] = useState([]);
+  const [trainersList, setTrainersList] = useState([]);
 
   // Load taxonomies
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const [c, loc, cat, p, act, np, ar, cu] = await Promise.all([
+        const [c, loc, cat, p, act, np, ar, cu, tr] = await Promise.all([
           api.get('/cities/all'),
           api.get('/locations/all'),
           api.get('/categories/all'),
@@ -119,6 +122,7 @@ export default function PackageFormPage() {
           api.get('/nearby-places/all'),
           api.get('/areas/all'),
           api.get('/cultures/all'),
+          api.get('/trainers/admin/all'),
         ]);
         setCities(c.data.data.items);
         setLocationsList(loc.data.data.items);
@@ -128,6 +132,7 @@ export default function PackageFormPage() {
         setNearbyPlaces(np.data.data.items);
         setAreas(ar.data.data.items);
         setCultures(cu.data.data.items);
+        setTrainersList(tr.data.data.items);
       } catch (err) {
         toast.error('Failed to load taxonomies');
       }
@@ -197,6 +202,7 @@ export default function PackageFormPage() {
         nearbyPlaceIds: (p.nearbyPlaces || []).map((c) => c.id),
         areaIds: (p.areas || []).map((c) => c.id),
         cultureIds: (p.cultures || []).map((c) => c.id),
+        trainerIds: (p.trainers || []).map((t) => t.id),
       });
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to load package');
@@ -495,18 +501,19 @@ export default function PackageFormPage() {
             <>
               <div>
                 <label className="label">Start date</label>
-                <input
-                  type="date" className="input"
+                <DatePicker
                   value={form.startDate || ''}
-                  onChange={(e) => change('startDate', e.target.value)}
+                  onChange={(v) => change('startDate', v)}
+                  placeholder="When does the retreat begin?"
                 />
               </div>
               <div>
                 <label className="label">End date</label>
-                <input
-                  type="date" className="input"
+                <DatePicker
                   value={form.endDate || ''}
-                  onChange={(e) => change('endDate', e.target.value)}
+                  min={form.startDate || undefined}
+                  onChange={(v) => change('endDate', v)}
+                  placeholder="When does it end?"
                 />
               </div>
             </>
@@ -626,6 +633,22 @@ export default function PackageFormPage() {
           <p className="text-[11px] text-ink-muted mt-1.5">
             Manage in{' '}
             <Link to="/admin/hotels-config/nearby-places" className="text-brand hover:underline">Nearby places</Link>
+          </p>
+        </div>
+        <div className="border-t pt-4 mt-2">
+          <label className="label">Trainers leading this package</label>
+          <p className="text-[11px] text-ink-muted -mt-1 mb-2">
+            Select one or more trainers — their profiles will appear on the retreat detail page.
+          </p>
+          <MultiSelectChips
+            options={trainersList.map((t) => ({ id: t.id, name: t.role ? `${t.name} · ${t.role}` : t.name }))}
+            value={form.trainerIds}
+            onChange={(v) => change('trainerIds', v)}
+            color="brand"
+          />
+          <p className="text-[11px] text-ink-muted mt-1.5">
+            Manage in{' '}
+            <Link to="/admin/trainers" className="text-brand hover:underline">Trainer Profiles</Link>
           </p>
         </div>
       </Section>

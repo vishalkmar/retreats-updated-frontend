@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Filter, X, LayoutGrid, List as ListIcon } from 'lucide-react';
 import api from '../../services/api';
 import EventCard from '../../components/public/EventCard.jsx';
+import DatePicker from '../../components/common/DatePicker.jsx';
 
 const SORTS = [
   { value: '', label: 'Recommended first' },
@@ -146,18 +147,16 @@ export default function EventsListPage() {
 
               <FilterBlock label="Date range">
                 <div className="space-y-2">
-                  <input
-                    type="date" className="input"
-                    placeholder="From"
+                  <DatePicker
                     value={filters.fromDate}
-                    onChange={(e) => update('fromDate', e.target.value)}
+                    onChange={(v) => update('fromDate', v)}
+                    placeholder="From"
                   />
-                  <input
-                    type="date" className="input"
-                    placeholder="To"
+                  <DatePicker
                     value={filters.toDate}
                     min={filters.fromDate || undefined}
-                    onChange={(e) => update('toDate', e.target.value)}
+                    onChange={(v) => update('toDate', v)}
+                    placeholder="To"
                   />
                 </div>
               </FilterBlock>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { MapPin, Calendar, Search, X, ChevronDown } from 'lucide-react';
 import api from '../../services/api';
+import DatePicker from '../common/DatePicker.jsx';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -177,21 +178,19 @@ export default function SearchTabs() {
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-ink-muted mb-1">From</label>
-                  <input
-                    type="date"
-                    className="input"
+                  <DatePicker
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                    onChange={setStartDate}
+                    placeholder="Check-in / from"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-ink-muted mb-1">To</label>
-                  <input
-                    type="date"
-                    className="input"
+                  <DatePicker
                     value={endDate}
                     min={startDate || undefined}
-                    onChange={(e) => setEndDate(e.target.value)}
+                    onChange={setEndDate}
+                    placeholder="Check-out / to"
                   />
                 </div>
               </div>

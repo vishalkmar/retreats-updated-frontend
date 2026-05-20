@@ -3,20 +3,25 @@ import { Link, useSearchParams } from 'react-router-dom';
 import {
   Hotel as HotelIcon, Package as PkgIcon, CalendarDays,
   Sparkles, ChevronRight, X, Filter, Search, Star,
+  LayoutGrid, BedDouble, MountainSnow, PartyPopper,
 } from 'lucide-react';
-import api from '../../services/api';
+import api, { fileUrl } from '../../services/api';
 import HotelCard from './HotelCard.jsx';
 import PackageCard from './PackageCard.jsx';
 import EventCard from './EventCard.jsx';
 import PriceRangeSlider from './PriceRangeSlider.jsx';
+import DatePicker from '../common/DatePicker.jsx';
 
+// Default tab metadata. Admin-managed overrides (label, sublabel, image,
+// headline) are merged in from `/featured-tabs` at runtime — see the useEffect
+// below.
 const TABS = [
   {
     key: 'all',
     label: 'All',
     sublabel: 'Everything',
     tooltip: 'All in one place: hotels, packages and events together.',
-    icon: Sparkles,
+    icon: LayoutGrid,
     gradient: 'from-brand to-wellness',
   },
   {
@@ -24,7 +29,7 @@ const TABS = [
     label: 'Hotels',
     sublabel: 'Stays',
     tooltip: 'Browse wellness hotels and retreat stays.',
-    icon: HotelIcon,
+    icon: BedDouble,
     gradient: 'from-sky-500 to-indigo-500',
   },
   {
@@ -32,7 +37,7 @@ const TABS = [
     label: 'Packages',
     sublabel: 'Retreats',
     tooltip: 'Browse curated wellness and healing packages.',
-    icon: PkgIcon,
+    icon: MountainSnow,
     gradient: 'from-emerald-500 to-teal-600',
   },
   {
@@ -40,7 +45,7 @@ const TABS = [
     label: 'Events',
     sublabel: 'Experiences',
     tooltip: 'Browse wellness events and local experiences.',
-    icon: CalendarDays,
+    icon: PartyPopper,
     gradient: 'from-amber-500 to-orange-500',
   },
 ];
@@ -233,6 +238,36 @@ export default function HomeResultsTabs() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState({ hotels: false, packages: false, events: false });
 
+  // Admin-managed per-tab metadata: label, sublabel, headline, banner image.
+  // Falls back to the static TABS defaults if the admin hasn't edited them.
+  const [tabMeta, setTabMeta] = useState({});
+  useEffect(() => {
+    let cancelled = false;
+    api.get('/featured-tabs')
+      .then((res) => {
+        if (cancelled) return;
+        const byKey = {};
+        (res.data?.data?.items || []).forEach((it) => { byKey[it.tabKey] = it; });
+        setTabMeta(byKey);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  // Merge static defaults with admin overrides — empty string overrides fall back.
+  const mergedTabs = TABS.map((t) => {
+    const m = tabMeta[t.key] || {};
+    return {
+      ...t,
+      label: m.label || t.label,
+      sublabel: m.sublabel || t.sublabel,
+      headline: m.headline || '',
+      subheadline: m.subheadline || '',
+      imageUrl: m.imageUrl || '',
+    };
+  });
+  const activeMeta = mergedTabs.find((t) => t.key === activeTab) || mergedTabs[0];
+
   // Slider max — auto-expands to the highest price seen across hotels/packages/
   // events. Never shrinks (would jiggle when user filters), rounded up to the
   // nearest 5k for clean tick values.
@@ -348,7 +383,7 @@ export default function HomeResultsTabs() {
 
         {/* Circular tabs — destination-style with thick double-border on the active one */}
         <div className="flex flex-wrap items-start justify-center gap-8 sm:gap-12 mb-10">
-          {TABS.map((t) => {
+          {mergedTabs.map((t) => {
             const active = activeTab === t.key;
             return (
               <button
@@ -370,11 +405,23 @@ export default function HomeResultsTabs() {
                 >
                   <div className={`rounded-full ${active ? 'p-1 bg-white' : 'p-0'}`}>
                     <div
-                      className={`w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden bg-gradient-to-br ${t.gradient} flex items-center justify-center transition-transform duration-300 ${
+                      className={`relative w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden bg-gradient-to-br ${t.gradient} flex items-center justify-center transition-transform duration-300 ${
                         active ? 'scale-100' : 'group-hover:scale-[1.03]'
                       }`}
                     >
-                      <t.icon size={48} className="text-white drop-shadow-lg" strokeWidth={1.75} />
+                      {t.imageUrl ? (
+                        <>
+                          <img
+                            src={fileUrl(t.imageUrl)}
+                            alt={t.label}
+                            className="absolute inset-0 w-full h-full object-cover"
+                          />
+                          <div className={`absolute inset-0 bg-gradient-to-br ${t.gradient} opacity-60 mix-blend-multiply`} />
+                          <t.icon size={42} className="relative text-white drop-shadow-lg" strokeWidth={1.75} />
+                        </>
+                      ) : (
+                        <t.icon size={48} className="text-white drop-shadow-lg" strokeWidth={1.75} />
+                      )}
                     </div>
                   </div>
                 </div>
@@ -396,6 +443,35 @@ export default function HomeResultsTabs() {
             );
           })}
         </div>
+
+        {/* Active tab banner — admin-managed image + headline. Hidden when no
+            override is set so the section stays clean on a fresh install. */}
+        {(activeMeta?.imageUrl || activeMeta?.headline) && (
+          <div className="relative overflow-hidden rounded-2xl shadow-lg mb-8 group">
+            {activeMeta.imageUrl && (
+              <>
+                <img
+                  src={fileUrl(activeMeta.imageUrl)}
+                  alt={activeMeta.label}
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
+              </>
+            )}
+            <div className={`relative ${activeMeta.imageUrl ? 'py-10 md:py-14' : 'py-7'} px-6 md:px-10 ${activeMeta.imageUrl ? 'text-white' : `bg-gradient-to-r ${activeMeta.gradient} text-white`}`}>
+              {activeMeta.headline && (
+                <h3 className="text-2xl md:text-4xl font-display font-black leading-tight max-w-3xl">
+                  {activeMeta.headline}
+                </h3>
+              )}
+              {activeMeta.subheadline && (
+                <p className="mt-2 text-sm md:text-base text-white/90 max-w-2xl">
+                  {activeMeta.subheadline}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Mobile filter toggle — desktop sidebar is always-visible */}
         <button
@@ -706,16 +782,18 @@ function FilterSidebar({
           {(activeTab === 'all' || activeTab === 'packages' || activeTab === 'events') && (
             <FilterBlock label="Date">
               <div className="space-y-2">
-                <input
-                  type="date" className="input text-sm"
+                <DatePicker
                   value={urlStartDate}
-                  onChange={(e) => onDateChange?.('startDate', e.target.value)}
+                  onChange={(v) => onDateChange?.('startDate', v)}
+                  placeholder="From"
+                  size="sm"
                 />
-                <input
-                  type="date" className="input text-sm"
+                <DatePicker
                   value={urlEndDate}
                   min={urlStartDate || undefined}
-                  onChange={(e) => onDateChange?.('endDate', e.target.value)}
+                  onChange={(v) => onDateChange?.('endDate', v)}
+                  placeholder="To"
+                  size="sm"
                 />
               </div>
             </FilterBlock>

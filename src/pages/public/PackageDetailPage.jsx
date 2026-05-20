@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   Star, MapPin, Calendar, Users, Heart, Share2, Check, X as XIcon,
-  ShieldCheck, Award, Flame, ChevronDown, Play, Send,
+  ShieldCheck, Award, Flame, ChevronDown, Play,
   Utensils, Sparkles, Hotel, Shield, RefreshCcw, XCircle, BookOpen,
-  Award as AwardIcon, Clock, Heart as HeartIcon,
+  Award as AwardIcon, Clock, Heart as HeartIcon, Compass,
+  User as UserIcon, Briefcase, Languages, Instagram, Globe, Linkedin, Youtube,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -15,10 +16,14 @@ import 'swiper/css/thumbs';
 import 'swiper/css/pagination';
 
 import api, { fileUrl } from '../../services/api';
+import ReviewsBlock from '../../components/public/ReviewsBlock.jsx';
+import AddOnsCarousel from '../../components/public/AddOnsCarousel.jsx';
 
 export default function PackageDetailPage() {
   const { slug } = useParams();
   const [pkg, setPkg] = useState(null);
+  const [addOns, setAddOns] = useState([]);
+  const [similarPackages, setSimilarPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [thumbsSwiper, setThumbsSwiper] = useState(null);
   const [showVideo, setShowVideo] = useState(false);
@@ -27,7 +32,48 @@ export default function PackageDetailPage() {
     let cancelled = false;
     setLoading(true);
     api.get(`/packages/${slug}`)
-      .then((res) => { if (!cancelled) setPkg(res.data?.data?.package); })
+      .then((res) => {
+        if (cancelled) return;
+        const p = res.data?.data?.package;
+        setPkg(p);
+        if (p?.id) {
+          // Suggested add-ons — try location-matched first, fall back to any
+          // active add-on so the section isn't empty just because the admin
+          // hasn't tagged add-ons with this package's location yet.
+          const loadAddOns = async () => {
+            try {
+              if (p.location?.slug) {
+                const r1 = await api.get('/add-ons', { params: { location: p.location.slug, limit: 6 } });
+                const matched = r1.data?.data?.items || [];
+                if (matched.length > 0) {
+                  if (!cancelled) setAddOns(matched);
+                  return;
+                }
+              }
+              const r2 = await api.get('/add-ons', { params: { limit: 6 } });
+              if (!cancelled) setAddOns(r2.data?.data?.items || []);
+            } catch { /* swallow */ }
+          };
+          loadAddOns();
+
+          // Similar retreats — prefer same-location, then any other package
+          const loadSimilar = async () => {
+            try {
+              let pool = [];
+              if (p.location?.slug) {
+                const r1 = await api.get('/packages', { params: { location: p.location.slug, limit: 12 } });
+                pool = (r1.data?.data?.items || []).filter((x) => x.id !== p.id);
+              }
+              if (pool.length === 0) {
+                const r2 = await api.get('/packages', { params: { limit: 12 } });
+                pool = (r2.data?.data?.items || []).filter((x) => x.id !== p.id);
+              }
+              if (!cancelled) setSimilarPackages(pool.slice(0, 8));
+            } catch { /* swallow */ }
+          };
+          loadSimilar();
+        }
+      })
       .catch(() => {})
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -441,34 +487,51 @@ export default function PackageDetailPage() {
             </Section>
           )}
 
-          {/* Reviews */}
-          {pkg.reviews?.length > 0 && (
-            <Section title={`Reviews (${pkg.reviewCount})`}>
-              <div className="space-y-3">
-                {pkg.reviews.slice(0, 6).map((r) => (
-                  <div key={r.id} className="bg-white border rounded-xl p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-9 h-9 rounded-full bg-brand text-white flex items-center justify-center font-bold text-sm">
-                        {r.name?.charAt(0)?.toUpperCase() || '?'}
-                      </div>
-                      <div>
-                        <div className="font-medium text-sm">{r.name}</div>
-                        <div className="flex items-center gap-1 text-xs text-accent">
-                          {Array.from({ length: r.rating }).map((_, i) => (
-                            <Star key={i} size={12} className="fill-accent" />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    {r.title && <h5 className="font-semibold text-sm">{r.title}</h5>}
-                    {r.comment && <p className="text-sm text-ink-muted mt-1">{r.comment}</p>}
-                  </div>
+          {/* Trainers leading this retreat */}
+          {pkg.trainers?.length > 0 && (
+            <Section title={pkg.trainers.length === 1 ? 'Your trainer' : 'Your trainers'} icon={UserIcon}>
+              <p className="text-sm text-ink-muted -mt-1 mb-4">
+                Meet the professionals guiding this retreat — each is hand-picked for their experience and approach.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {pkg.trainers.map((t) => (
+                  <TrainerCard key={t.id} trainer={t} />
                 ))}
               </div>
             </Section>
           )}
 
-          <ReviewForm packageId={pkg.id} />
+          {/* Suggested add-on activities */}
+          <AddOnsCarousel
+            addOns={addOns}
+            subtitle="Enhance your retreat with these popular experiences."
+            viewAllHref={pkg.location?.slug ? `/add-ons?location=${pkg.location.slug}` : '/add-ons'}
+          />
+
+          {/* Similar retreats */}
+          {similarPackages.length > 0 && (
+            <Section title="Similar retreats you may love" icon={Compass}>
+              <p className="text-sm text-ink-muted -mt-1 mb-4">
+                {pkg.location?.name
+                  ? `More wellness retreats in ${pkg.location.name}.`
+                  : 'Hand-picked retreats from our collection.'}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {similarPackages.map((p) => (
+                  <SimilarPackageCard key={p.id} pkg={p} />
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {/* Reviews */}
+          <ReviewsBlock
+            entityType="package"
+            entityId={pkg.id}
+            reviews={pkg.reviews}
+            reviewCount={pkg.reviewCount}
+            averageRating={pkg.rating}
+          />
         </div>
 
         {/* Sidebar booking card */}
@@ -595,56 +658,163 @@ function RichHtml({ html, className = '' }) {
   );
 }
 
-function ReviewForm({ packageId }) {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [rating, setRating] = useState(5);
-  const [comment, setComment] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  const submit = async (e) => {
-    e.preventDefault();
-    if (!name.trim() || !comment.trim()) return toast.error('Name and comment required');
-    setSubmitting(true);
-    try {
-      await api.post(`/packages/${packageId}/reviews`, { name, email, rating, comment });
-      toast.success('Thanks! Your review will appear after approval.');
-      setName(''); setEmail(''); setRating(5); setComment('');
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Submit failed');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
+function TrainerCard({ trainer: t }) {
+  const socials = t.socials || {};
   return (
-    <Section title="Leave a review">
-      <form onSubmit={submit} className="space-y-3 bg-surface-alt p-5 rounded-xl">
-        <div className="grid sm:grid-cols-2 gap-3">
-          <input className="input" placeholder="Your name *" value={name} onChange={(e) => setName(e.target.value)} required />
-          <input className="input" type="email" placeholder="Email (optional)" value={email} onChange={(e) => setEmail(e.target.value)} />
+    <article className="rounded-2xl border bg-white p-4 hover:shadow-md transition flex gap-4">
+      <div className="shrink-0 w-20 h-20 rounded-full overflow-hidden bg-slate-100 flex items-center justify-center">
+        {t.photo ? (
+          <img src={fileUrl(t.photo)} alt={t.name} className="w-full h-full object-cover" />
+        ) : (
+          <UserIcon size={28} className="text-ink-muted" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <h4 className="font-display font-semibold text-base leading-tight">{t.name}</h4>
+        {t.role && (
+          <div className="text-xs text-brand font-medium mt-0.5 flex items-center gap-1">
+            <Briefcase size={11} /> {t.role}
+          </div>
+        )}
+        <div className="flex items-center gap-3 text-[11px] text-ink-muted mt-1 flex-wrap">
+          {t.experienceYears != null && (
+            <span className="inline-flex items-center gap-1">
+              <Award size={11} /> {t.experienceYears}+ yrs
+            </span>
+          )}
+          {t.languages?.length > 0 && (
+            <span className="inline-flex items-center gap-1">
+              <Languages size={11} /> {t.languages.slice(0, 3).join(', ')}
+            </span>
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-ink-muted">Rating:</span>
-          {[1, 2, 3, 4, 5].map((n) => (
-            <button
-              key={n}
-              type="button"
-              onClick={() => setRating(n)}
-              className={n <= rating ? 'text-accent' : 'text-slate-300'}
-            ><Star size={20} className={n <= rating ? 'fill-accent' : ''} /></button>
-          ))}
-        </div>
-        <textarea
-          className="input" rows={3}
-          placeholder="Share your experience…"
-          value={comment} onChange={(e) => setComment(e.target.value)}
-          required
-        />
-        <button disabled={submitting} className="btn-primary text-sm">
-          <Send size={14} /> {submitting ? 'Submitting…' : 'Submit review'}
-        </button>
-      </form>
-    </Section>
+        {t.shortBio && (
+          <p className="text-sm text-ink-muted mt-2 line-clamp-3">{t.shortBio}</p>
+        )}
+        {t.specialties?.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {t.specialties.slice(0, 4).map((s) => (
+              <span key={s} className="text-[10px] px-1.5 py-0.5 rounded-full bg-brand/10 text-brand">
+                {s}
+              </span>
+            ))}
+          </div>
+        )}
+        {(socials.instagram || socials.website || socials.linkedin || socials.youtube) && (
+          <div className="flex items-center gap-2 mt-3 text-ink-muted">
+            {socials.instagram && (
+              <a href={socials.instagram} target="_blank" rel="noreferrer" className="hover:text-brand"><Instagram size={14} /></a>
+            )}
+            {socials.website && (
+              <a href={socials.website} target="_blank" rel="noreferrer" className="hover:text-brand"><Globe size={14} /></a>
+            )}
+            {socials.linkedin && (
+              <a href={socials.linkedin} target="_blank" rel="noreferrer" className="hover:text-brand"><Linkedin size={14} /></a>
+            )}
+            {socials.youtube && (
+              <a href={socials.youtube} target="_blank" rel="noreferrer" className="hover:text-brand"><Youtube size={14} /></a>
+            )}
+          </div>
+        )}
+      </div>
+    </article>
   );
 }
+
+function SuggestedAddOnCard({ addOn }) {
+  return (
+    <Link
+      to={`/add-ons/${addOn.slug}`}
+      className="card overflow-hidden hover:shadow-lg transition group block"
+    >
+      <div className="aspect-[16/10] bg-slate-100 relative overflow-hidden">
+        {addOn.mainImage ? (
+          <img
+            src={fileUrl(addOn.mainImage)}
+            alt={addOn.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-ink-muted">
+            <Sparkles size={28} />
+          </div>
+        )}
+        {addOn.isFeatured && (
+          <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded-full bg-amber-400 text-amber-900 font-semibold">
+            POPULAR
+          </span>
+        )}
+      </div>
+      <div className="p-4">
+        <h4 className="font-semibold leading-tight line-clamp-2 group-hover:text-brand transition">
+          {addOn.name}
+        </h4>
+        {addOn.location?.name && (
+          <div className="text-xs text-ink-muted mt-1 flex items-center gap-1">
+            <MapPin size={11} /> {addOn.location.name}
+          </div>
+        )}
+        <div className="mt-3 pt-3 border-t flex items-baseline justify-between gap-2">
+          <div>
+            <span className="text-lg font-bold text-brand">
+              {addOn.currency} {Number(addOn.price).toLocaleString()}
+            </span>
+            <div className="text-[10px] text-ink-muted">per person</div>
+          </div>
+          <span className="text-xs text-brand font-semibold">View →</span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function SimilarPackageCard({ pkg: p }) {
+  return (
+    <Link
+      to={`/retreats/${p.slug}`}
+      className="card overflow-hidden hover:shadow-lg transition group block"
+    >
+      <div className="aspect-[16/10] bg-slate-100 relative overflow-hidden">
+        {p.primaryImage ? (
+          <img
+            src={fileUrl(p.primaryImage)}
+            alt={p.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-ink-muted">
+            <Compass size={28} />
+          </div>
+        )}
+        {Number(p.rating) > 0 && (
+          <span className="absolute top-2 right-2 bg-emerald-600 text-white font-bold rounded px-1.5 py-0.5 text-[11px] inline-flex items-center gap-1">
+            <Star size={10} className="fill-current" />
+            {Number(p.rating).toFixed(1)}
+          </span>
+        )}
+      </div>
+      <div className="p-3">
+        <h4 className="font-semibold leading-tight line-clamp-2 group-hover:text-brand transition">
+          {p.name}
+        </h4>
+        {p.locationDetail && (
+          <div className="text-xs text-ink-muted mt-1 flex items-center gap-1">
+            <MapPin size={11} /> {p.locationDetail}
+          </div>
+        )}
+        <div className="mt-2 flex items-baseline gap-1.5">
+          <span className="text-base font-bold text-brand">
+            {p.currency} {Number(p.priceFrom).toLocaleString()}
+          </span>
+          {p.durationDays && (
+            <span className="text-[10px] text-ink-muted ml-auto">
+              {p.durationDays}d / {p.durationNights}n
+            </span>
+          )}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+

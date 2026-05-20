@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Edit3, Power, KeyRound, Search, Loader2, Copy, X, FileCheck2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
+import DatePicker from '../../components/common/DatePicker.jsx';
 
 // Shared admin UI for managing PWA Auditors and Officers. Pass `resource`
 // as 'auditors' or 'officers' from the page wrapper — the backend routes
@@ -294,11 +295,12 @@ const PwaUsersPage = ({ resource }) => {
               </label>
               <label className="flex flex-col gap-1 text-xs">
                 <span className="font-semibold text-slate-600">Date of birth</span>
-                <input
-                  type="date"
-                  value={form.dob}
-                  onChange={(e) => setForm((s) => ({ ...s, dob: e.target.value }))}
-                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand focus:ring-2 focus:ring-brand/10 focus:outline-none"
+                <DatePicker
+                  value={form.dob || ''}
+                  onChange={(v) => setForm((s) => ({ ...s, dob: v }))}
+                  placeholder="Select date of birth"
+                  max={new Date().toISOString().slice(0, 10)}
+                  hideToday
                 />
               </label>
               <label className="col-span-2 flex flex-col gap-1 text-xs">

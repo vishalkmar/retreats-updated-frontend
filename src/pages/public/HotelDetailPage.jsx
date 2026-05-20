@@ -14,6 +14,8 @@ import 'swiper/css/thumbs';
 import 'swiper/css/pagination';
 
 import api, { fileUrl } from '../../services/api';
+import ReviewsBlock from '../../components/public/ReviewsBlock.jsx';
+import AddOnsCarousel from '../../components/public/AddOnsCarousel.jsx';
 
 const stripHtml = (s) =>
   (s || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
@@ -41,22 +43,41 @@ export default function HotelDetailPage() {
             .then((r) => { if (!cancelled) setRooms(r.data?.data?.items || []); })
             .catch(() => {});
 
-          // Suggested add-on activities — match by hotel location when present,
-          // else fall back to a generic list of featured add-ons.
-          const params = h.location?.slug ? { location: h.location.slug, limit: 6 } : { featured: 'true', limit: 6 };
-          api.get('/add-ons', { params })
-            .then((r) => { if (!cancelled) setAddOns(r.data?.data?.items || []); })
-            .catch(() => {});
+          // Suggested add-on activities — try location-matched first, fall
+          // back to any active add-ons so the section isn't empty just because
+          // the admin hasn't tagged add-ons with this hotel's location yet.
+          const loadAddOns = async () => {
+            try {
+              if (h.location?.slug) {
+                const r1 = await api.get('/add-ons', { params: { location: h.location.slug, limit: 6 } });
+                const matched = r1.data?.data?.items || [];
+                if (matched.length > 0) {
+                  if (!cancelled) setAddOns(matched);
+                  return;
+                }
+              }
+              const r2 = await api.get('/add-ons', { params: { limit: 6 } });
+              if (!cancelled) setAddOns(r2.data?.data?.items || []);
+            } catch { /* swallow — section just hides if it fails */ }
+          };
+          loadAddOns();
 
-          // Similar hotels — prefer same-location, exclude the current one.
-          const simParams = h.location?.slug ? { location: h.location.slug, limit: 12 } : { limit: 12 };
-          api.get('/hotels', { params: simParams })
-            .then((r) => {
-              if (cancelled) return;
-              const all = r.data?.data?.items || [];
-              setSimilarHotels(all.filter((x) => x.id !== h.id).slice(0, 8));
-            })
-            .catch(() => {});
+          // Similar hotels — prefer same-location, then any other hotels.
+          const loadSimilar = async () => {
+            try {
+              let pool = [];
+              if (h.location?.slug) {
+                const r1 = await api.get('/hotels', { params: { location: h.location.slug, limit: 12 } });
+                pool = (r1.data?.data?.items || []).filter((x) => x.id !== h.id);
+              }
+              if (pool.length === 0) {
+                const r2 = await api.get('/hotels', { params: { limit: 12 } });
+                pool = (r2.data?.data?.items || []).filter((x) => x.id !== h.id);
+              }
+              if (!cancelled) setSimilarHotels(pool.slice(0, 8));
+            } catch { /* swallow */ }
+          };
+          loadSimilar();
         }
       })
       .catch(() => {})
@@ -315,26 +336,11 @@ export default function HotelDetailPage() {
         </div>
 
         {/* Suggested add-ons */}
-        {addOns.length > 0 && (
-          <Section icon={Sparkles} title="Suggested add-on activities">
-            <div className="flex items-end justify-between mb-4 -mt-1">
-              <p className="text-sm text-ink-muted">
-                Make your stay more memorable with these popular extras.
-              </p>
-              <Link
-                to={hotel.location?.slug ? `/add-ons?location=${hotel.location.slug}` : '/add-ons'}
-                className="text-sm text-brand font-semibold hover:underline whitespace-nowrap"
-              >
-                View all →
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {addOns.map((a) => (
-                <AddOnCard key={a.id} addOn={a} />
-              ))}
-            </div>
-          </Section>
-        )}
+        <AddOnsCarousel
+          addOns={addOns}
+          subtitle="Make your stay more memorable with these popular extras."
+          viewAllHref={hotel.location?.slug ? `/add-ons?location=${hotel.location.slug}` : '/add-ons'}
+        />
 
         {/* Similar hotels */}
         {similarHotels.length > 0 && (
@@ -414,6 +420,15 @@ export default function HotelDetailPage() {
             </div>
           </Section>
         )}
+
+        {/* Reviews */}
+        <ReviewsBlock
+          entityType="hotel"
+          entityId={hotel.id}
+          reviews={hotel.reviews}
+          reviewCount={hotel.reviewCount}
+          averageRating={hotel.rating}
+        />
 
         {/* Terms & Privacy */}
         {(hotel.termsConditions || hotel.privacyPolicy) && (

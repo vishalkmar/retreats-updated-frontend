@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import {
   MapPin, Calendar, Clock, Heart, Share2, Trophy,
   Shield, ShieldCheck, ChevronDown, Users,
+  Sparkles, CalendarDays, Star,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -13,6 +14,8 @@ import 'swiper/css/thumbs';
 import 'swiper/css/pagination';
 
 import api, { fileUrl } from '../../services/api';
+import ReviewsBlock from '../../components/public/ReviewsBlock.jsx';
+import AddOnsCarousel from '../../components/public/AddOnsCarousel.jsx';
 
 function formatDate(iso) {
   if (!iso) return '';
@@ -24,6 +27,8 @@ function formatDate(iso) {
 export default function EventDetailPage() {
   const { slug } = useParams();
   const [event, setEvent] = useState(null);
+  const [addOns, setAddOns] = useState([]);
+  const [similarEvents, setSimilarEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [thumbsSwiper, setThumbsSwiper] = useState(null);
 
@@ -44,6 +49,47 @@ export default function EventDetailPage() {
         const firstSport = (e?.sports || [])[0]?.name || '';
         setSelectedSport(firstSport);
         setSelectedDate(e?.eventDate || '');
+
+        if (e?.id) {
+          // Suggested add-ons — try location-matched first, then any active
+          // add-on so the section is helpful even when admin tagging is sparse.
+          const loadAddOns = async () => {
+            try {
+              if (e.location?.slug) {
+                const r1 = await api.get('/add-ons', { params: { location: e.location.slug, limit: 6 } });
+                const matched = r1.data?.data?.items || [];
+                if (matched.length > 0) {
+                  if (!cancelled) setAddOns(matched);
+                  return;
+                }
+              }
+              const r2 = await api.get('/add-ons', { params: { limit: 6 } });
+              if (!cancelled) setAddOns(r2.data?.data?.items || []);
+            } catch { /* swallow */ }
+          };
+          loadAddOns();
+
+          // Similar events — prefer same event-type, then same location, then any.
+          const loadSimilar = async () => {
+            try {
+              let pool = [];
+              if (e.eventType?.slug) {
+                const r1 = await api.get('/events', { params: { eventType: e.eventType.slug, limit: 12 } });
+                pool = (r1.data?.data?.items || []).filter((x) => x.id !== e.id);
+              }
+              if (pool.length === 0 && e.location?.slug) {
+                const r2 = await api.get('/events', { params: { location: e.location.slug, limit: 12 } });
+                pool = (r2.data?.data?.items || []).filter((x) => x.id !== e.id);
+              }
+              if (pool.length === 0) {
+                const r3 = await api.get('/events', { params: { limit: 12 } });
+                pool = (r3.data?.data?.items || []).filter((x) => x.id !== e.id);
+              }
+              if (!cancelled) setSimilarEvents(pool.slice(0, 8));
+            } catch { /* swallow */ }
+          };
+          loadSimilar();
+        }
       })
       .catch(() => {})
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -402,6 +448,38 @@ export default function EventDetailPage() {
           </Section>
         )}
 
+        {/* Suggested add-on activities */}
+        <AddOnsCarousel
+          addOns={addOns}
+          subtitle="Make a weekend of it with these popular nearby experiences."
+          viewAllHref={event.location?.slug ? `/add-ons?location=${event.location.slug}` : '/add-ons'}
+        />
+
+        {/* Similar events */}
+        {similarEvents.length > 0 && (
+          <Section icon={CalendarDays} title="Similar events you may like">
+            <p className="text-sm text-ink-muted -mt-1 mb-4">
+              {event.eventType?.name
+                ? `More ${event.eventType.name} events you might enjoy.`
+                : 'Hand-picked events you might enjoy.'}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {similarEvents.map((e) => (
+                <SimilarEventCard key={e.id} event={e} />
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {/* Reviews */}
+        <ReviewsBlock
+          entityType="event"
+          entityId={event.id}
+          reviews={event.reviews}
+          reviewCount={event.reviewCount}
+          averageRating={event.rating}
+        />
+
         {/* Terms & privacy */}
         {(event.termsConditions || event.privacyPolicy) && (
           <div className="grid md:grid-cols-2 gap-5">
@@ -431,5 +509,101 @@ function Section({ icon: Icon, title, children, compact }) {
       </h3>
       {children}
     </section>
+  );
+}
+
+function SuggestedAddOnCard({ addOn }) {
+  return (
+    <Link
+      to={`/add-ons/${addOn.slug}`}
+      className="card overflow-hidden hover:shadow-lg transition group block"
+    >
+      <div className="aspect-[16/10] bg-slate-100 relative overflow-hidden">
+        {addOn.mainImage ? (
+          <img
+            src={fileUrl(addOn.mainImage)}
+            alt={addOn.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-ink-muted">
+            <Sparkles size={28} />
+          </div>
+        )}
+        {addOn.isFeatured && (
+          <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded-full bg-amber-400 text-amber-900 font-semibold">
+            POPULAR
+          </span>
+        )}
+      </div>
+      <div className="p-4">
+        <h4 className="font-semibold leading-tight line-clamp-2 group-hover:text-brand transition">
+          {addOn.name}
+        </h4>
+        {addOn.location?.name && (
+          <div className="text-xs text-ink-muted mt-1 flex items-center gap-1">
+            <MapPin size={11} /> {addOn.location.name}
+          </div>
+        )}
+        <div className="mt-3 pt-3 border-t flex items-baseline justify-between gap-2">
+          <div>
+            <span className="text-lg font-bold text-brand">
+              {addOn.currency} {Number(addOn.price).toLocaleString()}
+            </span>
+            <div className="text-[10px] text-ink-muted">per person</div>
+          </div>
+          <span className="text-xs text-brand font-semibold">View →</span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function SimilarEventCard({ event: e }) {
+  return (
+    <Link
+      to={`/events/${e.slug}`}
+      className="card overflow-hidden hover:shadow-lg transition group block"
+    >
+      <div className="aspect-[16/10] bg-slate-100 relative overflow-hidden">
+        {e.mainImage ? (
+          <img
+            src={fileUrl(e.mainImage)}
+            alt={e.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-ink-muted">
+            <CalendarDays size={28} />
+          </div>
+        )}
+        {Number(e.rating) > 0 && (
+          <span className="absolute top-2 right-2 bg-emerald-600 text-white font-bold rounded px-1.5 py-0.5 text-[11px] inline-flex items-center gap-1">
+            <Star size={10} className="fill-current" />
+            {Number(e.rating).toFixed(1)}
+          </span>
+        )}
+      </div>
+      <div className="p-3">
+        <h4 className="font-semibold leading-tight line-clamp-2 group-hover:text-brand transition">
+          {e.name}
+        </h4>
+        {e.eventDate && (
+          <div className="text-xs text-ink-muted mt-1 flex items-center gap-1">
+            <Calendar size={11} /> {new Date(e.eventDate).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}
+          </div>
+        )}
+        {e.location?.name && (
+          <div className="text-xs text-ink-muted mt-0.5 flex items-center gap-1">
+            <MapPin size={11} /> {e.location.name}
+          </div>
+        )}
+        {Number(e.price) > 0 && (
+          <div className="mt-2 text-base font-bold text-brand">
+            {e.currency} {Number(e.price).toLocaleString()}
+          </div>
+        )}
+      </div>
+    </Link>
   );
 }
