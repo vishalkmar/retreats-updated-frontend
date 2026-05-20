@@ -9,7 +9,7 @@ import api, { fileUrl } from '../../services/api';
 import HotelCard from './HotelCard.jsx';
 import PackageCard from './PackageCard.jsx';
 import EventCard from './EventCard.jsx';
-import PriceRangeSlider from './PriceRangeSlider.jsx';
+import PriceTierFilter from './PriceTierFilter.jsx';
 import DatePicker from '../common/DatePicker.jsx';
 
 // Default tab metadata. Admin-managed overrides (label, sublabel, image,
@@ -286,17 +286,20 @@ export default function HomeResultsTabs() {
 
   useEffect(() => {
     let cancelled = false;
-    const extractPrice = (item) => Number(item?.priceFrom || item?.priceOriginal || item?.price || 0) || 0;
+    // Three tiny aggregate queries instead of three full `limit:200` list
+    // fetches with all joins (was ~25 s combined on a populated DB).
     Promise.allSettled([
-      api.get('/hotels', { params: { limit: 200 } }),
-      api.get('/packages', { params: { limit: 200 } }),
-      api.get('/events', { params: { limit: 200 } }),
+      api.get('/hotels/price-stats'),
+      api.get('/packages/price-stats'),
+      api.get('/events/price-stats'),
     ]).then((results) => {
       if (cancelled) return;
-      const allItems = results.flatMap((res) => (
-        res.status === 'fulfilled' ? (res.value?.data?.data?.items || []) : []
-      ));
-      const peak = Math.max(0, ...allItems.map(extractPrice));
+      const peak = Math.max(
+        0,
+        ...results.map((r) =>
+          r.status === 'fulfilled' ? Number(r.value?.data?.data?.max) || 0 : 0
+        ),
+      );
       const rounded = Math.max(5000, Math.ceil(peak / 5000) * 5000);
       setDataMaxPrice(rounded);
     });
@@ -758,6 +761,21 @@ function FilterSidebar({
             </div>
           </FilterBlock>
 
+          {/* Price tier — pinned at top of the filter list. Dynamic tiers built
+              from the live catalogue ceiling, with a safe fallback. */}
+          <FilterBlock label="Price">
+            <PriceTierFilter
+              priceMin={0}
+              priceMax={priceMax}
+              value={filters.maxPrice}
+              onChange={(v) => onChange({
+                ...filters,
+                minPrice: '',
+                maxPrice: v,
+              })}
+            />
+          </FilterBlock>
+
           {/* Location — applies to all */}
           <FilterBlock label="Location">
             {locationsList.length === 0 ? (
@@ -798,24 +816,6 @@ function FilterSidebar({
               </div>
             </FilterBlock>
           )}
-
-          {/* Price range — slider scales to the highest live price */}
-          <FilterBlock label="Price">
-            <PriceRangeSlider
-              min={0}
-              max={priceMax}
-              step={500}
-              value={[
-                filters.minPrice !== '' ? Number(filters.minPrice) : 0,
-                filters.maxPrice !== '' ? Number(filters.maxPrice) : priceMax,
-              ]}
-              onChange={([lo, hi]) => onChange({
-                ...filters,
-                minPrice: lo === 0 ? '' : String(lo),
-                maxPrice: hi === priceMax ? '' : String(hi),
-              })}
-            />
-          </FilterBlock>
 
           {/* User rating — hotels & packages */}
           {(activeTab === 'all' || activeTab === 'hotels' || activeTab === 'packages') && (

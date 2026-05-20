@@ -4,6 +4,7 @@ import { Filter, X, LayoutGrid, List as ListIcon } from 'lucide-react';
 import api from '../../services/api';
 import EventCard from '../../components/public/EventCard.jsx';
 import DatePicker from '../../components/common/DatePicker.jsx';
+import PriceTierFilter from '../../components/public/PriceTierFilter.jsx';
 
 const SORTS = [
   { value: '', label: 'Recommended first' },
@@ -22,6 +23,7 @@ export default function EventsListPage() {
 
   const [locations, setLocations] = useState([]);
   const [eventTypes, setEventTypes] = useState([]);
+  const [priceBounds, setPriceBounds] = useState({ min: 0, max: 0 });
 
   const [filters, setFilters] = useState({
     search: searchParams.get('search') || '',
@@ -31,6 +33,7 @@ export default function EventsListPage() {
     toDate: searchParams.get('toDate') || searchParams.get('endDate') || '',
     fromTime: searchParams.get('fromTime') || '',
     toTime: searchParams.get('toTime') || '',
+    maxPrice: searchParams.get('maxPrice') || '',
     sort: searchParams.get('sort') || '',
     page: parseInt(searchParams.get('page') || '1', 10),
   });
@@ -43,6 +46,13 @@ export default function EventsListPage() {
       api.get('/locations').then((r) => setLocations(r.data?.data?.items || [])),
       api.get('/event-types').then((r) => setEventTypes(r.data?.data?.items || [])),
     ]).catch(() => {});
+
+    api.get('/events/price-stats')
+      .then((res) => {
+        const d = res.data?.data || {};
+        setPriceBounds({ min: Number(d.min) || 0, max: Number(d.max) || 0 });
+      })
+      .catch(() => {});
   }, []);
 
   const queryString = useMemo(() => {
@@ -78,10 +88,11 @@ export default function EventsListPage() {
   const clearAll = () => setFilters({
     search: '', location: '', eventType: '',
     fromDate: '', toDate: '', fromTime: '', toTime: '',
+    maxPrice: '',
     sort: '', page: 1,
   });
 
-  const hasFilters = ['search', 'location', 'eventType', 'fromDate', 'toDate', 'fromTime', 'toTime']
+  const hasFilters = ['search', 'location', 'eventType', 'fromDate', 'toDate', 'fromTime', 'toTime', 'maxPrice']
     .some((k) => filters[k]);
 
   const headerSubtitle = `${pagination.total || 0} events found${
@@ -119,6 +130,9 @@ export default function EventsListPage() {
                 onClear={() => { update('fromTime', ''); update('toTime', ''); }}
               />
             )}
+            {filters.maxPrice && (
+              <Chip label={`Under ₹${Number(filters.maxPrice).toLocaleString()}`} onClear={() => update('maxPrice', '')} />
+            )}
             <button onClick={clearAll} className="text-sm text-brand font-semibold hover:underline ml-2">
               Clear all
             </button>
@@ -142,6 +156,16 @@ export default function EventsListPage() {
                   placeholder="Cricket Box…"
                   value={filters.search}
                   onChange={(e) => update('search', e.target.value)}
+                />
+              </FilterBlock>
+
+              {/* Price tier — pinned at top, dynamic from live catalogue */}
+              <FilterBlock label="Price">
+                <PriceTierFilter
+                  priceMin={priceBounds.min}
+                  priceMax={priceBounds.max}
+                  value={filters.maxPrice}
+                  onChange={(v) => update('maxPrice', v)}
                 />
               </FilterBlock>
 

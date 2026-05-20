@@ -154,30 +154,58 @@ export default function RichTextEditor({
     emit();
   };
 
-  // Apply an inline style to the nearest block ancestor of the current selection
-  // (P / H1–H6 / LI / DIV / BLOCKQUOTE). Falls back to wrapping the selection in
-  // a span if no block ancestor is found. Used for properties like line-height
-  // that are paragraph-level rather than character-level.
+  // Apply an inline style to EVERY block (P / H1–H6 / LI / DIV / BLOCKQUOTE …)
+  // that intersects the current selection. This is what makes line-height and
+  // paragraph-spacing work the way Word does: pick a few paragraphs, hit "1.0",
+  // and ALL of them change — not just the first. Falls back to nearest-ancestor
+  // when there's no selectable block descendant, and to wrapping in a span as a
+  // last resort.
   const setBlockStyle = (styleProp, styleValue) => {
     focusEditor();
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    // 1) Collect every block descendant that the selection range touches.
+    const blockSelector = 'p, div, li, h1, h2, h3, h4, h5, h6, blockquote, pre, td, th';
+    const candidates = editor.querySelectorAll(blockSelector);
+    const blocks = [];
+    candidates.forEach((el) => {
+      try {
+        if (range.intersectsNode(el)) blocks.push(el);
+      } catch {
+        /* range can throw for detached nodes — skip */
+      }
+    });
+
+    if (blocks.length > 0) {
+      blocks.forEach((b) => { b.style[styleProp] = styleValue; });
+      emit();
+      return;
+    }
+
+    // 2) No matching descendants — climb to nearest block ancestor of the anchor.
     let node = sel.anchorNode;
     if (node && node.nodeType === Node.TEXT_NODE) node = node.parentNode;
-    while (
-      node &&
-      node !== editorRef.current &&
-      !BLOCK_TAGS.has(node.tagName)
-    ) {
+    while (node && node !== editor && !BLOCK_TAGS.has(node.tagName)) {
       node = node.parentNode;
     }
-    if (node && node !== editorRef.current) {
+    if (node && node !== editor) {
       node.style[styleProp] = styleValue;
       emit();
       return;
     }
-    // No block ancestor found — fall back to wrapping the selection
-    wrapSelection(styleProp, styleValue);
+
+    // 3) Final fallback — wrap the selection in a span, or set on the editor
+    //    itself if nothing is selected (so a fresh editor with raw text reacts).
+    if (!range.collapsed) {
+      wrapSelection(styleProp, styleValue);
+      return;
+    }
+    editor.style[styleProp] = styleValue;
+    emit();
   };
 
   // Find the nearest <ul> or <ol> that contains the current selection and

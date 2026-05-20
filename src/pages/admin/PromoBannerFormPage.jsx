@@ -83,7 +83,7 @@ export default function PromoBannerFormPage() {
     clearDraft,
     discardDraft,
     hasDraft,
-  } = usePersistedForm(`banner-form:${id || 'new'}`, blankForm);
+  } = usePersistedForm(`banner-form:${id || 'new'}`, blankForm, { editing });
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(editing);
 
@@ -310,7 +310,11 @@ export default function PromoBannerFormPage() {
           {hasDraft && (
             <button
               type="button"
-              onClick={() => { if (confirm('Discard unsaved draft?')) discardDraft(); }}
+              onClick={() => {
+                if (!confirm('Discard unsaved draft and reload from the server?')) return;
+                discardDraft();
+                if (editing) load();
+              }}
               className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100"
             >
               Discard draft

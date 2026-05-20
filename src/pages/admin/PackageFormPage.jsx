@@ -89,7 +89,7 @@ export default function PackageFormPage() {
     clearDraft,
     discardDraft,
     hasDraft,
-  } = usePersistedForm(`package-form:${id || 'new'}`, blankForm);
+  } = usePersistedForm(`package-form:${id || 'new'}`, blankForm, { editing });
   const [pkg, setPkg] = useState(null);
   const [loading, setLoading] = useState(editing);
   const [submitting, setSubmitting] = useState(false);
@@ -302,9 +302,13 @@ export default function PackageFormPage() {
           {hasDraft && (
             <button
               type="button"
-              onClick={() => { if (confirm('Discard unsaved draft and reset the form?')) discardDraft(); }}
+              onClick={() => {
+                if (!confirm('Discard unsaved draft and reload from the server?')) return;
+                discardDraft();
+                if (editing) loadPkg();
+              }}
               className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100"
-              title="Restore the form to a clean state — discards any unsaved changes"
+              title="Discard unsaved changes and reload from the server"
             >
               Discard draft
             </button>

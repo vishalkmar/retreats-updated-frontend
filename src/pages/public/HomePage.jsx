@@ -4,24 +4,18 @@ import HomeResultsTabs from '../../components/public/HomeResultsTabs.jsx';
 import PersonalisedRecommendationCTA from '../../components/public/PersonalisedRecommendationCTA.jsx';
 import PromoBannerSection from '../../components/public/PromoBannerSection.jsx';
 import TestimonialsSection from '../../components/public/TestimonialsSection.jsx';
-import ClientReviewsSection from '../../components/public/ClientReviewsSection.jsx';
 import VideoTestimonialsBand from '../../components/public/VideoTestimonialsBand.jsx';
 import BlogsSection from '../../components/public/BlogsSection.jsx';
 
 export default function HomePage() {
   return (
     <>
-      {/* Hero is rendered by <PageHero/> in PublicLayout. Search bar sits
-          right below it (with a negative top margin to overlap the hero edge).
-          AuditChecklistSection sits between the search bar and the featured
-          retreats grid — it's our trust-and-safety strip. */}
       <SearchTabs />
       <AuditChecklistSection />
       <HomeResultsTabs />
       <PersonalisedRecommendationCTA />
       <VideoTestimonialsBand />
       <PromoBannerSection page="home" position="below-video-testimonials" />
-      <ClientReviewsSection />
       <TestimonialsSection />
       <BlogsSection />
     </>

@@ -658,66 +658,230 @@ function RichHtml({ html, className = '' }) {
   );
 }
 
+// Compact card — the whole card is clickable and opens the full profile modal.
 function TrainerCard({ trainer: t }) {
-  const socials = t.socials || {};
+  const [open, setOpen] = useState(false);
+
   return (
-    <article className="rounded-2xl border bg-white p-4 hover:shadow-md transition flex gap-4">
-      <div className="shrink-0 w-20 h-20 rounded-full overflow-hidden bg-slate-100 flex items-center justify-center">
-        {t.photo ? (
-          <img src={fileUrl(t.photo)} alt={t.name} className="w-full h-full object-cover" />
-        ) : (
-          <UserIcon size={28} className="text-ink-muted" />
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <h4 className="font-display font-semibold text-base leading-tight">{t.name}</h4>
-        {t.role && (
-          <div className="text-xs text-brand font-medium mt-0.5 flex items-center gap-1">
-            <Briefcase size={11} /> {t.role}
-          </div>
-        )}
-        <div className="flex items-center gap-3 text-[11px] text-ink-muted mt-1 flex-wrap">
-          {t.experienceYears != null && (
-            <span className="inline-flex items-center gap-1">
-              <Award size={11} /> {t.experienceYears}+ yrs
-            </span>
-          )}
-          {t.languages?.length > 0 && (
-            <span className="inline-flex items-center gap-1">
-              <Languages size={11} /> {t.languages.slice(0, 3).join(', ')}
-            </span>
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="group text-left w-full rounded-2xl border bg-white p-4 hover:shadow-xl hover:-translate-y-0.5 hover:border-brand/40 transition-all flex gap-4 focus:outline-none focus:ring-2 focus:ring-brand/40"
+      >
+        <div className="shrink-0 w-20 h-20 rounded-full overflow-hidden bg-gradient-to-br from-brand/10 to-emerald-100 flex items-center justify-center ring-2 ring-white shadow-sm">
+          {t.photo ? (
+            <img src={fileUrl(t.photo)} alt={t.name} className="w-full h-full object-cover" />
+          ) : (
+            <UserIcon size={28} className="text-ink-muted" />
           )}
         </div>
-        {t.shortBio && (
-          <p className="text-sm text-ink-muted mt-2 line-clamp-3">{t.shortBio}</p>
-        )}
-        {t.specialties?.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2">
-            {t.specialties.slice(0, 4).map((s) => (
-              <span key={s} className="text-[10px] px-1.5 py-0.5 rounded-full bg-brand/10 text-brand">
-                {s}
+        <div className="flex-1 min-w-0">
+          <h4 className="font-display font-semibold text-base leading-tight truncate group-hover:text-brand transition-colors">
+            {t.name}
+          </h4>
+          {t.role && (
+            <div className="text-xs text-brand font-medium mt-0.5 flex items-center gap-1 truncate">
+              <Briefcase size={11} /> {t.role}
+            </div>
+          )}
+          <div className="flex items-center gap-3 text-[11px] text-ink-muted mt-1.5 flex-wrap">
+            {t.experienceYears != null && (
+              <span className="inline-flex items-center gap-1">
+                <Award size={11} /> {t.experienceYears}+ yrs
               </span>
-            ))}
-          </div>
-        )}
-        {(socials.instagram || socials.website || socials.linkedin || socials.youtube) && (
-          <div className="flex items-center gap-2 mt-3 text-ink-muted">
-            {socials.instagram && (
-              <a href={socials.instagram} target="_blank" rel="noreferrer" className="hover:text-brand"><Instagram size={14} /></a>
             )}
-            {socials.website && (
-              <a href={socials.website} target="_blank" rel="noreferrer" className="hover:text-brand"><Globe size={14} /></a>
-            )}
-            {socials.linkedin && (
-              <a href={socials.linkedin} target="_blank" rel="noreferrer" className="hover:text-brand"><Linkedin size={14} /></a>
-            )}
-            {socials.youtube && (
-              <a href={socials.youtube} target="_blank" rel="noreferrer" className="hover:text-brand"><Youtube size={14} /></a>
+            {t.languages?.length > 0 && (
+              <span className="inline-flex items-center gap-1">
+                <Languages size={11} /> {t.languages.slice(0, 2).join(', ')}
+                {t.languages.length > 2 && ' +'}
+              </span>
             )}
           </div>
-        )}
+          <div className="mt-2 text-[11px] font-semibold text-brand inline-flex items-center gap-1">
+            View profile <span aria-hidden>→</span>
+          </div>
+        </div>
+      </button>
+
+      {open && <TrainerProfileModal trainer={t} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+// Full profile popup. Closes on overlay-click, X-button or Escape.
+function TrainerProfileModal({ trainer: t, onClose }) {
+  const socials = t.socials || {};
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
+
+  const stop = (e) => e.stopPropagation();
+
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+      style={{ animation: 'fadeIn 0.2s ease-out both' }}
+    >
+      <div
+        onClick={stop}
+        className="bg-white w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl shadow-2xl relative max-h-[92vh] flex flex-col"
+      >
+        {/* Close */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 z-10 w-10 h-10 rounded-full bg-white/95 hover:bg-white shadow-md text-ink hover:text-red-600 flex items-center justify-center transition"
+          aria-label="Close trainer profile"
+        >
+          <XIcon size={20} />
+        </button>
+
+        {/* Banner / header */}
+        <div className="relative bg-gradient-to-br from-brand to-emerald-600 px-6 sm:px-8 pt-8 pb-16 sm:pb-20 rounded-t-3xl text-white">
+          <h3 className="text-2xl sm:text-3xl font-display font-bold leading-tight pr-12">
+            {t.name}
+          </h3>
+          {t.role && (
+            <div className="mt-1.5 inline-flex items-center gap-1.5 text-sm font-medium text-white/90">
+              <Briefcase size={14} /> {t.role}
+            </div>
+          )}
+        </div>
+
+        {/* Photo overlapping the banner */}
+        <div className="relative -mt-12 sm:-mt-14 px-6 sm:px-8">
+          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl overflow-hidden bg-slate-100 ring-4 ring-white shadow-xl">
+            {t.photo ? (
+              <img src={fileUrl(t.photo)} alt={t.name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center"><UserIcon size={48} className="text-ink-muted" /></div>
+            )}
+          </div>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="overflow-y-auto px-6 sm:px-8 py-5 space-y-5">
+          {/* Quick stats row */}
+          <div className="flex flex-wrap gap-2.5 text-xs">
+            {t.experienceYears != null && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 text-amber-800 font-semibold">
+                <Award size={13} /> {t.experienceYears}+ years experience
+              </span>
+            )}
+            {t.languages?.length > 0 && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-sky-50 text-sky-800 font-semibold">
+                <Languages size={13} /> {t.languages.join(', ')}
+              </span>
+            )}
+            {t.isFeatured && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand/10 text-brand font-semibold">
+                <Star size={13} className="fill-current" /> Featured
+              </span>
+            )}
+          </div>
+
+          {t.shortBio && (
+            <p className="text-sm text-ink leading-relaxed italic border-l-4 border-brand/40 pl-4">
+              {t.shortBio}
+            </p>
+          )}
+
+          {t.bioRich && (
+            <div>
+              <h4 className="text-sm font-semibold uppercase tracking-wide text-ink-muted mb-2">About</h4>
+              <div
+                className="rich-prose text-sm"
+                dangerouslySetInnerHTML={{ __html: t.bioRich }}
+              />
+            </div>
+          )}
+
+          {t.specialties?.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold uppercase tracking-wide text-ink-muted mb-2">Specialties</h4>
+              <div className="flex flex-wrap gap-1.5">
+                {t.specialties.map((s) => (
+                  <span key={s} className="text-xs px-2.5 py-1 rounded-full bg-brand/10 text-brand font-medium">
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {t.certifications?.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold uppercase tracking-wide text-ink-muted mb-2">Certifications</h4>
+              <ul className="space-y-1.5">
+                {t.certifications.map((c, i) => (
+                  <li key={i} className="text-sm flex items-start gap-2">
+                    <Award size={14} className="text-brand mt-0.5 shrink-0" />
+                    <span>
+                      <span className="font-medium">{c.title || c.name}</span>
+                      {c.issuer && <span className="text-ink-muted"> — {c.issuer}</span>}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {(socials.instagram || socials.website || socials.linkedin || socials.youtube) && (
+            <div>
+              <h4 className="text-sm font-semibold uppercase tracking-wide text-ink-muted mb-2">Connect</h4>
+              <div className="flex items-center gap-2 flex-wrap">
+                {socials.instagram && (
+                  <a href={socials.instagram} target="_blank" rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 hover:border-brand hover:text-brand text-xs font-medium transition">
+                    <Instagram size={13} /> Instagram
+                  </a>
+                )}
+                {socials.website && (
+                  <a href={socials.website} target="_blank" rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 hover:border-brand hover:text-brand text-xs font-medium transition">
+                    <Globe size={13} /> Website
+                  </a>
+                )}
+                {socials.linkedin && (
+                  <a href={socials.linkedin} target="_blank" rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 hover:border-brand hover:text-brand text-xs font-medium transition">
+                    <Linkedin size={13} /> LinkedIn
+                  </a>
+                )}
+                {socials.youtube && (
+                  <a href={socials.youtube} target="_blank" rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 hover:border-brand hover:text-brand text-xs font-medium transition">
+                    <Youtube size={13} /> YouTube
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="border-t px-6 sm:px-8 py-3.5 flex justify-end bg-surface-alt rounded-b-3xl">
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn-outline text-sm"
+          >
+            Close
+          </button>
+        </div>
       </div>
-    </article>
+    </div>
   );
 }
 

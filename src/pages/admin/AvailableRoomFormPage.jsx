@@ -60,7 +60,8 @@ export default function AvailableRoomFormPage() {
     hasDraft,
   } = usePersistedForm(
     `room-form:${id || `new-${presetHotelId || 'noid'}`}`,
-    { ...blankForm, hotelId: presetHotelId || '' }
+    { ...blankForm, hotelId: presetHotelId || '' },
+    { editing },
   );
   const [room, setRoom] = useState(null);
   const [loading, setLoading] = useState(editing);
@@ -217,7 +218,11 @@ export default function AvailableRoomFormPage() {
           {hasDraft && (
             <button
               type="button"
-              onClick={() => { if (confirm('Discard unsaved draft and reset the form?')) discardDraft(); }}
+              onClick={() => {
+                if (!confirm('Discard unsaved draft and reload from the server?')) return;
+                discardDraft();
+                if (editing) loadRoom();
+              }}
               className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100"
             >
               Discard draft

@@ -56,7 +56,7 @@ export default function AddOnActivityFormPage() {
     clearDraft,
     discardDraft,
     hasDraft,
-  } = usePersistedForm(`addon-form:${id || 'new'}`, blankForm);
+  } = usePersistedForm(`addon-form:${id || 'new'}`, blankForm, { editing });
   const [activity, setActivity] = useState(null);
   const [loading, setLoading] = useState(editing);
   const [submitting, setSubmitting] = useState(false);
@@ -180,7 +180,11 @@ export default function AddOnActivityFormPage() {
           {hasDraft && (
             <button
               type="button"
-              onClick={() => { if (confirm('Discard unsaved draft and reset the form?')) discardDraft(); }}
+              onClick={() => {
+                if (!confirm('Discard unsaved draft and reload from the server?')) return;
+                discardDraft();
+                if (editing) load();
+              }}
               className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100"
             >
               Discard draft

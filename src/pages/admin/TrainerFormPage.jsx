@@ -147,7 +147,7 @@ export default function TrainerFormPage() {
     clearDraft,
     discardDraft,
     hasDraft,
-  } = usePersistedForm(`trainer-form:${id || 'new'}`, blankForm);
+  } = usePersistedForm(`trainer-form:${id || 'new'}`, blankForm, { editing });
   const [loading, setLoading] = useState(editing);
   const [submitting, setSubmitting] = useState(false);
   const [photo, setPhoto] = useState(null);
@@ -254,7 +254,7 @@ export default function TrainerFormPage() {
           {hasDraft && (
             <button
               type="button"
-              onClick={discardDraft}
+              onClick={() => { discardDraft(); if (editing) load(); }}
               className="btn-ghost text-xs"
               title="Discard local draft and reload from server"
             >

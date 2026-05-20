@@ -44,6 +44,7 @@ const websiteItems = [
   { to: '/admin/website/site-details', label: 'Site Details', icon: Building2 },
   { to: '/admin/website/promo-banners', label: 'Promo Banners', icon: Megaphone },
   { to: '/admin/website/featured-tabs', label: 'Featured Tabs', icon: Layers },
+  { to: '/admin/website/personalised-recommendation', label: 'Personalised CTA', icon: Sparkles },
 ];
 
 const contentItems = [

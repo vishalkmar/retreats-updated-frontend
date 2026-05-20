@@ -55,6 +55,7 @@ import BlogFormPage from './pages/admin/BlogFormPage.jsx';
 import BlogCategoriesPage from './pages/admin/BlogCategoriesPage.jsx';
 import ReviewsPage from './pages/admin/ReviewsPage.jsx';
 import SiteDetailsPage from './pages/admin/SiteDetailsPage.jsx';
+import PersonalisedRecommendationPage from './pages/admin/PersonalisedRecommendationPage.jsx';
 import AuditorsPage from './pages/admin/AuditorsPage.jsx';
 import OfficersPage from './pages/admin/OfficersPage.jsx';
 import SignedPropertiesPage from './pages/admin/SignedPropertiesPage.jsx';
@@ -94,6 +95,7 @@ export default function App() {
         <Route path="website/header-links" element={<HeaderLinksPage />} />
         <Route path="website/theme" element={<ThemeManagementPage />} />
         <Route path="website/site-details" element={<SiteDetailsPage />} />
+        <Route path="website/personalised-recommendation" element={<PersonalisedRecommendationPage />} />
         <Route path="content/cities" element={<CitiesPage />} />
         <Route path="content/categories" element={<CategoriesPage />} />
         <Route path="content/problems" element={<ProblemsPage />} />

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Filter, X, LayoutGrid, List as ListIcon } from 'lucide-react';
 import api from '../../services/api';
 import HotelCard from '../../components/public/HotelCard.jsx';
+import PriceTierFilter from '../../components/public/PriceTierFilter.jsx';
 
 const SORTS = [
   { value: '', label: 'Recommended first' },
@@ -30,6 +31,7 @@ export default function HotelsListPage() {
   const [locations, setLocations] = useState([]);
   const [facilities, setFacilities] = useState([]);
   const [roomViews, setRoomViews] = useState([]);
+  const [priceBounds, setPriceBounds] = useState({ min: 0, max: 0 });
 
   const [filters, setFilters] = useState({
     location: searchParams.get('location') || '',
@@ -52,6 +54,16 @@ export default function HotelsListPage() {
       api.get('/facilities').then((r) => setFacilities(r.data?.data?.items || [])),
       api.get('/room-views').then((r) => setRoomViews(r.data?.data?.items || [])),
     ]).catch(() => {});
+
+    // Discover the live price range via a single lightweight aggregate
+    // endpoint. Replaces two full-include `limit:1` probes that were taking
+    // ~8 s combined.
+    api.get('/hotels/price-stats')
+      .then((res) => {
+        const d = res.data?.data || {};
+        setPriceBounds({ min: Number(d.min) || 0, max: Number(d.max) || 0 });
+      })
+      .catch(() => {});
   }, []);
 
   const queryString = useMemo(() => {
@@ -143,8 +155,8 @@ export default function HotelsListPage() {
             {filters.minRating && (
               <Chip label={`${filters.minRating}+ rating`} onClear={() => update('minRating', '')} />
             )}
-            {filters.minPrice && <Chip label={`Min ${filters.minPrice}`} onClear={() => update('minPrice', '')} />}
-            {filters.maxPrice && <Chip label={`Max ${filters.maxPrice}`} onClear={() => update('maxPrice', '')} />}
+            {filters.minPrice && <Chip label={`Min ₹${Number(filters.minPrice).toLocaleString()}`} onClear={() => update('minPrice', '')} />}
+            {filters.maxPrice && <Chip label={`Under ₹${Number(filters.maxPrice).toLocaleString()}`} onClear={() => update('maxPrice', '')} />}
             <button onClick={clearAll} className="text-sm text-brand font-semibold hover:underline ml-2">
               Clear all
             </button>
@@ -162,19 +174,14 @@ export default function HotelsListPage() {
                 </button>
               </h3>
 
+              {/* Price tier — first filter, dynamic from live catalogue */}
               <FilterBlock label="Price per night">
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="number" placeholder="Min" className="input"
-                    value={filters.minPrice}
-                    onChange={(e) => update('minPrice', e.target.value)}
-                  />
-                  <input
-                    type="number" placeholder="Max" className="input"
-                    value={filters.maxPrice}
-                    onChange={(e) => update('maxPrice', e.target.value)}
-                  />
-                </div>
+                <PriceTierFilter
+                  priceMin={priceBounds.min}
+                  priceMax={priceBounds.max}
+                  value={filters.maxPrice}
+                  onChange={(v) => update('maxPrice', v)}
+                />
               </FilterBlock>
 
               <FilterBlock label="Star category">
