@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
-  MapPin, Calendar, Clock, Heart, Share2, Trophy,
+  MapPin, Calendar, Clock, Share2, Trophy,
   Shield, ShieldCheck, ChevronDown, Users,
   Sparkles, CalendarDays, Star,
 } from 'lucide-react';
@@ -16,6 +16,8 @@ import 'swiper/css/pagination';
 import api, { fileUrl } from '../../services/api';
 import ReviewsBlock from '../../components/public/ReviewsBlock.jsx';
 import AddOnsCarousel from '../../components/public/AddOnsCarousel.jsx';
+import WishlistButton from '../../components/public/WishlistButton.jsx';
+import useRequireLogin from '../../hooks/useRequireLogin.js';
 
 function formatDate(iso) {
   if (!iso) return '';
@@ -26,6 +28,8 @@ function formatDate(iso) {
 
 export default function EventDetailPage() {
   const { slug } = useParams();
+  const navigate = useNavigate();
+  const requireLogin = useRequireLogin();
   const [event, setEvent] = useState(null);
   const [addOns, setAddOns] = useState([]);
   const [similarEvents, setSimilarEvents] = useState([]);
@@ -110,6 +114,12 @@ export default function EventDetailPage() {
       .catch(() => setSlots([]))
       .finally(() => setSlotsLoading(false));
   }, [isSportEvent, event?.id, selectedDate, selectedSport]);
+
+  const handleBook = () => {
+    if (!event) return;
+    const target = `/book/event/${event.id}`;
+    requireLogin(() => navigate(target), { redirectTo: target });
+  };
 
   const onShare = () => {
     if (navigator.share) {
@@ -282,28 +292,19 @@ export default function EventDetailPage() {
                   </div>
                 </div>
 
-                {!isSportEvent && (
-                  <button
-                    type="button"
-                    className="btn-primary w-full mt-4"
-                    onClick={() => toast.success('Booking flow coming soon')}
-                  >
-                    Book now
-                  </button>
-                )}
-                {isSportEvent && (
-                  <a href="#book" className="btn-primary w-full mt-4">
-                    <Trophy size={16} /> Pick a slot
-                  </a>
-                )}
+                <button
+                  type="button"
+                  className="btn-primary w-full mt-4"
+                  onClick={handleBook}
+                >
+                  {isSportEvent ? <><Trophy size={16} /> Book a slot</> : 'Book this event'}
+                </button>
 
                 <div className="flex items-center gap-3 mt-3 text-xs text-ink-muted">
                   <button onClick={onShare} className="inline-flex items-center gap-1 hover:text-brand">
                     <Share2 size={14} /> Share
                   </button>
-                  <button className="inline-flex items-center gap-1 hover:text-brand">
-                    <Heart size={14} /> Save
-                  </button>
+                  <WishlistButton type="event" id={event.id} variant="pill" size={14} className="!py-1 !px-2.5 !text-xs" />
                 </div>
               </div>
             </div>

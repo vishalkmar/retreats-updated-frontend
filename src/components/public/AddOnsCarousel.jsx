@@ -8,6 +8,7 @@ import {
   MapPin, Sparkles, ChevronLeft, ChevronRight, ArrowRight, Users, BadgePercent,
 } from 'lucide-react';
 import { fileUrl } from '../../services/api';
+import WishlistButton from './WishlistButton.jsx';
 
 /**
  * Reusable carousel for "Suggested add-on activities" used on Hotel, Package
@@ -163,6 +164,8 @@ function AddOnPremiumCard({ addOn: a }) {
 
         {/* Gradient overlay on bottom for legibility on hover */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+        <WishlistButton type="addon" id={a.id} className="bottom-3 right-3" />
       </div>
 
       {/* Body */}

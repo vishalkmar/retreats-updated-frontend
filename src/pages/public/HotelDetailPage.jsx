@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   Star, MapPin, Heart, Share2, Play,
   Wifi, Landmark, Shield, ShieldCheck, ChevronDown, Bed, Maximize2,
@@ -16,6 +16,8 @@ import 'swiper/css/pagination';
 import api, { fileUrl } from '../../services/api';
 import ReviewsBlock from '../../components/public/ReviewsBlock.jsx';
 import AddOnsCarousel from '../../components/public/AddOnsCarousel.jsx';
+import WishlistButton from '../../components/public/WishlistButton.jsx';
+import useRequireLogin from '../../hooks/useRequireLogin.js';
 
 const stripHtml = (s) =>
   (s || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
@@ -606,6 +608,12 @@ function AddOnCard({ addOn }) {
 }
 
 function RoomRow({ hotel, room }) {
+  const navigate = useNavigate();
+  const requireLogin = useRequireLogin();
+  const handleBook = () => {
+    const target = `/book/room/${room.id}`;
+    requireLogin(() => navigate(target), { redirectTo: target });
+  };
   return (
     <article className="card flex flex-col md:flex-row overflow-hidden">
       <div className="md:w-56 h-44 md:h-auto shrink-0 bg-slate-100 relative">
@@ -616,6 +624,7 @@ function RoomRow({ hotel, room }) {
             <Bed size={24} />
           </div>
         )}
+        <WishlistButton type="room" id={room.id} className="bottom-3 right-3" />
       </div>
       <div className="flex-1 p-4 flex flex-col">
         <h4 className="font-display font-semibold text-lg leading-tight">{room.name}</h4>
@@ -675,7 +684,7 @@ function RoomRow({ hotel, room }) {
             >
               View details
             </Link>
-            <button type="button" className="btn-primary text-xs whitespace-nowrap" onClick={() => toast.success('Booking flow coming soon')}>
+            <button type="button" className="btn-primary text-xs whitespace-nowrap" onClick={handleBook}>
               Book now
             </button>
           </div>

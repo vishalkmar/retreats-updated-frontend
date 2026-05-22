@@ -1,15 +1,25 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
-  MapPin, Star, Heart, Calendar, ShieldCheck, Award, Flame,
+  MapPin, Star, Calendar, ShieldCheck, Award, Flame,
   Moon, Sun, Sparkles, BadgePercent, Users,
 } from 'lucide-react';
 import { fileUrl } from '../../services/api';
+import WishlistButton from './WishlistButton.jsx';
+import useRequireLogin from '../../hooks/useRequireLogin.js';
 
 // shortDescription may now be rich-text HTML — strip tags for the card teaser.
 const stripHtml = (s) =>
   (s || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 
 export default function PackageCard({ pkg }) {
+  const navigate = useNavigate();
+  const requireLogin = useRequireLogin();
+  const handleBook = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const target = `/book/package/${pkg.id}`;
+    requireLogin(() => navigate(target), { redirectTo: target });
+  };
   const teaser = stripHtml(pkg.shortDescription);
   const reviewsLine =
     pkg.reviewCount > 0
@@ -70,14 +80,7 @@ export default function PackageCard({ pkg }) {
           </span>
         )}
 
-        <button
-          type="button"
-          className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow z-20"
-          aria-label="Save to wishlist"
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-        >
-          <Heart size={16} />
-        </button>
+        <WishlistButton type="package" id={pkg.id} className="bottom-3 right-3" />
 
         {Number(pkg.rating) > 0 && (
           <div className="absolute bottom-3 left-3 inline-flex items-center gap-1 bg-emerald-600 text-white text-xs font-bold rounded-md px-2 py-1 shadow z-20">
@@ -180,13 +183,13 @@ export default function PackageCard({ pkg }) {
             >
               Details
             </Link>
-            <Link
-              to={`${detailHref}#book`}
-              onClick={(e) => e.stopPropagation()}
+            <button
+              type="button"
+              onClick={handleBook}
               className="btn-primary text-sm py-2 px-5"
             >
               Book Now
-            </Link>
+            </button>
           </div>
         </div>
       </div>

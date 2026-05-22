@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { Menu, X, Search, Heart, ExternalLink } from 'lucide-react';
+import { Menu, X, Search, ExternalLink } from 'lucide-react';
 import api from '../../services/api';
 import { usePageHero } from './PageHero.jsx';
+import UserMenu from './UserMenu.jsx';
+import { useUserAuth } from '../../context/UserAuthContext.jsx';
 
 const fallbackLinks = [
   { label: 'Hotels', path: '/hotels' },
@@ -17,6 +19,7 @@ export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [links, setLinks] = useState(fallbackLinks);
   const { hasHero } = usePageHero();
+  const { isAuthenticated, requestLogin } = useUserAuth();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -80,14 +83,6 @@ export default function Header() {
           >
             <Search size={20} />
           </button>
-          <button
-            className={`p-2 rounded-full transition ${
-              solid ? 'text-ink hover:bg-surface-alt' : 'text-white hover:bg-white/10'
-            }`}
-            aria-label="Wishlists"
-          >
-            <Heart size={20} />
-          </button>
           <a
             href="https://traveon.in"
             target="_blank"
@@ -98,6 +93,7 @@ export default function Header() {
             Traveon
             <ExternalLink size={13} />
           </a>
+          <UserMenu darkOnTransparent={!solid} />
         </div>
 
         <button
@@ -135,6 +131,25 @@ export default function Header() {
             >
               Traveon <ExternalLink size={13} />
             </a>
+            <div className="pt-3 mt-2 border-t border-gray-100">
+              {isAuthenticated ? (
+                <NavLink
+                  to="/dashboard"
+                  onClick={() => setOpen(false)}
+                  className="inline-flex items-center justify-center w-full py-2.5 rounded-lg bg-brand text-white font-medium"
+                >
+                  Go to dashboard
+                </NavLink>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => { setOpen(false); requestLogin(); }}
+                  className="inline-flex items-center justify-center w-full py-2.5 rounded-lg bg-brand text-white font-medium"
+                >
+                  Login / Sign up
+                </button>
+              )}
+            </div>
           </nav>
         </div>
       )}

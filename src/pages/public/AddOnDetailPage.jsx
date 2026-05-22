@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
-  MapPin, Heart, Share2, Sparkles, ArrowLeft, Users, ChevronDown,
+  MapPin, Share2, Sparkles, ArrowLeft, Users, ChevronDown,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -12,12 +12,22 @@ import 'swiper/css/thumbs';
 import 'swiper/css/pagination';
 
 import api, { fileUrl } from '../../services/api';
+import WishlistButton from '../../components/public/WishlistButton.jsx';
+import useRequireLogin from '../../hooks/useRequireLogin.js';
 
 export default function AddOnDetailPage() {
   const { slug } = useParams();
+  const navigate = useNavigate();
+  const requireLogin = useRequireLogin();
   const [activity, setActivity] = useState(null);
   const [loading, setLoading] = useState(true);
   const [thumbsSwiper, setThumbsSwiper] = useState(null);
+
+  const handleBook = () => {
+    if (!activity) return;
+    const target = `/book/addon/${activity.id}`;
+    requireLogin(() => navigate(target), { redirectTo: target });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -162,7 +172,7 @@ export default function AddOnDetailPage() {
                 <button
                   type="button"
                   className="btn-primary w-full mt-4"
-                  onClick={() => toast.success('Booking flow coming soon')}
+                  onClick={handleBook}
                 >
                   Book this activity
                 </button>
@@ -171,9 +181,7 @@ export default function AddOnDetailPage() {
                   <button onClick={onShare} className="inline-flex items-center gap-1 hover:text-brand">
                     <Share2 size={14} /> Share
                   </button>
-                  <button className="inline-flex items-center gap-1 hover:text-brand">
-                    <Heart size={14} /> Save
-                  </button>
+                  <WishlistButton type="addon" id={activity.id} variant="pill" size={14} className="!py-1 !px-2.5 !text-xs" />
                 </div>
               </div>
             </div>

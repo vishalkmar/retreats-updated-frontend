@@ -10,8 +10,9 @@ import DatePicker from '../../components/common/DatePicker.jsx';
 // follow the same shape, so a single component handles both.
 
 const RESOURCE_LABEL = {
-  auditors: { title: 'Auditors', singular: 'Auditor', accent: 'brand', endpoint: 'auditors' },
-  officers: { title: 'Centralized Officers', singular: 'Officer', accent: 'amber', endpoint: 'officers' },
+  auditors:     { title: 'Auditors',              singular: 'Auditor',     accent: 'brand',   endpoint: 'auditors' },
+  officers:     { title: 'Centralized Officers',  singular: 'Officer',     accent: 'amber',   endpoint: 'officers' },
+  salespersons: { title: 'Salespersons',          singular: 'Salesperson', accent: 'emerald', endpoint: 'salespersons' },
 };
 
 const empty = { name: '', email: '', phone: '', dob: '', address: '', profilePhoto: null };

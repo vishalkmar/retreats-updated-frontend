@@ -48,6 +48,9 @@ const blankForm = {
   facilities: [],
   itinerary: [], faqs: [],
   hostName: '', hostBio: '',
+  // Check-Availability assignment
+  pwaOwnerId: '', pwaSalespersonId: '',
+  ownerContactName: '', ownerContactEmail: '', ownerContactPhone: '',
   metaTitle: '', metaDescription: '',
   sortOrder: 0,
   categoryIds: [], problemIds: [], activityIds: [],
@@ -108,6 +111,8 @@ export default function PackageFormPage() {
   const [areas, setAreas] = useState([]);
   const [cultures, setCultures] = useState([]);
   const [trainersList, setTrainersList] = useState([]);
+  const [salespersons, setSalespersons] = useState([]);
+  const [pwaOwners, setPwaOwners] = useState([]);
 
   // Load taxonomies
   useEffect(() => {
@@ -136,6 +141,18 @@ export default function PackageFormPage() {
       } catch (err) {
         toast.error('Failed to load taxonomies');
       }
+
+      // Salespersons + property owners for the Check-Availability section.
+      // Failures here are non-fatal — the user can still save without
+      // assigning anyone.
+      try {
+        const [spRes, ownerRes] = await Promise.all([
+          api.get('/pwa/admin/salespersons'),
+          api.get('/pwa/admin/owners'),
+        ]);
+        setSalespersons(spRes.data?.data?.items || []);
+        setPwaOwners(ownerRes.data?.data?.items || []);
+      } catch { /* swallow — UI shows empty dropdowns */ }
     };
     fetchAll();
   }, []);
@@ -193,6 +210,11 @@ export default function PackageFormPage() {
         faqs: p.faqs || [],
         hostName: p.hostName || '',
         hostBio: p.hostBio || '',
+        pwaOwnerId: p.pwaOwnerId ?? '',
+        pwaSalespersonId: p.pwaSalespersonId ?? '',
+        ownerContactName: p.ownerContactName || '',
+        ownerContactEmail: p.ownerContactEmail || '',
+        ownerContactPhone: p.ownerContactPhone || '',
         metaTitle: p.metaTitle || '',
         metaDescription: p.metaDescription || '',
         sortOrder: p.sortOrder ?? 0,
@@ -872,6 +894,77 @@ export default function PackageFormPage() {
               onChange={(v) => change('hostBio', v)}
               placeholder="A short bio for the host…"
               minHeight={150}
+            />
+          </div>
+        </div>
+      </Section>
+
+      {/* Check-Availability — owner + salesperson assignment */}
+      <Section icon={User} title="Booking & contact (Check-Availability)" defaultOpen={false}>
+        <p className="text-xs text-ink-muted -mt-2">
+          When a guest hits “Check availability” on this package, the chosen owner and salesperson
+          get an in-app notification + dummy voice call. Direct contact details below are also
+          used to fire the call when no PWA-registered owner is linked.
+        </p>
+
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label className="label">Linked property owner (PWA)</label>
+            <select
+              className="input"
+              value={form.pwaOwnerId}
+              onChange={(e) => change('pwaOwnerId', e.target.value)}
+            >
+              <option value="">— None —</option>
+              {pwaOwners.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name || o.email} · {o.phone || 'no phone'}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-ink-muted mt-1">
+              If the owner is registered in the PWA, link them here so leads also appear in their owner dashboard.
+            </p>
+          </div>
+          <div>
+            <label className="label">Assigned salesperson (PWA)</label>
+            <select
+              className="input"
+              value={form.pwaSalespersonId}
+              onChange={(e) => change('pwaSalespersonId', e.target.value)}
+            >
+              <option value="">— None —</option>
+              {salespersons.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} · {s.phone || s.email}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="label">Owner contact name</label>
+            <input
+              className="input"
+              value={form.ownerContactName}
+              onChange={(e) => change('ownerContactName', e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="label">Owner contact email</label>
+            <input
+              type="email" className="input"
+              value={form.ownerContactEmail}
+              onChange={(e) => change('ownerContactEmail', e.target.value)}
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="label">Owner contact phone (for voice call)</label>
+            <input
+              type="tel" className="input"
+              value={form.ownerContactPhone}
+              onChange={(e) => change('ownerContactPhone', e.target.value)}
+              placeholder="+91 9XXXXXXXXX"
             />
           </div>
         </div>

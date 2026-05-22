@@ -2,7 +2,18 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 
 import PublicLayout from './layouts/PublicLayout.jsx';
 import AdminLayout from './layouts/AdminLayout.jsx';
+import UserDashboardLayout from './layouts/UserDashboardLayout.jsx';
 import ProtectedRoute from './components/admin/ProtectedRoute.jsx';
+import UserProtectedRoute from './components/public/UserProtectedRoute.jsx';
+import UserDashboardHomePage from './pages/user/UserDashboardHomePage.jsx';
+import UserProfilePage from './pages/user/UserProfilePage.jsx';
+import UserBookingsPage from './pages/user/UserBookingsPage.jsx';
+import UserTransactionsPage from './pages/user/UserTransactionsPage.jsx';
+import UserWishlistPage from './pages/user/UserWishlistPage.jsx';
+import UserReferEarnPage from './pages/user/UserReferEarnPage.jsx';
+import BookingPreviewPage from './pages/user/BookingPreviewPage.jsx';
+import BookingCheckoutPage from './pages/user/BookingCheckoutPage.jsx';
+import BookingSuccessPage from './pages/user/BookingSuccessPage.jsx';
 
 import HomePage from './pages/public/HomePage.jsx';
 import RetreatsPage from './pages/public/RetreatsPage.jsx';
@@ -19,6 +30,8 @@ import NotFoundPage from './pages/public/NotFoundPage.jsx';
 
 import AdminLoginPage from './pages/admin/AdminLoginPage.jsx';
 import DashboardPage from './pages/admin/DashboardPage.jsx';
+import AdminBookingsPage from './pages/admin/AdminBookingsPage.jsx';
+import AdminTransactionsPage from './pages/admin/AdminTransactionsPage.jsx';
 import HeroManagementPage from './pages/admin/HeroManagementPage.jsx';
 import HeaderLinksPage from './pages/admin/HeaderLinksPage.jsx';
 import ThemeManagementPage from './pages/admin/ThemeManagementPage.jsx';
@@ -59,6 +72,8 @@ import PersonalisedRecommendationPage from './pages/admin/PersonalisedRecommenda
 import AuditorsPage from './pages/admin/AuditorsPage.jsx';
 import OfficersPage from './pages/admin/OfficersPage.jsx';
 import SignedPropertiesPage from './pages/admin/SignedPropertiesPage.jsx';
+import PropertyListingImagesPage from './pages/admin/PropertyListingImagesPage.jsx';
+import SalespeoplePage from './pages/admin/SalespeoplePage.jsx';
 
 export default function App() {
   return (
@@ -79,6 +94,54 @@ export default function App() {
         <Route path="*" element={<NotFoundPage />} />
       </Route>
 
+      {/* Booking flow — both pages require auth. They live outside the dashboard
+          layout because we want a clean, full-bleed checkout surface free of
+          the sidebar (matches every other booking platform's checkout UX). */}
+      <Route
+        path="/book/:type/:id"
+        element={
+          <UserProtectedRoute>
+            <BookingPreviewPage />
+          </UserProtectedRoute>
+        }
+      />
+      <Route
+        path="/checkout/:code"
+        element={
+          <UserProtectedRoute>
+            <BookingCheckoutPage />
+          </UserProtectedRoute>
+        }
+      />
+      <Route
+        path="/booking-success/:code"
+        element={
+          <UserProtectedRoute>
+            <BookingSuccessPage />
+          </UserProtectedRoute>
+        }
+      />
+
+      {/* Authenticated user dashboard — sidebar layout with nested routes.
+          Lives OUTSIDE PublicLayout so it doesn't inherit the public header,
+          footer and "Book Retreats" CTA. UserProtectedRoute handles the
+          "not signed in → open login modal" flow. */}
+      <Route
+        path="/dashboard"
+        element={
+          <UserProtectedRoute>
+            <UserDashboardLayout />
+          </UserProtectedRoute>
+        }
+      >
+        <Route index element={<UserDashboardHomePage />} />
+        <Route path="profile" element={<UserProfilePage />} />
+        <Route path="bookings" element={<UserBookingsPage />} />
+        <Route path="transactions" element={<UserTransactionsPage />} />
+        <Route path="wishlist" element={<UserWishlistPage />} />
+        <Route path="refer" element={<UserReferEarnPage />} />
+      </Route>
+
       {/* Admin */}
       <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route
@@ -91,6 +154,8 @@ export default function App() {
       >
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="bookings" element={<AdminBookingsPage />} />
+        <Route path="transactions" element={<AdminTransactionsPage />} />
         <Route path="website/hero" element={<HeroManagementPage />} />
         <Route path="website/header-links" element={<HeaderLinksPage />} />
         <Route path="website/theme" element={<ThemeManagementPage />} />
@@ -140,6 +205,8 @@ export default function App() {
         <Route path="pwa/auditors" element={<AuditorsPage />} />
         <Route path="pwa/officers" element={<OfficersPage />} />
         <Route path="pwa/signed-properties" element={<SignedPropertiesPage />} />
+        <Route path="pwa/listing-images" element={<PropertyListingImagesPage />} />
+        <Route path="pwa/salespersons" element={<SalespeoplePage />} />
       </Route>
     </Routes>
   );

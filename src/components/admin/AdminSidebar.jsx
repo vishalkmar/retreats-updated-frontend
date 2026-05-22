@@ -34,8 +34,11 @@ import {
   Megaphone,
   Trophy,
   Users as UsersIcon,
+  Wallet,
+  Calendar as CalendarIcon,
 } from 'lucide-react';
 import api from '../../services/api';
+import { useAdminView } from '../../context/AdminViewContext.jsx';
 
 const websiteItems = [
   { to: '/admin/website/hero', label: 'Hero Sections', icon: Image },
@@ -61,7 +64,9 @@ const contentItems = [
 const pwaItems = [
   { to: '/admin/pwa/auditors', label: 'Auditors', icon: UserCog },
   { to: '/admin/pwa/officers', label: 'Officers', icon: ShieldCheck },
+  { to: '/admin/pwa/salespersons', label: 'Salespersons', icon: UsersIcon },
   { to: '/admin/pwa/signed-properties', label: 'Signed Property', icon: FileCheck2 },
+  { to: '/admin/pwa/listing-images', label: 'Listing Images', icon: Image },
 ];
 
 const hotelConfigItems = [
@@ -72,6 +77,7 @@ const hotelConfigItems = [
 ];
 
 export default function AdminSidebar({ open, onClose }) {
+  const { view, setView } = useAdminView();
   const [websiteOpen, setWebsiteOpen] = useState(true);
   const [contentOpen, setContentOpen] = useState(true);
   const [pwaOpen, setPwaOpen] = useState(true);
@@ -127,10 +133,46 @@ export default function AdminSidebar({ open, onClose }) {
         </div>
 
         <nav className="p-3 space-y-1 overflow-y-auto h-[calc(100vh-4rem)]">
+          {/* Top-of-sidebar view toggle. Lets the operator flip between
+              "what they manage day to day" (bookings, transactions) and
+              "what they configure occasionally" (theme, content, etc.). */}
+          <div className="flex gap-1 p-1 bg-white/5 rounded-lg mb-3">
+            <button
+              type="button"
+              onClick={() => setView('main')}
+              className={`flex-1 px-2 py-1.5 rounded-md text-xs font-semibold transition ${
+                view === 'main' ? 'bg-brand text-white shadow-soft' : 'text-slate-300 hover:bg-white/10'
+              }`}
+            >
+              Main
+            </button>
+            <button
+              type="button"
+              onClick={() => setView('configure')}
+              className={`flex-1 px-2 py-1.5 rounded-md text-xs font-semibold transition ${
+                view === 'configure' ? 'bg-brand text-white shadow-soft' : 'text-slate-300 hover:bg-white/10'
+              }`}
+            >
+              Configure
+            </button>
+          </div>
+
           <NavLink to="/admin/dashboard" className={linkClass}>
             <LayoutDashboard size={18} /> Dashboard
           </NavLink>
 
+          {view === 'main' && (
+            <>
+              <NavLink to="/admin/bookings" className={linkClass}>
+                <CalendarIcon size={18} /> Bookings
+              </NavLink>
+              <NavLink to="/admin/transactions" className={linkClass}>
+                <Wallet size={18} /> Transactions
+              </NavLink>
+            </>
+          )}
+
+          {view === 'configure' && <>
           <NavLink to="/admin/packages" className={linkClass}>
             <PkgIcon size={18} /> Packages
           </NavLink>
@@ -272,6 +314,7 @@ export default function AdminSidebar({ open, onClose }) {
               ))}
             </div>
           )}
+          </>}
         </nav>
       </aside>
     </>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   Star, MapPin, Calendar, Users, Heart, Share2, Check, X as XIcon,
   ShieldCheck, Award, Flame, ChevronDown, Play,
@@ -16,17 +16,28 @@ import 'swiper/css/thumbs';
 import 'swiper/css/pagination';
 
 import api, { fileUrl } from '../../services/api';
+import WishlistButton from '../../components/public/WishlistButton.jsx';
+import useRequireLogin from '../../hooks/useRequireLogin.js';
 import ReviewsBlock from '../../components/public/ReviewsBlock.jsx';
 import AddOnsCarousel from '../../components/public/AddOnsCarousel.jsx';
 
 export default function PackageDetailPage() {
   const { slug } = useParams();
+  const navigate = useNavigate();
+  const requireLogin = useRequireLogin();
   const [pkg, setPkg] = useState(null);
   const [addOns, setAddOns] = useState([]);
   const [similarPackages, setSimilarPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [thumbsSwiper, setThumbsSwiper] = useState(null);
   const [showVideo, setShowVideo] = useState(false);
+  const [showAvailability, setShowAvailability] = useState(false);
+
+  const handleBook = () => {
+    if (!pkg) return;
+    const target = `/book/package/${pkg.id}`;
+    requireLogin(() => navigate(target), { redirectTo: target });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -164,13 +175,14 @@ export default function PackageDetailPage() {
               )}
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button onClick={onShare} className="btn-ghost text-sm">
               <Share2 size={16} /> Share
             </button>
             <button onClick={onInterested} className="btn-outline text-sm">
-              <Heart size={16} /> Save
+              <Heart size={16} /> I'm interested
             </button>
+            <WishlistButton type="package" id={pkg.id} variant="pill" />
           </div>
         </div>
       </div>
@@ -549,8 +561,21 @@ export default function PackageDetailPage() {
               )}
             </div>
 
-            <button className="btn-primary w-full mt-4">Book now</button>
-            <button onClick={onInterested} className="btn-outline w-full mt-2">
+            <button
+              type="button"
+              onClick={handleBook}
+              className="btn-primary w-full mt-4"
+            >
+              Book this retreat
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowAvailability(true)}
+              className="btn-outline w-full mt-2"
+            >
+              Check availability
+            </button>
+            <button onClick={onInterested} className="btn-ghost w-full mt-2 text-sm">
               <Heart size={14} /> I'm interested
             </button>
 
@@ -621,7 +646,176 @@ export default function PackageDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Check availability modal */}
+      {showAvailability && (
+        <CheckAvailabilityModal
+          pkg={pkg}
+          onClose={() => setShowAvailability(false)}
+        />
+      )}
     </>
+  );
+}
+
+// Modal that captures Name, Phone, Date and POSTs to
+// /api/packages/:id/check-availability. The owner + assigned salesperson
+// pick this up in their PWA dashboards (and get a dummy voice call).
+function CheckAvailabilityModal({ pkg, onClose }) {
+  const [form, setForm] = useState({
+    customerName: '',
+    customerPhone: '',
+    customerEmail: '',
+    requestedDate: '',
+    notes: '',
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
+
+  const change = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!form.customerName.trim()) { toast.error('Please enter your name'); return; }
+    if (!form.customerPhone.trim()) { toast.error('Please enter a phone number'); return; }
+    if (!form.requestedDate) { toast.error('Please pick a date'); return; }
+    setSubmitting(true);
+    try {
+      await api.post(`/packages/${pkg.id}/check-availability`, form);
+      setDone(true);
+      toast.success("We've notified the retreat — they'll confirm shortly");
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not submit. Try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl relative max-h-[92vh] flex flex-col"
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 z-10 w-10 h-10 rounded-full bg-white shadow-md text-ink hover:text-red-600 flex items-center justify-center transition"
+          aria-label="Close"
+        >
+          <XIcon size={20} />
+        </button>
+
+        {done ? (
+          <div className="px-6 sm:px-8 py-10 text-center">
+            <div className="mx-auto w-14 h-14 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mb-4">
+              <Check size={28} />
+            </div>
+            <h3 className="font-display text-xl font-bold">Request received</h3>
+            <p className="text-sm text-ink-muted mt-2 leading-relaxed">
+              We've notified the retreat about your interest. Our team will
+              call/WhatsApp you within a few hours to confirm availability.
+            </p>
+            <button
+              onClick={onClose}
+              className="btn-primary mt-6 w-full"
+            >
+              Close
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={submit} className="flex flex-col max-h-[92vh]">
+            <div className="bg-gradient-to-br from-brand to-emerald-600 px-6 sm:px-8 pt-6 pb-5 rounded-t-3xl text-white">
+              <h3 className="text-lg sm:text-xl font-display font-bold leading-tight pr-12">
+                Check availability
+              </h3>
+              <p className="mt-1 text-sm text-white/90 line-clamp-1">{pkg.name}</p>
+            </div>
+
+            <div className="overflow-y-auto px-6 sm:px-8 py-5 space-y-3.5">
+              <div>
+                <label className="label">Your name</label>
+                <input
+                  type="text" className="input"
+                  value={form.customerName}
+                  onChange={(e) => change('customerName', e.target.value)}
+                  placeholder="Full name"
+                  required
+                />
+              </div>
+              <div>
+                <label className="label">Phone number</label>
+                <input
+                  type="tel" className="input"
+                  value={form.customerPhone}
+                  onChange={(e) => change('customerPhone', e.target.value)}
+                  placeholder="+91 90000 00000"
+                  required
+                />
+              </div>
+              <div>
+                <label className="label">Email (optional)</label>
+                <input
+                  type="email" className="input"
+                  value={form.customerEmail}
+                  onChange={(e) => change('customerEmail', e.target.value)}
+                  placeholder="you@example.com"
+                />
+              </div>
+              <div>
+                <label className="label">Preferred date</label>
+                <input
+                  type="date" className="input"
+                  min={today}
+                  value={form.requestedDate}
+                  onChange={(e) => change('requestedDate', e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="label">Anything we should know? (optional)</label>
+                <textarea
+                  className="input" rows={3}
+                  value={form.notes}
+                  onChange={(e) => change('notes', e.target.value)}
+                  placeholder="Group size, dietary preferences, special requests…"
+                />
+              </div>
+            </div>
+
+            <div className="border-t px-6 sm:px-8 py-4 bg-surface-alt rounded-b-3xl">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="btn-primary w-full"
+              >
+                {submitting ? 'Sending…' : 'Submit request'}
+              </button>
+              <p className="mt-2 text-[11px] text-ink-muted text-center">
+                By submitting you agree to be contacted by Retreats by Traveon about your enquiry.
+              </p>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
   );
 }
 

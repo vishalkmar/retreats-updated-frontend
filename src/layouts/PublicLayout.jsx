@@ -5,6 +5,7 @@ import PageHero, { PageHeroProvider } from '../components/public/PageHero.jsx';
 import BookRetreatsCTA from '../components/public/BookRetreatsCTA.jsx';
 import ScrollToTopButton from '../components/public/ScrollToTopButton.jsx';
 import ScrollToTop from '../components/public/ScrollToTop.jsx';
+import UserLoginModal from '../components/public/UserLoginModal.jsx';
 
 /**
  * Header is `fixed` and transparent at the top of pages that have a hero —
@@ -27,6 +28,7 @@ export default function PublicLayout() {
         <Footer />
       </div>
       <ScrollToTopButton />
+      <UserLoginModal />
     </PageHeroProvider>
   );
 }

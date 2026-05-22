@@ -1,6 +1,8 @@
-import { Link } from 'react-router-dom';
-import { MapPin, Calendar, Clock, Heart, Trophy } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { MapPin, Calendar, Clock, Trophy } from 'lucide-react';
 import { fileUrl } from '../../services/api';
+import WishlistButton from './WishlistButton.jsx';
+import useRequireLogin from '../../hooks/useRequireLogin.js';
 
 function formatDate(iso) {
   if (!iso) return '';
@@ -47,6 +49,7 @@ export default function EventCard({ event, variant = 'horizontal' }) {
               <Trophy size={10} /> SLOT BOOKING
             </span>
           )}
+          <WishlistButton type="event" id={event.id} className="bottom-3 right-3" />
         </div>
         <div className="p-4">
           <Body event={event} isSport={isSport} detailHref={detailHref} />
@@ -80,14 +83,7 @@ export default function EventCard({ event, variant = 'horizontal' }) {
             <Trophy size={10} /> SLOT BOOKING
           </span>
         )}
-        <button
-          type="button"
-          className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow z-20"
-          aria-label="Save to wishlist"
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-        >
-          <Heart size={16} />
-        </button>
+        <WishlistButton type="event" id={event.id} className="bottom-3 right-3" />
       </div>
 
       <div className="flex-1 p-5 flex flex-col">
@@ -98,6 +94,14 @@ export default function EventCard({ event, variant = 'horizontal' }) {
 }
 
 function Body({ event, isSport, detailHref, expanded }) {
+  const navigate = useNavigate();
+  const requireLogin = useRequireLogin();
+  const handleBook = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const target = `/book/event/${event.id}`;
+    requireLogin(() => navigate(target), { redirectTo: target });
+  };
   return (
     <>
       <h3 className="font-display font-semibold text-lg leading-snug group-hover:text-brand transition line-clamp-2">
@@ -158,13 +162,13 @@ function Body({ event, isSport, detailHref, expanded }) {
           >
             Details
           </Link>
-          <Link
-            to={`${detailHref}#book`}
-            onClick={(e) => e.stopPropagation()}
+          <button
+            type="button"
+            onClick={handleBook}
             className="btn-primary text-xs whitespace-nowrap"
           >
             {isSport ? 'Book slot' : 'Book now'}
-          </Link>
+          </button>
         </div>
       </div>
     </>
