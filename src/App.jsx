@@ -32,6 +32,10 @@ import AdminLoginPage from './pages/admin/AdminLoginPage.jsx';
 import DashboardPage from './pages/admin/DashboardPage.jsx';
 import AdminBookingsPage from './pages/admin/AdminBookingsPage.jsx';
 import AdminTransactionsPage from './pages/admin/AdminTransactionsPage.jsx';
+import AdminUsersPage from './pages/admin/AdminUsersPage.jsx';
+import AdminUserDetailPage from './pages/admin/AdminUserDetailPage.jsx';
+import AdminReferralConfigPage from './pages/admin/AdminReferralConfigPage.jsx';
+import AdminRefundPolicyPage from './pages/admin/AdminRefundPolicyPage.jsx';
 import HeroManagementPage from './pages/admin/HeroManagementPage.jsx';
 import HeaderLinksPage from './pages/admin/HeaderLinksPage.jsx';
 import ThemeManagementPage from './pages/admin/ThemeManagementPage.jsx';
@@ -155,7 +159,11 @@ export default function App() {
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="bookings" element={<AdminBookingsPage />} />
+        <Route path="users" element={<AdminUsersPage />} />
+        <Route path="users/:id" element={<AdminUserDetailPage />} />
         <Route path="transactions" element={<AdminTransactionsPage />} />
+        <Route path="config/referrals" element={<AdminReferralConfigPage />} />
+        <Route path="config/refunds" element={<AdminRefundPolicyPage />} />
         <Route path="website/hero" element={<HeroManagementPage />} />
         <Route path="website/header-links" element={<HeaderLinksPage />} />
         <Route path="website/theme" element={<ThemeManagementPage />} />

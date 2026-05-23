@@ -23,7 +23,7 @@ const blankForm = {
   aboutRich: '', highlightsRich: '',
   termsConditions: '', privacyPolicy: '',
   sports: [],   // [{ name, defaultPrice }]
-  isFeatured: false, isActive: true,
+  isFeatured: false, isActive: true, isRefundable: true,
   sortOrder: 0,
 };
 
@@ -112,6 +112,7 @@ export default function EventFormPage() {
         sports: e.sports || [],
         isFeatured: !!e.isFeatured,
         isActive: e.isActive ?? true,
+        isRefundable: e.isRefundable ?? true,
         sortOrder: e.sortOrder ?? 0,
       });
     } catch (err) {
@@ -488,6 +489,10 @@ export default function EventFormPage() {
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={form.isFeatured} onChange={(e) => change('isFeatured', e.target.checked)} />
             <span className="text-sm">Featured</span>
+          </label>
+          <label className="flex items-center gap-2" title="When off, cancellations on this event will not refund any money regardless of the platform refund tiers.">
+            <input type="checkbox" checked={form.isRefundable} onChange={(e) => change('isRefundable', e.target.checked)} />
+            <span className="text-sm">Refundable on cancellation</span>
           </label>
         </div>
       </Section>

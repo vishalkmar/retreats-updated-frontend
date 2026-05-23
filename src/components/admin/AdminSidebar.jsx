@@ -36,6 +36,8 @@ import {
   Users as UsersIcon,
   Wallet,
   Calendar as CalendarIcon,
+  Gift,
+  RefreshCcw,
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAdminView } from '../../context/AdminViewContext.jsx';
@@ -76,12 +78,20 @@ const hotelConfigItems = [
   { to: '/admin/hotels-config/nearby-places', label: 'Nearby Places', icon: Landmark },
 ];
 
+// Platform-level money / policy configuration. Lives in the Configure
+// sidebar group so it sits next to other infrequently-changed settings.
+const platformConfigItems = [
+  { to: '/admin/config/referrals', label: 'Refer & Earn', icon: Gift },
+  { to: '/admin/config/refunds',   label: 'Refund Policy', icon: RefreshCcw },
+];
+
 export default function AdminSidebar({ open, onClose }) {
   const { view, setView } = useAdminView();
   const [websiteOpen, setWebsiteOpen] = useState(true);
   const [contentOpen, setContentOpen] = useState(true);
   const [pwaOpen, setPwaOpen] = useState(true);
   const [hotelConfigOpen, setHotelConfigOpen] = useState(true);
+  const [platformConfigOpen, setPlatformConfigOpen] = useState(true);
   const [pendingReviews, setPendingReviews] = useState(0);
 
   // Poll pending review count once on mount + when window refocuses
@@ -165,6 +175,9 @@ export default function AdminSidebar({ open, onClose }) {
             <>
               <NavLink to="/admin/bookings" className={linkClass}>
                 <CalendarIcon size={18} /> Bookings
+              </NavLink>
+              <NavLink to="/admin/users" className={linkClass}>
+                <UsersIcon size={18} /> Users
               </NavLink>
               <NavLink to="/admin/transactions" className={linkClass}>
                 <Wallet size={18} /> Transactions
@@ -285,6 +298,29 @@ export default function AdminSidebar({ open, onClose }) {
           {hotelConfigOpen && (
             <div className="ml-3 pl-3 border-l border-white/10 space-y-1">
               {hotelConfigItems.map((item) => (
+                <NavLink key={item.to} to={item.to} className={linkClass}>
+                  <item.icon size={16} /> {item.label}
+                </NavLink>
+              ))}
+            </div>
+          )}
+
+          <button
+            onClick={() => setPlatformConfigOpen(!platformConfigOpen)}
+            className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-white/10 hover:text-white transition mt-2"
+          >
+            <span className="flex items-center gap-3">
+              <Wallet size={18} /> Money & Refunds
+            </span>
+            <ChevronDown
+              size={16}
+              className={`transition-transform ${platformConfigOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
+
+          {platformConfigOpen && (
+            <div className="ml-3 pl-3 border-l border-white/10 space-y-1">
+              {platformConfigItems.map((item) => (
                 <NavLink key={item.to} to={item.to} className={linkClass}>
                   <item.icon size={16} /> {item.label}
                 </NavLink>

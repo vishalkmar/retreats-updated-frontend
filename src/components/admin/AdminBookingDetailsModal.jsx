@@ -1,13 +1,22 @@
 import { useEffect, useState } from 'react';
 import {
   X, Printer, MapPin, Calendar, Users, Clock, CreditCard, FileText, User as UserIcon,
-  Mail, Phone, Loader2, CheckCircle2, AlertCircle, Hotel as HotelIcon,
+  Mail, Phone, Loader2, CheckCircle2, AlertCircle, Hotel as HotelIcon, RefreshCcw,
+  XCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
 import {
   TYPE_LABEL, STATUS_BADGE, fmtMoney, fmtDate, fmtDateTime,
 } from '../user/bookingFormatters.js';
+
+const REFUND_STATUS_BADGE = {
+  none:       { label: 'No refund',         cls: 'bg-slate-100 text-slate-700' },
+  pending:    { label: 'Refund pending',    cls: 'bg-amber-100 text-amber-800' },
+  processing: { label: 'Refund processing', cls: 'bg-blue-100 text-blue-800' },
+  completed:  { label: 'Refund completed',  cls: 'bg-emerald-100 text-emerald-700' },
+  failed:     { label: 'Refund failed',     cls: 'bg-rose-100 text-rose-700' },
+};
 
 /**
  * Admin-side details modal. Same voucher layout as the user one, but also
@@ -18,6 +27,23 @@ import {
  */
 export default function AdminBookingDetailsModal({ booking, open, onClose, onChanged }) {
   const [marking, setMarking] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
+
+  // POST /admin/refund-policy/reconcile — ping Cashfree to refresh the refund
+  // status when it's stuck on processing. Admin-only "Refresh" button next to
+  // the refund badge.
+  const handleReconcileRefund = async () => {
+    setReconciling(true);
+    try {
+      const res = await api.post(`/admin/refund-policy/reconcile/${booking.bookingCode}`);
+      toast.success(`Refund status: ${res.data?.data?.refundStatus || 'updated'}`);
+      onChanged?.();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not reconcile refund');
+    } finally {
+      setReconciling(false);
+    }
+  };
 
   useEffect(() => {
     if (!open) return undefined;
@@ -231,9 +257,46 @@ export default function AdminBookingDetailsModal({ booking, open, onClose, onCha
 
         {(booking.status === 'cancelled' || booking.status === 'refunded') && booking.cancelledAt && (
           <div className="px-5 sm:px-6 py-4 bg-rose-50 border-t border-rose-100 text-sm text-rose-900">
-            <div className="font-semibold mb-1">Cancelled on {fmtDateTime(booking.cancelledAt)}</div>
+            <div className="font-semibold mb-1 flex items-center gap-2 flex-wrap">
+              <XCircle size={14} />
+              <span>Cancelled on {fmtDateTime(booking.cancelledAt)}</span>
+              {booking.refundStatus && booking.refundStatus !== 'none' && (
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${REFUND_STATUS_BADGE[booking.refundStatus]?.cls || 'bg-slate-100 text-slate-700'}`}>
+                  {REFUND_STATUS_BADGE[booking.refundStatus]?.label || booking.refundStatus}
+                </span>
+              )}
+              {/* Refresh button — useful when refund is stuck on processing. */}
+              {booking.refundStatus === 'processing' && booking.cashfreeRefundId && (
+                <button
+                  type="button"
+                  onClick={handleReconcileRefund}
+                  disabled={reconciling}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white border border-rose-200 text-rose-700 text-[10px] font-semibold hover:bg-rose-100 disabled:opacity-60"
+                  title="Re-check Cashfree for the latest refund status"
+                >
+                  {reconciling ? <Loader2 size={10} className="animate-spin" /> : <RefreshCcw size={10} />}
+                  Refresh
+                </button>
+              )}
+            </div>
             {booking.cancellationReason && (
-              <div className="text-rose-800">Reason: {booking.cancellationReason}</div>
+              <div className="text-rose-800 mt-1">
+                Reason: {booking.cancellationReason}
+                {booking.cancellationReasonCode && booking.cancellationReasonCode !== 'other' && (
+                  <span className="text-xs text-rose-700 ml-2">[{booking.cancellationReasonCode}]</span>
+                )}
+              </div>
+            )}
+            {booking.refundAmount > 0 && (
+              <div className="text-rose-800 mt-2 flex items-center gap-3 flex-wrap text-xs">
+                <span>
+                  Refund: <strong className="text-rose-900">{fmtMoney(booking.refundAmount, booking.currency)}</strong>
+                </span>
+                {booking.refundedAt && <span>Initiated {fmtDateTime(booking.refundedAt)}</span>}
+                {booking.cashfreeRefundId && (
+                  <span>Cashfree ID: <span className="font-mono">{booking.cashfreeRefundId}</span></span>
+                )}
+              </div>
             )}
           </div>
         )}

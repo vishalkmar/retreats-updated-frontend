@@ -17,7 +17,7 @@ const blankForm = {
   price: 0, priceOriginal: '', currency: 'INR',
   roomSize: '', maxOccupancy: 2,
   highlightsRich: '', descriptionRich: '',
-  isFeatured: false, isActive: true,
+  isFeatured: false, isActive: true, isRefundable: true,
   sortOrder: 0,
   facilityIds: [], viewIds: [],
 };
@@ -113,6 +113,7 @@ export default function AvailableRoomFormPage() {
         descriptionRich: r.descriptionRich || '',
         isFeatured: !!r.isFeatured,
         isActive: r.isActive ?? true,
+        isRefundable: r.isRefundable ?? true,
         sortOrder: r.sortOrder ?? 0,
         facilityIds: (r.facilities || []).map((x) => x.id),
         viewIds: (r.views || []).map((x) => x.id),
@@ -426,6 +427,10 @@ export default function AvailableRoomFormPage() {
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={form.isFeatured} onChange={(e) => change('isFeatured', e.target.checked)} />
             <span className="text-sm">Featured</span>
+          </label>
+          <label className="flex items-center gap-2" title="When off, cancellations on this room will not refund any money regardless of the platform refund tiers.">
+            <input type="checkbox" checked={form.isRefundable} onChange={(e) => change('isRefundable', e.target.checked)} />
+            <span className="text-sm">Refundable on cancellation</span>
           </label>
         </div>
       </Section>

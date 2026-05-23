@@ -36,7 +36,7 @@ const blankForm = {
   availableAllYear: true, startDate: '', endDate: '',
   minGroupSize: 1, maxGroupSize: 30,
   priceFrom: 0, priceOriginal: '', currency: 'INR',
-  freeCancellation: true, isGoldHost: false,
+  freeCancellation: true, isRefundable: true, isGoldHost: false,
   isFeatured: false, isPopular: false, isActive: true,
   richContent: '',
   highlightsRich: '', inclusionsRich: '', exclusionsRich: '',
@@ -186,6 +186,7 @@ export default function PackageFormPage() {
         priceOriginal: p.priceOriginal ?? '',
         currency: p.currency || 'INR',
         freeCancellation: p.freeCancellation ?? true,
+        isRefundable: p.isRefundable ?? true,
         isGoldHost: !!p.isGoldHost,
         isFeatured: !!p.isFeatured,
         isPopular: !!p.isPopular,
@@ -1007,6 +1008,13 @@ export default function PackageFormPage() {
               onChange={(e) => change('freeCancellation', e.target.checked)}
             />
             Free cancellation
+          </label>
+          <label className="flex items-center gap-2 text-sm" title="When off, cancellations on this package will not refund any money regardless of the platform refund tiers.">
+            <input
+              type="checkbox" checked={form.isRefundable}
+              onChange={(e) => change('isRefundable', e.target.checked)}
+            />
+            Refundable on cancellation
           </label>
           <div className="sm:col-span-2">
             <label className="label">Meta title (SEO)</label>

@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
-  Gift, Copy, Check, Share2, Wallet, Tag, Users, Clock, Loader2,
-  ArrowUpRight, ArrowDownRight, CheckCircle2, XCircle, AlertCircle,
+  Gift, Copy, Check, Share2, Wallet, Users, Clock, Loader2,
+  ArrowUpRight, ArrowDownRight, CheckCircle2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -41,7 +41,6 @@ export default function UserReferEarnPage() {
   const [tab, setTab] = useState('wallet');
   const [config, setConfig] = useState(null);
   const [wallet, setWallet] = useState({ balance: 0, transactions: [] });
-  const [coupons, setCoupons] = useState([]);
   const [referees, setReferees] = useState({ referees: [], count: 0, rewardedCount: 0, pendingCount: 0, totalEarned: 0 });
   const [loading, setLoading] = useState(true);
 
@@ -51,16 +50,16 @@ export default function UserReferEarnPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch everything in parallel — the refer & earn page is read-heavy.
-      const [cfg, w, c, r] = await Promise.all([
+      // v2 refer & earn is money-only — no more coupons fetched here. The
+      // /refer-earn/coupons endpoint still exists for legacy data but isn't
+      // surfaced on the dashboard.
+      const [cfg, w, r] = await Promise.all([
         api.get('/refer-earn/config'),
         api.get('/refer-earn/wallet'),
-        api.get('/refer-earn/coupons'),
         api.get('/refer-earn/referees'),
       ]);
       setConfig(cfg.data?.data || null);
       setWallet(w.data?.data || { balance: 0, transactions: [] });
-      setCoupons(c.data?.data?.coupons || []);
       setReferees(r.data?.data || { referees: [], count: 0, rewardedCount: 0, pendingCount: 0, totalEarned: 0 });
     } catch (err) {
       toast.error(err.response?.data?.message || 'Could not load refer & earn');
@@ -95,18 +94,13 @@ export default function UserReferEarnPage() {
     }
   };
 
-  const activeCoupons = useMemo(
-    () => coupons.filter((c) => !c.isExpired && !c.isUsedUp),
-    [coupons]
-  );
-
   return (
     <div className="max-w-6xl space-y-6">
       <div>
         <h1 className="text-2xl font-display font-bold">Refer & Earn</h1>
         <p className="text-sm text-ink-muted mt-1">
           {config
-            ? `Invite a friend and earn ${fmtMoney(config.referrerWallet)} in wallet credit when they complete their first booking.`
+            ? `Invite a friend and earn ${fmtMoney(config.baseAmount)} in wallet credit when they complete their first booking.`
             : 'Invite friends, earn rewards.'}
         </p>
       </div>
@@ -124,10 +118,25 @@ export default function UserReferEarnPage() {
         </div>
 
         {config && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5 text-sm">
-            <Perk title="You earn" value={`${fmtMoney(config.referrerWallet)} wallet`} sub="per friend's first booking" />
-            <Perk title="They get" value={`${config.newUserCouponPercent}% off`} sub={`up to ${fmtMoney(config.newUserCouponCap)}`} />
-            <Perk title="Bonus" value={`${config.referrerCouponPercent}% off coupon`} sub="for you on next booking" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5 text-sm">
+            <Perk
+              title="You earn (base)"
+              value={`${fmtMoney(config.baseAmount)} wallet`}
+              sub="per friend's first booking"
+            />
+            {config.tiers && config.tiers.length > 0 ? (
+              <Perk
+                title={`Bonus — ${config.tiers[0].atCount} friends`}
+                value={fmtMoney(config.tiers[0].totalPayout)}
+                sub={`if all complete within ${config.tiers[0].withinDays} days`}
+              />
+            ) : (
+              <Perk
+                title="Goal"
+                value="Invite more, earn more"
+                sub="Every paid friend adds wallet credit"
+              />
+            )}
           </div>
         )}
 
@@ -153,19 +162,18 @@ export default function UserReferEarnPage() {
         </div>
       </div>
 
-      {/* Stat strip */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Stat strip — v2 refer&earn is money-only; coupons are admin/promo
+          territory now, so they don't surface on this page any more. */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard icon={Wallet} label="Wallet balance" value={fmtMoney(wallet.balance)} accent="bg-emerald-50 text-emerald-600" />
         <StatCard icon={Users} label="Friends invited" value={referees.count} accent="bg-blue-50 text-blue-600" />
         <StatCard icon={CheckCircle2} label="Rewarded" value={referees.rewardedCount} accent="bg-amber-50 text-amber-600" />
-        <StatCard icon={Tag} label="Active coupons" value={activeCoupons.length} accent="bg-fuchsia-50 text-fuchsia-600" />
       </div>
 
-      {/* Tabs */}
+      {/* Tabs — coupons tab removed in v2 rewrite. Wallet + Friends only. */}
       <div className="flex flex-wrap gap-2 border-b">
         {[
           { key: 'wallet', label: 'Wallet history' },
-          { key: 'coupons', label: `Coupons (${activeCoupons.length})` },
           { key: 'referees', label: `Friends (${referees.count})` },
         ].map((t) => (
           <button
@@ -190,8 +198,6 @@ export default function UserReferEarnPage() {
         </div>
       ) : tab === 'wallet' ? (
         <WalletHistory transactions={wallet.transactions} />
-      ) : tab === 'coupons' ? (
-        <CouponList coupons={coupons} onCopy={copy} />
       ) : (
         <RefereesList referees={referees.referees} />
       )}
@@ -264,81 +270,6 @@ function WalletHistory({ transactions }) {
         })}
       </ul>
     </div>
-  );
-}
-
-function CouponList({ coupons, onCopy }) {
-  if (!coupons.length) {
-    return (
-      <div className="bg-white rounded-2xl shadow-soft p-10 text-center">
-        <Tag size={28} className="mx-auto text-ink-muted mb-2" />
-        <h3 className="font-semibold text-ink">No coupons yet</h3>
-        <p className="text-sm text-ink-muted mt-1">Refer a friend to earn your first coupon.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      {coupons.map((c) => (
-        <CouponCard key={c.id} coupon={c} onCopy={onCopy} />
-      ))}
-    </div>
-  );
-}
-
-function CouponCard({ coupon, onCopy }) {
-  const isActive = !coupon.isExpired && !coupon.isUsedUp;
-  return (
-    <article className={`rounded-2xl border-2 border-dashed p-4 relative overflow-hidden ${
-      isActive ? 'bg-white border-brand/30' : 'bg-surface-alt/30 border-gray-200 opacity-70'
-    }`}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-[10px] uppercase tracking-wider text-ink-muted font-bold mb-1 flex items-center gap-1.5">
-            <Tag size={11} /> {coupon.reason.replace('_', ' ')}
-          </div>
-          <div className="font-display font-bold text-2xl text-brand tracking-wider">
-            {coupon.kind === 'percent' ? `${coupon.value}% OFF` : `${fmtMoney(coupon.value / 100)} OFF`}
-          </div>
-          {coupon.maxDiscount && coupon.kind === 'percent' && (
-            <div className="text-[11px] text-ink-muted mt-0.5">up to {fmtMoney(coupon.maxDiscount)}</div>
-          )}
-        </div>
-        {!isActive && (
-          <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-slate-200 text-slate-600 uppercase">
-            {coupon.isUsedUp ? 'Used' : 'Expired'}
-          </span>
-        )}
-      </div>
-
-      {coupon.description && (
-        <p className="text-xs text-ink-muted mt-2 line-clamp-2">{coupon.description}</p>
-      )}
-
-      <div className="mt-4 pt-3 border-t border-dashed border-gray-200 flex items-center justify-between gap-2">
-        <div className="min-w-0">
-          <div className="text-[10px] text-ink-muted uppercase tracking-wide">Code</div>
-          <div className="font-mono font-bold text-sm text-ink truncate">{coupon.code}</div>
-        </div>
-        <button
-          type="button"
-          onClick={() => onCopy(coupon.code)}
-          disabled={!isActive}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition shrink-0 ${
-            isActive ? 'bg-brand text-white hover:brightness-110' : 'bg-slate-200 text-slate-500 cursor-not-allowed'
-          }`}
-        >
-          <Copy size={12} /> Copy
-        </button>
-      </div>
-
-      {coupon.expiresAt && isActive && (
-        <div className="text-[11px] text-ink-muted mt-2 inline-flex items-center gap-1">
-          <Clock size={11} /> Expires {fmtDate(coupon.expiresAt)}
-        </div>
-      )}
-    </article>
   );
 }
 
