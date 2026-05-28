@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
+import DatePicker from '../../components/common/DatePicker.jsx';
 import { fmtMoney, fmtDate, fmtDateTime } from '../../components/user/bookingFormatters.js';
 
 const PAGE_SIZES = [25, 50, 100];
@@ -110,20 +111,23 @@ export default function AdminUsersPage() {
           >
             {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
-          <div className="flex gap-2 lg:col-span-2">
-            <input
-              type="date"
+          <div className="grid grid-cols-2 gap-2 lg:col-span-2">
+            <DatePicker
               value={filters.from}
-              onChange={(e) => updateFilter('from', e.target.value)}
-              className="flex-1 px-2 py-2 rounded-lg border border-gray-200 text-sm focus:border-brand outline-none"
-              title="Joined from"
+              onChange={(iso) => updateFilter('from', iso)}
+              placeholder="Joined from"
+              compact
+              size="sm"
+              ariaLabel="Joined from"
             />
-            <input
-              type="date"
+            <DatePicker
               value={filters.to}
-              onChange={(e) => updateFilter('to', e.target.value)}
-              className="flex-1 px-2 py-2 rounded-lg border border-gray-200 text-sm focus:border-brand outline-none"
-              title="Joined to"
+              min={filters.from || undefined}
+              onChange={(iso) => updateFilter('to', iso)}
+              placeholder="Joined to"
+              compact
+              size="sm"
+              ariaLabel="Joined to"
             />
           </div>
         </div>

@@ -20,6 +20,8 @@ import WishlistButton from '../../components/public/WishlistButton.jsx';
 import useRequireLogin from '../../hooks/useRequireLogin.js';
 import ReviewsBlock from '../../components/public/ReviewsBlock.jsx';
 import AddOnsCarousel from '../../components/public/AddOnsCarousel.jsx';
+import DatePicker from '../../components/common/DatePicker.jsx';
+import LivePriceEstimator from '../../components/public/LivePriceEstimator.jsx';
 
 export default function PackageDetailPage() {
   const { slug } = useParams();
@@ -32,10 +34,13 @@ export default function PackageDetailPage() {
   const [thumbsSwiper, setThumbsSwiper] = useState(null);
   const [showVideo, setShowVideo] = useState(false);
   const [showAvailability, setShowAvailability] = useState(false);
+  // Live traveller count for the LivePriceEstimator on the right rail.
+  // Forwarded into the booking preview via ?guests=N.
+  const [travellers, setTravellers] = useState(1);
 
   const handleBook = () => {
     if (!pkg) return;
-    const target = `/book/package/${pkg.id}`;
+    const target = `/book/package/${pkg.id}?guests=${Math.max(1, travellers)}`;
     requireLogin(() => navigate(target), { redirectTo: target });
   };
 
@@ -560,13 +565,25 @@ export default function PackageDetailPage() {
                 </span>
               )}
             </div>
+            <div className="text-[11px] text-ink-muted mt-0.5">per traveller</div>
+
+            <div className="mt-4">
+              <LivePriceEstimator
+                unitPrice={Number(pkg.priceFrom) || 0}
+                currency={pkg.currency || 'INR'}
+                unitLabel="traveller"
+                defaultUnits={travellers}
+                maxUnits={pkg.maxGroupSize || 30}
+                onChange={setTravellers}
+              />
+            </div>
 
             <button
               type="button"
               onClick={handleBook}
               className="btn-primary w-full mt-4"
             >
-              Book this retreat
+              Book for {travellers} traveller{travellers === 1 ? '' : 's'}
             </button>
             <button
               type="button"
@@ -781,12 +798,11 @@ function CheckAvailabilityModal({ pkg, onClose }) {
               </div>
               <div>
                 <label className="label">Preferred date</label>
-                <input
-                  type="date" className="input"
-                  min={today}
+                <DatePicker
                   value={form.requestedDate}
-                  onChange={(e) => change('requestedDate', e.target.value)}
-                  required
+                  min={today}
+                  onChange={(iso) => change('requestedDate', iso)}
+                  placeholder="Pick a date"
                 />
               </div>
               <div>

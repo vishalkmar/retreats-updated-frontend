@@ -1,20 +1,17 @@
 import { useMemo } from 'react';
-import { ChevronDown, IndianRupee } from 'lucide-react';
+import { IndianRupee } from 'lucide-react';
 
 /**
- * Dynamic price-tier dropdown used by Hotels / Packages / Events list pages.
+ * Vertical radio list of price tiers used by Hotels / Packages / Events.
+ * Each tier sits on its own line with a radio button — no dropdown, no
+ * inner scroll, so the whole sidebar scrolls naturally with the page.
  *
  * Props
- *   priceMin     — lowest price in the live dataset (number).
- *   priceMax     — highest price in the live dataset (number). Required for
- *                  the dropdown to have meaningful tiers.
- *   value        — currently-selected maxPrice (string or number).
- *   onChange     — (nextMaxPriceString: string) => void.  Pass '' to clear.
- *   currency     — display label, defaults to 'INR'.
- *   tierCount    — how many tiers to render (default 5).
- *
- * Renders nothing if priceMax is missing or non-positive — the page will
- * gracefully hide the filter until prices are known.
+ *   priceMin / priceMax  → live dataset range (numbers)
+ *   value                → currently-selected maxPrice (string or number)
+ *   onChange             → (nextMaxPriceString: string) => void.  '' clears.
+ *   currency             → display label, defaults to 'INR'
+ *   tierCount            → how many tiers to render (default 5)
  */
 export default function PriceTierFilter({
   priceMin = 0,
@@ -27,40 +24,57 @@ export default function PriceTierFilter({
   const tiers = useMemo(() => {
     const fromLive = generateTiers(Number(priceMin) || 0, Number(priceMax) || 0, tierCount);
     if (fromLive.length > 0) return fromLive;
-    // Fallback tiers — used while the catalogue probe is in flight or when
-    // the dataset hasn't been priced yet. Ensures the filter is ALWAYS
-    // visible at the top of the sidebar.
     return [5000, 10000, 25000, 50000, 100000];
   }, [priceMin, priceMax, tierCount]);
 
+  const current = String(value || '');
   const haveLiveRange = Number(priceMax) > 0;
 
   return (
-    <div className="relative">
-      <select
-        className="input pr-9 appearance-none cursor-pointer"
-        value={value || ''}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        <option value="">Any price</option>
-        {tiers.map((t) => (
-          <option key={t} value={t}>
-            Under {currency} {t.toLocaleString()}
-          </option>
-        ))}
-      </select>
-      <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
+    <div className="space-y-1.5">
+      <RadioRow
+        label="Any price"
+        checked={current === ''}
+        onChange={() => onChange('')}
+      />
+      {tiers.map((t) => (
+        <RadioRow
+          key={t}
+          label={`Under ${currency} ${t.toLocaleString()}`}
+          checked={current === String(t)}
+          onChange={() => onChange(String(t))}
+        />
+      ))}
       {haveLiveRange && (
         <p className="mt-1.5 text-[11px] text-ink-muted flex items-center gap-1">
           <IndianRupee size={11} />
-          Range in this list: {currency} {Number(priceMin).toLocaleString()} – {Number(priceMax).toLocaleString()}
+          Range: {currency} {Number(priceMin).toLocaleString()} – {Number(priceMax).toLocaleString()}
         </p>
       )}
     </div>
   );
 }
 
-// Round to a "nice" step value (500 or 1000 for big, 100 for small).
+// One-line radio row. Whole row is clickable; the visual radio is just
+// styled so the click target is the whole label (better mobile UX).
+function RadioRow({ label, checked, onChange }) {
+  return (
+    <label
+      className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm cursor-pointer transition ${
+        checked ? 'bg-brand/5 text-brand font-semibold' : 'hover:bg-slate-50 text-ink'
+      }`}
+    >
+      <input
+        type="radio"
+        checked={checked}
+        onChange={onChange}
+        className="accent-brand"
+      />
+      <span className="flex-1 truncate">{label}</span>
+    </label>
+  );
+}
+
 function roundStep(step) {
   if (step <= 0) return 100;
   if (step >= 5000) return Math.ceil(step / 1000) * 1000;
@@ -80,13 +94,9 @@ function roundUpToNice(n) {
 
 function generateTiers(min, max, count) {
   if (!max || max <= 0) return [];
-
   const cleanMax = roundUpToNice(max);
   const cleanMin = Math.max(0, Math.floor(min / 100) * 100);
-
-  // Just one tier needed when range is too tight.
   if (cleanMax - cleanMin < 500 || count <= 1) return [cleanMax];
-
   const step = roundStep((cleanMax - cleanMin) / count);
   const tiers = new Set();
   let v = Math.max(cleanMin + step, step);

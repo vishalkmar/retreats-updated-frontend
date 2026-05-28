@@ -100,7 +100,7 @@ export default function UserReferEarnPage() {
         <h1 className="text-2xl font-display font-bold">Refer & Earn</h1>
         <p className="text-sm text-ink-muted mt-1">
           {config
-            ? `Invite a friend and earn ${fmtMoney(config.baseAmount)} in wallet credit when they complete their first booking.`
+            ? `Invite a friend and earn ${fmtMoney(config.baseAmount)} in wallet credit the moment they join using your code.`
             : 'Invite friends, earn rewards.'}
         </p>
       </div>
@@ -122,7 +122,7 @@ export default function UserReferEarnPage() {
             <Perk
               title="You earn (base)"
               value={`${fmtMoney(config.baseAmount)} wallet`}
-              sub="per friend's first booking"
+              sub="per friend who joins via your code"
             />
             {config.tiers && config.tiers.length > 0 ? (
               <Perk
@@ -309,7 +309,7 @@ function RefereesList({ referees }) {
                   </>
                 ) : (
                   <>
-                    <div className="text-xs font-semibold text-amber-600">Awaiting first booking</div>
+                    <div className="text-xs font-semibold text-amber-600">Awaiting first login</div>
                     <div className="text-[10px] text-ink-muted">{r.paidBookingCount} bookings</div>
                   </>
                 )}

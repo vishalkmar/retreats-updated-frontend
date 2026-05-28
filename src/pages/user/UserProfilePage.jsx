@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { Loader2, Save, User as UserIcon, Camera } from 'lucide-react';
 import api from '../../services/api';
 import { useUserAuth } from '../../context/UserAuthContext.jsx';
+import DatePicker from '../../components/common/DatePicker.jsx';
 
 const GENDERS = [
   { value: '', label: '—' },
@@ -179,11 +180,10 @@ export default function UserProfilePage() {
               </select>
             </Field>
             <Field label="Date of birth">
-              <input
-                type="date"
+              <DatePicker
                 value={form.dob || ''}
-                onChange={handleChange('dob')}
-                className="input"
+                onChange={(iso) => setForm((f) => ({ ...f, dob: iso }))}
+                placeholder="Pick your DOB"
               />
             </Field>
           </div>

@@ -7,6 +7,7 @@ import {
 import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
 import { useUserAuth } from '../../context/UserAuthContext.jsx';
+import DatePicker from '../../components/common/DatePicker.jsx';
 
 const TYPE_LABEL = {
   package: 'Retreat',
@@ -49,8 +50,22 @@ export default function BookingPreviewPage() {
   // Form fields. Sensible defaults so the page is immediately usable on every
   // item type — the user only tweaks what's wrong.
   const [scheduledFor, setScheduledFor] = useState(() => params.get('from') || todayISO());
-  const [scheduledEndAt, setScheduledEndAt] = useState(() => params.get('to') || '');
+  // Detail pages may pass either an explicit `to=` checkout or a `nights=N`
+  // count. The room detail page uses `nights`; the hotel stay picker uses
+  // `to`. Derive a sensible checkout in either case.
+  const [scheduledEndAt, setScheduledEndAt] = useState(() => {
+    const explicit = params.get('to');
+    if (explicit) return explicit;
+    const n = parseInt(params.get('nights'), 10);
+    if (Number.isFinite(n) && n > 0) {
+      return addDaysISO(params.get('from') || todayISO(), n);
+    }
+    return '';
+  });
   const [guestCount, setGuestCount] = useState(() => parseInt(params.get('guests'), 10) || 1);
+  // Room bookings carry an extra `rooms` count — the hotel detail page
+  // seeds this from the stay picker. Defaults to 1 for non-room items.
+  const [roomCount, setRoomCount] = useState(() => Math.max(1, parseInt(params.get('rooms'), 10) || 1));
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
@@ -86,6 +101,7 @@ export default function BookingPreviewPage() {
         scheduledFor: scheduledFor || null,
         scheduledEndAt: scheduledEndAt || null,
         guestCount,
+        roomCount,
         // Only send a coupon if the user actually applied one. Sending the raw
         // input as they type would spam the validator with errors.
         couponCode: appliedCouponCode,
@@ -99,7 +115,7 @@ export default function BookingPreviewPage() {
     } finally {
       setPreviewing(false);
     }
-  }, [type, id, scheduledFor, scheduledEndAt, guestCount, appliedCouponCode, useWallet]);
+  }, [type, id, scheduledFor, scheduledEndAt, guestCount, roomCount, appliedCouponCode, useWallet]);
 
   useEffect(() => { fetchPreview(); }, [fetchPreview]);
 
@@ -198,6 +214,7 @@ export default function BookingPreviewPage() {
         scheduledFor: scheduledFor || null,
         scheduledEndAt: config.showCheckOut ? (scheduledEndAt || null) : null,
         guestCount,
+        roomCount,
         guestName: guestName.trim(),
         guestEmail: guestEmail.trim(),
         guestPhone: guestPhone.trim(),
@@ -312,23 +329,21 @@ export default function BookingPreviewPage() {
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label={config.scheduledLabel}>
-                <input
-                  type="date"
-                  min={todayISO()}
+                <DatePicker
                   value={scheduledFor || ''}
-                  onChange={(e) => setScheduledFor(e.target.value)}
+                  min={todayISO()}
+                  onChange={(iso) => setScheduledFor(iso)}
                   disabled={config.scheduledReadonly}
-                  className="input"
+                  placeholder={config.scheduledLabel}
                 />
               </Field>
               {config.showCheckOut && (
                 <Field label={config.scheduledEndLabel}>
-                  <input
-                    type="date"
-                    min={scheduledFor ? addDaysISO(scheduledFor, 1) : todayISO()}
+                  <DatePicker
                     value={scheduledEndAt || ''}
-                    onChange={(e) => setScheduledEndAt(e.target.value)}
-                    className="input"
+                    min={scheduledFor ? addDaysISO(scheduledFor, 1) : todayISO()}
+                    onChange={(iso) => setScheduledEndAt(iso)}
+                    placeholder={config.scheduledEndLabel}
                   />
                 </Field>
               )}
@@ -337,9 +352,21 @@ export default function BookingPreviewPage() {
                   <input
                     type="number"
                     min={1}
-                    max={config.guestMax}
+                    max={config.guestMax * (type === 'room' ? roomCount : 1)}
                     value={guestCount}
                     onChange={(e) => setGuestCount(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                    className="input"
+                  />
+                </Field>
+              )}
+              {type === 'room' && (
+                <Field label="Rooms">
+                  <input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={roomCount}
+                    onChange={(e) => setRoomCount(Math.max(1, parseInt(e.target.value, 10) || 1))}
                     className="input"
                   />
                 </Field>
@@ -510,6 +537,9 @@ export default function BookingPreviewPage() {
                   <div className="flex justify-between"><span>{config.scheduledEndLabel}</span><span className="text-ink font-medium">{fmtDate(schedule.scheduledEndAt)}</span></div>
                 )}
                 <div className="flex justify-between"><span>{config.guestLabel}</span><span className="text-ink font-medium">{guestCount}</span></div>
+                {type === 'room' && (
+                  <div className="flex justify-between"><span>Rooms</span><span className="text-ink font-medium">{roomCount}</span></div>
+                )}
               </div>
             )}
 

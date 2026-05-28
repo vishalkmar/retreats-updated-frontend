@@ -41,12 +41,25 @@ export default function AdminReferralConfigPage() {
         enabled: draft.enabled,
         baseAmount: Number(draft.baseAmount),
         description: draft.description || '',
+        maxPerBooking: Number(draft.maxPerBooking || 0),
+        maxPerBookingPct: Number(draft.maxPerBookingPct || 0),
         tiers: draft.tiers.map((t) => ({
           atCount: Number(t.atCount),
           withinDays: Number(t.withinDays),
           totalPayout: Number(t.totalPayout),
           label: t.label,
         })),
+        // Send the redemption tiers in rupees — backend stores paise.
+        // Blank max => open-ended upper bound (highest range).
+        redemptionTiers: draft.redemptionTiers
+          .filter((t) => String(t.min).trim() !== '')
+          .map((t) => ({
+            min: Number(t.min) || 0,
+            max: String(t.max).trim() === '' ? null : Number(t.max),
+            cap: Number(t.cap) || 0,
+            capPct: Number(t.capPct) || 0,
+            label: t.label || '',
+          })),
       };
       const res = await api.put('/admin/referral-config', payload);
       toast.success('Referral config saved');
@@ -91,8 +104,10 @@ export default function AdminReferralConfigPage() {
           <Gift size={22} className="text-brand" /> Referral Configuration
         </h1>
         <p className="text-ink-muted text-sm">
-          Tune the rewards a user earns each time a friend they referred makes their first paid booking.
-          Changes apply immediately — no restart.
+          Tune the rewards a user earns each time a friend they referred joins
+          and completes their profile (first login). Every field on this
+          page is editable and persists immediately — no restart, no code
+          changes.
         </p>
       </div>
 
@@ -114,7 +129,7 @@ export default function AdminReferralConfigPage() {
               <div className="font-semibold text-ink text-sm">Referral payouts</div>
               <div className="text-xs text-ink-muted mt-0.5">
                 {draft.enabled
-                  ? 'On — referrers earn wallet credit when their referees complete a first paid booking.'
+                  ? 'On — referrers earn wallet credit the moment their referee joins (completes profile / first login).'
                   : 'Off — no payouts will be issued for any new referrals (existing balances stay intact).'}
               </div>
             </div>
@@ -193,9 +208,110 @@ export default function AdminReferralConfigPage() {
         <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-900 flex items-start gap-2">
           <Info size={14} className="shrink-0 mt-0.5" />
           <div>
-            <strong>How it works:</strong> First match wins. We count the referrer's referees who have completed their first paid booking, chronologically. If <strong>atCount</strong> matches AND those referees' first-paid dates fit inside <strong>withinDays</strong> from the very first one, the tier pays the difference between <em>totalPayout</em> and <em>base × atCount</em>. So a tier of <code>3 / 10 days / ₹1200</code> with <code>base ₹300</code> tops up by ₹300 the moment the 3rd qualifying referee pays within 10 days of the 1st.
+            <strong>How it works:</strong> First match wins. We count the
+            referrer's referees who have joined (completed their first
+            login), chronologically. If <strong>atCount</strong> matches AND
+            those referees' join dates fit inside <strong>withinDays</strong>
+            from the very first one, the tier pays the difference between
+            <em>totalPayout</em> and <em>base × atCount</em>. So a tier of
+            <code>3 / 10 days / ₹1200</code> with <code>base ₹300</code>
+            tops up by ₹300 the moment the 3rd qualifying referee joins
+            within 10 days of the 1st.
           </div>
         </div>
+      </div>
+
+      {/* Anti-abuse caps */}
+      <div className="bg-white rounded-2xl shadow-soft p-5 mb-5">
+        <h3 className="font-display font-bold text-ink mb-1 inline-flex items-center gap-2">
+          <AlertTriangle size={18} className="text-amber-600" /> Per-booking redemption cap
+        </h3>
+        <p className="text-xs text-ink-muted mb-3">
+          Stops a user from draining a huge referral balance in one go. The
+          stricter of the two caps wins. Set to <strong>0</strong> to disable
+          that knob. With both at 0 the entire wallet can be used on one
+          booking (the old behaviour).
+        </p>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <label className="block">
+            <span className="text-xs font-semibold text-ink-muted">Max amount per booking (₹)</span>
+            <input
+              type="number"
+              min={0}
+              value={draft.maxPerBooking}
+              onChange={(e) => setDraft((d) => ({ ...d, maxPerBooking: e.target.value }))}
+              className="mt-1 w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none"
+              placeholder="e.g. 500 (0 = no cap)"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs font-semibold text-ink-muted">Max % of booking total</span>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={draft.maxPerBookingPct}
+              onChange={(e) => setDraft((d) => ({ ...d, maxPerBookingPct: e.target.value }))}
+              className="mt-1 w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none"
+              placeholder="e.g. 25 (0 = no cap)"
+            />
+          </label>
+        </div>
+        <p className="mt-2 text-[11px] text-ink-muted">
+          Example: a ₹4,000 booking with both knobs at <code>₹500 / 25%</code>
+          will let the user redeem at most <strong>min(₹500, ₹1,000) = ₹500</strong>
+          this booking. The remainder stays in their wallet for next time.
+        </p>
+      </div>
+
+      {/* Redemption tiers by booking amount range */}
+      <div className="bg-white rounded-2xl shadow-soft p-5 mb-5">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-display font-bold text-ink inline-flex items-center gap-2">
+            <Sparkles size={18} className="text-emerald-600" /> Redemption tiers by booking range
+          </h3>
+          <button
+            type="button"
+            onClick={() => setDraft((d) => ({
+              ...d,
+              redemptionTiers: [...(d.redemptionTiers || []), { min: '', max: '', cap: '', capPct: '', label: '' }],
+            }))}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition"
+          >
+            <Plus size={12} /> Add tier
+          </button>
+        </div>
+        <p className="text-xs text-ink-muted mb-3">
+          Optional, more granular than the single cap above. If a tier
+          matches the booking's total amount, its cap wins over the global
+          cap. Example: <code>≤ ₹2,000 → ₹300</code>, <code>₹2,000–₹5,000 → ₹750</code>,
+          <code>above ₹5,000 → 20%</code>. Leave <strong>Max</strong> blank
+          for the top-most open-ended tier. Empty list = use the global cap
+          above for every booking.
+        </p>
+
+        {(draft.redemptionTiers || []).length === 0 ? (
+          <div className="text-sm text-ink-muted bg-surface-alt/40 rounded-xl p-6 text-center">
+            No tiers yet — every booking uses the global cap above.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {draft.redemptionTiers.map((tier, idx) => (
+              <RedemptionTierRow
+                key={idx}
+                tier={tier}
+                onChange={(patch) => setDraft((d) => ({
+                  ...d,
+                  redemptionTiers: d.redemptionTiers.map((t, i) => (i === idx ? { ...t, ...patch } : t)),
+                }))}
+                onRemove={() => setDraft((d) => ({
+                  ...d,
+                  redemptionTiers: d.redemptionTiers.filter((_, i) => i !== idx),
+                }))}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Public description */}
@@ -248,8 +364,95 @@ const toDraft = (config) => {
       label: t.label || '',
     })),
     description: config.description || '',
+    maxPerBooking: String(config.maxPerBooking ?? 0),
+    maxPerBookingPct: String(config.maxPerBookingPct ?? 0),
+    redemptionTiers: (config.redemptionTiers || []).map((t) => ({
+      min: String(t.min ?? 0),
+      max: t.max === null || t.max === undefined ? '' : String(t.max),
+      cap: String(t.cap ?? 0),
+      capPct: String(t.capPct ?? 0),
+      label: t.label || '',
+    })),
   };
 };
+
+function RedemptionTierRow({ tier, onChange, onRemove }) {
+  const min = Number(tier.min) || 0;
+  const max = tier.max === '' || tier.max === null || tier.max === undefined ? null : Number(tier.max);
+  const cap = Number(tier.cap) || 0;
+  const capPct = Number(tier.capPct) || 0;
+  const isOpenEnded = max === null;
+  return (
+    <div className="rounded-xl border border-slate-200 p-4 bg-surface-alt/30">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <Field label="Booking ≥ (₹)">
+          <input
+            type="number"
+            min="0"
+            value={tier.min}
+            onChange={(e) => onChange({ min: e.target.value })}
+            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-brand outline-none"
+            placeholder="0"
+          />
+        </Field>
+        <Field label="Booking < (₹)">
+          <input
+            type="number"
+            min="0"
+            value={tier.max}
+            onChange={(e) => onChange({ max: e.target.value })}
+            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-brand outline-none"
+            placeholder="leave blank = no upper limit"
+          />
+        </Field>
+        <Field label="Max ₹ apply (cap)">
+          <input
+            type="number"
+            min="0"
+            value={tier.cap}
+            onChange={(e) => onChange({ cap: e.target.value })}
+            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-brand outline-none"
+            placeholder="e.g. 300 (0 = no ₹ cap)"
+          />
+        </Field>
+        <Field label="Max % of booking">
+          <input
+            type="number"
+            min="0"
+            max="100"
+            value={tier.capPct}
+            onChange={(e) => onChange({ capPct: e.target.value })}
+            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-brand outline-none"
+            placeholder="0 = no % cap"
+          />
+        </Field>
+      </div>
+      <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+        <div className="text-xs text-ink-muted">
+          {isOpenEnded
+            ? <>Bookings <strong>above ₹{min.toLocaleString()}</strong></>
+            : <>Bookings <strong>₹{min.toLocaleString()} – ₹{max.toLocaleString()}</strong></>
+          }
+          {' '}
+          → {cap > 0 || capPct > 0
+            ? <>user can redeem at most <strong className="text-emerald-700">
+                {cap > 0 && `₹${cap.toLocaleString()}`}
+                {cap > 0 && capPct > 0 && ' or '}
+                {capPct > 0 && `${capPct}%`}
+              </strong> (stricter wins)</>
+            : <span className="text-rose-600">cap = 0 means nothing can be redeemed</span>}
+        </div>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold text-rose-600 hover:bg-rose-50"
+        >
+          <Trash2 size={12} /> Remove
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function StatCard({ icon: Icon, label, value, accent }) {
   return (

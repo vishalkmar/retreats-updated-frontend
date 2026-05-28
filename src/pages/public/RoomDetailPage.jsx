@@ -15,6 +15,7 @@ import 'swiper/css/pagination';
 import api, { fileUrl } from '../../services/api';
 import WishlistButton from '../../components/public/WishlistButton.jsx';
 import useRequireLogin from '../../hooks/useRequireLogin.js';
+import LivePriceEstimator from '../../components/public/LivePriceEstimator.jsx';
 
 export default function RoomDetailPage() {
   const { hotelSlug, roomSlug } = useParams();
@@ -23,10 +24,13 @@ export default function RoomDetailPage() {
   const [room, setRoom] = useState(null);
   const [loading, setLoading] = useState(true);
   const [thumbsSwiper, setThumbsSwiper] = useState(null);
+  // Live nights count for the estimator. Forwarded into the booking
+  // preview so the per-night × nights math is already correct on landing.
+  const [nights, setNights] = useState(1);
 
   const handleBook = () => {
     if (!room) return;
-    const target = `/book/room/${room.id}`;
+    const target = `/book/room/${room.id}?nights=${Math.max(1, nights)}`;
     requireLogin(() => navigate(target), { redirectTo: target });
   };
 
@@ -167,12 +171,23 @@ export default function RoomDetailPage() {
                   <div className="text-[11px] text-ink-muted mt-0.5">+ taxes & fees</div>
                 </div>
 
+                <div className="mt-4">
+                  <LivePriceEstimator
+                    unitPrice={Number(room.price) || 0}
+                    currency={room.currency || 'INR'}
+                    unitLabel="night"
+                    defaultUnits={nights}
+                    maxUnits={30}
+                    onChange={setNights}
+                  />
+                </div>
+
                 <button
                   type="button"
                   className="btn-primary w-full mt-4"
                   onClick={handleBook}
                 >
-                  Book this room
+                  Book for {nights} night{nights === 1 ? '' : 's'}
                 </button>
 
                 <div className="flex items-center gap-3 mt-3 text-xs text-ink-muted">

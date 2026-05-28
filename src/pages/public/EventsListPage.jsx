@@ -315,12 +315,15 @@ function FilterBlock({ label, children }) {
 }
 
 function RadioList({ options, value, onChange, field = 'slug' }) {
+  const [expanded, setExpanded] = useState(false);
+  const collapseAfter = 8;
   if (!options?.length) {
     return <p className="text-xs text-ink-muted italic">None yet</p>;
   }
+  const visible = expanded ? options : options.slice(0, collapseAfter);
   return (
-    <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-      {options.map((o) => (
+    <div className="space-y-1.5">
+      {visible.map((o) => (
         <label key={o.id} className="flex items-center gap-2 text-sm cursor-pointer hover:text-brand">
           <input
             type="radio"
@@ -330,6 +333,15 @@ function RadioList({ options, value, onChange, field = 'slug' }) {
           <span className="flex-1 truncate">{o.name}</span>
         </label>
       ))}
+      {options.length > collapseAfter && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="text-xs font-semibold text-brand hover:underline"
+        >
+          {expanded ? 'Show less' : `Show all ${options.length}`}
+        </button>
+      )}
     </div>
   );
 }

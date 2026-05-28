@@ -6,6 +6,7 @@ import {
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import AdminBookingDetailsModal from '../../components/admin/AdminBookingDetailsModal.jsx';
+import DatePicker from '../../components/common/DatePicker.jsx';
 import {
   TYPE_LABEL, fmtMoney, fmtDateTime,
 } from '../../components/user/bookingFormatters.js';
@@ -95,19 +96,22 @@ export default function AdminTransactionsPage() {
               className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none"
             />
           </div>
-          <input
-            type="date"
+          <DatePicker
             value={filters.from}
-            onChange={(e) => updateFilter('from', e.target.value)}
-            className="px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-brand outline-none"
-            title="From date"
+            onChange={(iso) => updateFilter('from', iso)}
+            placeholder="From"
+            compact
+            size="sm"
+            ariaLabel="From date"
           />
-          <input
-            type="date"
+          <DatePicker
             value={filters.to}
-            onChange={(e) => updateFilter('to', e.target.value)}
-            className="px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-brand outline-none"
-            title="To date"
+            min={filters.from || undefined}
+            onChange={(iso) => updateFilter('to', iso)}
+            placeholder="To"
+            compact
+            size="sm"
+            ariaLabel="To date"
           />
         </div>
       </div>

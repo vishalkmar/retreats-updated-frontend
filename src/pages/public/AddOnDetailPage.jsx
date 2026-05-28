@@ -14,6 +14,7 @@ import 'swiper/css/pagination';
 import api, { fileUrl } from '../../services/api';
 import WishlistButton from '../../components/public/WishlistButton.jsx';
 import useRequireLogin from '../../hooks/useRequireLogin.js';
+import LivePriceEstimator from '../../components/public/LivePriceEstimator.jsx';
 
 export default function AddOnDetailPage() {
   const { slug } = useParams();
@@ -22,10 +23,13 @@ export default function AddOnDetailPage() {
   const [activity, setActivity] = useState(null);
   const [loading, setLoading] = useState(true);
   const [thumbsSwiper, setThumbsSwiper] = useState(null);
+  // Estimator state lifted up so the Book CTA can forward the chosen
+  // guest count straight into the booking preview as ?guests=N.
+  const [guests, setGuests] = useState(1);
 
   const handleBook = () => {
     if (!activity) return;
-    const target = `/book/addon/${activity.id}`;
+    const target = `/book/addon/${activity.id}?guests=${Math.max(1, guests)}`;
     requireLogin(() => navigate(target), { redirectTo: target });
   };
 
@@ -169,12 +173,22 @@ export default function AddOnDetailPage() {
                   <div className="text-[11px] text-ink-muted mt-0.5">per person</div>
                 </div>
 
+                <div className="mt-4">
+                  <LivePriceEstimator
+                    unitPrice={Number(activity.price) || 0}
+                    currency={activity.currency || 'INR'}
+                    unitLabel="guest"
+                    defaultUnits={guests}
+                    onChange={setGuests}
+                  />
+                </div>
+
                 <button
                   type="button"
                   className="btn-primary w-full mt-4"
                   onClick={handleBook}
                 >
-                  Book this activity
+                  Book for {guests} guest{guests === 1 ? '' : 's'}
                 </button>
 
                 <div className="flex items-center gap-3 mt-3 text-xs text-ink-muted">

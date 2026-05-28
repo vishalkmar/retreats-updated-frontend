@@ -28,6 +28,9 @@ export default function AddOnsCarousel({
   addOns = [],
   viewAllHref,
   icon: Icon = Sparkles,
+  // Optional: hotel detail page passes the stay picker's guest count so the
+  // card can show a live multiplied total ("₹500 × 3 guests = ₹1,500").
+  guestCount = 0,
 }) {
   const prevRef = useRef(null);
   const nextRef = useRef(null);
@@ -104,7 +107,7 @@ export default function AddOnsCarousel({
       >
         {addOns.map((a) => (
           <SwiperSlide key={a.id} className="!h-auto">
-            <AddOnPremiumCard addOn={a} />
+            <AddOnPremiumCard addOn={a} guestCount={guestCount} />
           </SwiperSlide>
         ))}
       </Swiper>
@@ -112,10 +115,13 @@ export default function AddOnsCarousel({
   );
 }
 
-function AddOnPremiumCard({ addOn: a }) {
+function AddOnPremiumCard({ addOn: a, guestCount = 0 }) {
   const orig = Number(a.priceOriginal || 0);
   const now = Number(a.price || 0);
   const discountPct = orig > now && orig > 0 ? Math.round(((orig - now) / orig) * 100) : 0;
+  // Live per-person multiplied total — only shows when the parent passes a
+  // real guest count so the section stays clean on pages without a picker.
+  const livePartyTotal = guestCount > 0 ? now * guestCount : 0;
 
   return (
     <article className="relative h-full rounded-2xl overflow-hidden bg-white shadow-[0_8px_24px_-12px_rgba(15,23,42,0.18)] hover:shadow-[0_20px_40px_-16px_rgba(15,118,110,0.35)] transition-all duration-300 group flex flex-col border border-slate-100">
@@ -196,6 +202,14 @@ function AddOnPremiumCard({ addOn: a }) {
               )}
             </div>
             <div className="text-[10px] text-ink-muted">per person</div>
+            {livePartyTotal > 0 && (
+              <div className="text-[11px] mt-1">
+                <span className="text-ink-muted">{guestCount} guests = </span>
+                <span className="font-semibold text-ink">
+                  {a.currency} {livePartyTotal.toLocaleString()}
+                </span>
+              </div>
+            )}
           </div>
           <span className="relative z-20 inline-flex items-center gap-1 text-xs font-semibold text-brand bg-brand/10 px-3 py-1.5 rounded-full group-hover:bg-brand group-hover:text-white transition">
             Book <ArrowRight size={12} />

@@ -4,6 +4,7 @@ import { Filter, X, LayoutGrid, List as ListIcon } from 'lucide-react';
 import api from '../../services/api';
 import PackageCard from '../../components/public/PackageCard.jsx';
 import PriceTierFilter from '../../components/public/PriceTierFilter.jsx';
+import StarRatingFilter from '../../components/public/StarRatingFilter.jsx';
 
 const SORTS = [
   { value: '', label: 'Recommended first' },
@@ -234,8 +235,7 @@ export default function RetreatsPage() {
               </FilterBlock>
 
               <FilterBlock label="User rating">
-                <RadioList
-                  options={RATING_BUCKETS.map((r) => ({ id: r.value, name: r.label, slug: r.value }))}
+                <StarRatingFilter
                   value={filters.minRating}
                   onChange={(v) => update('minRating', v)}
                 />
@@ -426,12 +426,15 @@ function FilterBlock({ label, children }) {
 }
 
 function RadioList({ options, value, onChange, field = 'slug' }) {
+  const [expanded, setExpanded] = useState(false);
+  const collapseAfter = 8;
   if (!options?.length) {
     return <p className="text-xs text-ink-muted italic">None yet</p>;
   }
+  const visible = expanded ? options : options.slice(0, collapseAfter);
   return (
-    <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-      {options.map((o) => (
+    <div className="space-y-1.5">
+      {visible.map((o) => (
         <label key={o.id} className="flex items-center gap-2 text-sm cursor-pointer hover:text-brand">
           <input
             type="radio"
@@ -441,6 +444,15 @@ function RadioList({ options, value, onChange, field = 'slug' }) {
           <span className="flex-1 truncate">{o.name}</span>
         </label>
       ))}
+      {options.length > collapseAfter && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="text-xs font-semibold text-brand hover:underline"
+        >
+          {expanded ? 'Show less' : `Show all ${options.length}`}
+        </button>
+      )}
     </div>
   );
 }

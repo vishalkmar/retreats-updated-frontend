@@ -18,6 +18,7 @@ import ReviewsBlock from '../../components/public/ReviewsBlock.jsx';
 import AddOnsCarousel from '../../components/public/AddOnsCarousel.jsx';
 import WishlistButton from '../../components/public/WishlistButton.jsx';
 import useRequireLogin from '../../hooks/useRequireLogin.js';
+import LivePriceEstimator from '../../components/public/LivePriceEstimator.jsx';
 
 function formatDate(iso) {
   if (!iso) return '';
@@ -115,9 +116,12 @@ export default function EventDetailPage() {
       .finally(() => setSlotsLoading(false));
   }, [isSportEvent, event?.id, selectedDate, selectedSport]);
 
+  // Live ticket count lifted up so the booking CTA can pass it along.
+  const [tickets, setTickets] = useState(1);
+
   const handleBook = () => {
     if (!event) return;
-    const target = `/book/event/${event.id}`;
+    const target = `/book/event/${event.id}?guests=${Math.max(1, tickets)}`;
     requireLogin(() => navigate(target), { redirectTo: target });
   };
 
@@ -290,6 +294,18 @@ export default function EventDetailPage() {
                       </span>
                     )}
                   </div>
+                  <div className="text-[11px] text-ink-muted mt-0.5">per ticket</div>
+                </div>
+
+                <div className="mt-4">
+                  <LivePriceEstimator
+                    unitPrice={Number(event.price) || 0}
+                    currency={event.currency || 'INR'}
+                    unitLabel={isSportEvent ? 'slot' : 'ticket'}
+                    defaultUnits={tickets}
+                    maxUnits={20}
+                    onChange={setTickets}
+                  />
                 </div>
 
                 <button
@@ -297,7 +313,9 @@ export default function EventDetailPage() {
                   className="btn-primary w-full mt-4"
                   onClick={handleBook}
                 >
-                  {isSportEvent ? <><Trophy size={16} /> Book a slot</> : 'Book this event'}
+                  {isSportEvent
+                    ? <><Trophy size={16} /> Book {tickets} slot{tickets === 1 ? '' : 's'}</>
+                    : `Book ${tickets} ticket${tickets === 1 ? '' : 's'}`}
                 </button>
 
                 <div className="flex items-center gap-3 mt-3 text-xs text-ink-muted">

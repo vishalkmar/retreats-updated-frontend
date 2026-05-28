@@ -4,6 +4,7 @@ import { Filter, X, LayoutGrid, List as ListIcon } from 'lucide-react';
 import api from '../../services/api';
 import HotelCard from '../../components/public/HotelCard.jsx';
 import PriceTierFilter from '../../components/public/PriceTierFilter.jsx';
+import StarRatingFilter from '../../components/public/StarRatingFilter.jsx';
 
 const SORTS = [
   { value: '', label: 'Recommended first' },
@@ -185,30 +186,39 @@ export default function HotelsListPage() {
               </FilterBlock>
 
               <FilterBlock label="Star category">
-                <div className="flex flex-wrap gap-2">
+                <div className="space-y-1.5">
                   {STAR_OPTIONS.map((s) => {
                     const active = isStarActive(s);
                     return (
-                      <button
+                      <label
                         key={s}
-                        type="button"
-                        onClick={() => toggleStar(s)}
-                        className={`px-3 py-1 rounded-full text-sm border transition ${
-                          active
-                            ? 'bg-brand text-white border-brand'
-                            : 'bg-white border-slate-200 hover:border-brand'
+                        className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm cursor-pointer transition ${
+                          active ? 'bg-amber-50 text-amber-700 font-semibold' : 'hover:bg-slate-50 text-ink'
                         }`}
                       >
-                        {'★'.repeat(s)}
-                      </button>
+                        <input
+                          type="checkbox"
+                          checked={active}
+                          onChange={() => toggleStar(s)}
+                          className="accent-amber-500"
+                        />
+                        <span className="flex-1 inline-flex items-center gap-0.5 text-amber-500 text-base leading-none">
+                          {Array.from({ length: s }).map((_, i) => (
+                            <span key={i}>★</span>
+                          ))}
+                          {Array.from({ length: 5 - s }).map((_, i) => (
+                            <span key={i + 5} className="text-slate-200">★</span>
+                          ))}
+                        </span>
+                        <span className="text-[11px] text-ink-muted">{s}-star</span>
+                      </label>
                     );
                   })}
                 </div>
               </FilterBlock>
 
               <FilterBlock label="User rating">
-                <RadioList
-                  options={RATING_BUCKETS.map((r) => ({ id: r.value, name: r.label, slug: r.value }))}
+                <StarRatingFilter
                   value={filters.minRating}
                   onChange={(v) => update('minRating', v)}
                 />
@@ -359,12 +369,17 @@ function FilterBlock({ label, children }) {
 }
 
 function RadioList({ options, value, onChange, field = 'slug' }) {
+  // Long lists get an inline "show more" toggle instead of a scrollbar so
+  // the whole sidebar scrolls as one piece — matches MMT-style filters.
+  const [expanded, setExpanded] = useState(false);
+  const collapseAfter = 8;
   if (!options?.length) {
     return <p className="text-xs text-ink-muted italic">None yet</p>;
   }
+  const visible = expanded ? options : options.slice(0, collapseAfter);
   return (
-    <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-      {options.map((o) => (
+    <div className="space-y-1.5">
+      {visible.map((o) => (
         <label key={o.id} className="flex items-center gap-2 text-sm cursor-pointer hover:text-brand">
           <input
             type="radio"
@@ -374,6 +389,15 @@ function RadioList({ options, value, onChange, field = 'slug' }) {
           <span className="flex-1 truncate">{o.name}</span>
         </label>
       ))}
+      {options.length > collapseAfter && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="text-xs font-semibold text-brand hover:underline"
+        >
+          {expanded ? 'Show less' : `Show all ${options.length}`}
+        </button>
+      )}
     </div>
   );
 }

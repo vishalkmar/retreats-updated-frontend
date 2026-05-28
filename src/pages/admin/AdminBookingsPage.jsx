@@ -6,6 +6,7 @@ import {
 import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
 import AdminBookingDetailsModal from '../../components/admin/AdminBookingDetailsModal.jsx';
+import DatePicker from '../../components/common/DatePicker.jsx';
 import {
   TYPE_LABEL, STATUS_BADGE, fmtMoney, fmtDate,
 } from '../../components/user/bookingFormatters.js';
@@ -139,20 +140,23 @@ export default function AdminBookingsPage() {
           >
             {TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
-          <div className="flex gap-2">
-            <input
-              type="date"
+          <div className="grid grid-cols-2 gap-2">
+            <DatePicker
               value={filters.from}
-              onChange={(e) => updateFilter('from', e.target.value)}
-              className="flex-1 px-2 py-2 rounded-lg border border-gray-200 text-sm focus:border-brand outline-none"
-              title="Scheduled from"
+              onChange={(iso) => updateFilter('from', iso)}
+              placeholder="From"
+              compact
+              size="sm"
+              ariaLabel="Scheduled from"
             />
-            <input
-              type="date"
+            <DatePicker
               value={filters.to}
-              onChange={(e) => updateFilter('to', e.target.value)}
-              className="flex-1 px-2 py-2 rounded-lg border border-gray-200 text-sm focus:border-brand outline-none"
-              title="Scheduled to"
+              min={filters.from || undefined}
+              onChange={(iso) => updateFilter('to', iso)}
+              placeholder="To"
+              compact
+              size="sm"
+              ariaLabel="Scheduled to"
             />
           </div>
         </div>

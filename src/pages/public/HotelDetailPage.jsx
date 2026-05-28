@@ -17,6 +17,7 @@ import api, { fileUrl } from '../../services/api';
 import ReviewsBlock from '../../components/public/ReviewsBlock.jsx';
 import AddOnsCarousel from '../../components/public/AddOnsCarousel.jsx';
 import WishlistButton from '../../components/public/WishlistButton.jsx';
+import HotelStayPicker, { todayISO, addDaysISO, nightsBetween } from '../../components/public/HotelStayPicker.jsx';
 import useRequireLogin from '../../hooks/useRequireLogin.js';
 
 const stripHtml = (s) =>
@@ -31,6 +32,16 @@ export default function HotelDetailPage() {
   const [loading, setLoading] = useState(true);
   const [thumbsSwiper, setThumbsSwiper] = useState(null);
   const [showVideo, setShowVideo] = useState(false);
+
+  // Stay picker — the source of truth for dates + guest counts the booking
+  // flow uses. Persists through navigation via the /book route query string.
+  const [stay, setStay] = useState(() => ({
+    checkIn: todayISO(),
+    checkOut: addDaysISO(todayISO(), 1),
+    adults: 2,
+    children: 0,
+    rooms: 1,
+  }));
 
   useEffect(() => {
     let cancelled = false;
@@ -324,24 +335,66 @@ export default function HotelDetailPage() {
         {/* Available Rooms */}
         <div id="rooms" className="scroll-mt-24">
           <h2 className="text-2xl font-display font-bold mb-4">Available rooms</h2>
-          {rooms.length === 0 ? (
-            <div className="card p-8 text-center text-ink-muted">
-              No rooms listed yet for this property.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {rooms.map((r) => (
-                <RoomRow key={r.id} hotel={hotel} room={r} />
-              ))}
-            </div>
-          )}
+
+          <div className="mb-5">
+            <HotelStayPicker value={stay} onChange={setStay} />
+          </div>
+
+          {(() => {
+            const guests = (stay.adults || 0) + (stay.children || 0);
+            const nights = nightsBetween(stay.checkIn, stay.checkOut);
+            // A room "fits" when N rooms × its maxOccupancy can cover the party.
+            const fitting = rooms.filter((r) => {
+              const cap = (Number(r.maxOccupancy) || 2) * (stay.rooms || 1);
+              return cap >= guests;
+            });
+            const tooSmall = rooms.length - fitting.length;
+
+            if (rooms.length === 0) {
+              return (
+                <div className="card p-8 text-center text-ink-muted">
+                  No rooms listed yet for this property.
+                </div>
+              );
+            }
+            if (fitting.length === 0) {
+              return (
+                <div className="card p-8 text-center">
+                  <p className="text-ink-muted">
+                    None of the room types fit {guests} guest{guests > 1 ? 's' : ''} in {stay.rooms} room
+                    {stay.rooms > 1 ? 's' : ''}.
+                  </p>
+                  <p className="text-xs text-ink-muted mt-2">
+                    Try adding another room or reducing guests.
+                  </p>
+                </div>
+              );
+            }
+            return (
+              <>
+                {tooSmall > 0 && (
+                  <p className="text-xs text-ink-muted mb-3">
+                    {tooSmall} room type{tooSmall > 1 ? 's' : ''} hidden — too small for {guests} guests
+                    across {stay.rooms} room{stay.rooms > 1 ? 's' : ''}.
+                  </p>
+                )}
+                <div className="space-y-4">
+                  {fitting.map((r) => (
+                    <RoomRow key={r.id} hotel={hotel} room={r} stay={stay} nights={nights} />
+                  ))}
+                </div>
+              </>
+            );
+          })()}
         </div>
 
-        {/* Suggested add-ons */}
+        {/* Suggested add-ons — passes the live guest count so each card
+            shows a per-party multiplied total alongside the per-person price. */}
         <AddOnsCarousel
           addOns={addOns}
           subtitle="Make your stay more memorable with these popular extras."
           viewAllHref={hotel.location?.slug ? `/add-ons?location=${hotel.location.slug}` : '/add-ons'}
+          guestCount={(stay.adults || 0) + (stay.children || 0)}
         />
 
         {/* Similar hotels */}
@@ -607,11 +660,22 @@ function AddOnCard({ addOn }) {
   );
 }
 
-function RoomRow({ hotel, room }) {
+function RoomRow({ hotel, room, stay, nights }) {
   const navigate = useNavigate();
   const requireLogin = useRequireLogin();
+  // Bill preview built from the stay-picker state: nights × rooms × rate.
+  const roomsBooked = Math.max(1, stay?.rooms || 1);
+  const stayNights = Math.max(1, nights || 1);
+  const totalPerStay = Number(room.price || 0) * stayNights * roomsBooked;
+  const guests = (stay?.adults || 0) + (stay?.children || 0);
+
   const handleBook = () => {
-    const target = `/book/room/${room.id}`;
+    const params = new URLSearchParams();
+    if (stay?.checkIn)  params.set('from', stay.checkIn);
+    if (stay?.checkOut) params.set('to', stay.checkOut);
+    if (guests > 0)     params.set('guests', String(guests));
+    if (roomsBooked)    params.set('rooms', String(roomsBooked));
+    const target = `/book/room/${room.id}?${params.toString()}`;
     requireLogin(() => navigate(target), { redirectTo: target });
   };
   return (
@@ -675,7 +739,12 @@ function RoomRow({ hotel, room }) {
                 {Number(room.priceOriginal).toLocaleString()}
               </span>
             )}
-            <div className="text-[11px] text-ink-muted">+ taxes · per night</div>
+            <div className="text-[11px] text-ink-muted">+ taxes · per night, per room</div>
+            <div className="mt-1 text-xs">
+              <span className="text-ink-muted">{stayNights} night{stayNights > 1 ? 's' : ''} × {roomsBooked} room{roomsBooked > 1 ? 's' : ''} = </span>
+              <span className="font-semibold text-ink">{room.currency} {totalPerStay.toLocaleString()}</span>
+              <span className="text-[10px] text-ink-muted ml-1">before tax</span>
+            </div>
           </div>
           <div className="flex flex-col gap-2 items-stretch">
             <Link
