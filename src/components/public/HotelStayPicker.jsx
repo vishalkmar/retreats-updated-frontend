@@ -1,4 +1,4 @@
-import { Calendar, Bed, User, Baby, Minus, Plus } from 'lucide-react';
+import { Calendar, Bed, User, Baby } from 'lucide-react';
 import DatePicker from '../common/DatePicker.jsx';
 
 // MMT-style stay picker — sits on the hotel detail page above the room
@@ -155,27 +155,21 @@ function CounterCell({ icon: Icon, label, hint, value, onChange, min, max, divid
       <div className="text-[10px] uppercase tracking-wider text-ink-muted flex items-center gap-1 mb-1.5">
         {Icon && <Icon size={11} />} {label}{hint && <span className="text-[9px] text-slate-400">· {hint}</span>}
       </div>
-      <div className="inline-flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => onChange(value - 1)}
-          disabled={value <= min}
-          className="h-7 w-7 rounded-full border border-slate-300 grid place-items-center disabled:opacity-40 hover:border-brand transition"
-          aria-label={`Decrease ${label}`}
-        >
-          <Minus size={12} />
-        </button>
-        <span className="w-5 text-center text-base font-bold text-ink">{value}</span>
-        <button
-          type="button"
-          onClick={() => onChange(value + 1)}
-          disabled={value >= max}
-          className="h-7 w-7 rounded-full border border-slate-300 grid place-items-center disabled:opacity-40 hover:border-brand transition"
-          aria-label={`Increase ${label}`}
-        >
-          <Plus size={12} />
-        </button>
-      </div>
+      <input
+        type="number"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(e) => {
+          const raw = e.target.value;
+          if (raw === '') { onChange(min); return; }
+          const n = parseInt(raw, 10);
+          if (!Number.isFinite(n)) return;
+          onChange(Math.max(min, Math.min(max, n)));
+        }}
+        aria-label={label}
+        className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-center text-base font-bold text-ink focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none"
+      />
     </div>
   );
 }

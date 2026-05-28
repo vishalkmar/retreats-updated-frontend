@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Minus, Plus } from 'lucide-react';
 
 /**
  * Tiny "estimate your total" widget for any bookable detail page. The user
@@ -65,41 +64,19 @@ export default function LivePriceEstimator({
       </p>
 
       <div className="mt-3 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => patch(safeUnits - 1)}
-          disabled={safeUnits <= minUnits}
-          aria-label={`Decrease ${unitLabel}`}
-          className="h-9 w-9 rounded-full border border-slate-300 grid place-items-center hover:border-brand disabled:opacity-40 transition"
-        >
-          <Minus size={14} />
-        </button>
-
-        <div className="flex-1 flex items-baseline gap-2">
-          <input
-            type="number"
-            min={minUnits}
-            max={maxUnits}
-            value={units}
-            onChange={handleInput}
-            onBlur={handleBlur}
-            className="w-20 px-3 py-2 rounded-lg border border-slate-200 text-lg font-bold text-center focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none"
-            aria-label={`Number of ${unitLabel}s`}
-          />
-          <span className="text-sm text-ink-muted">
-            {unitLabel}{safeUnits === 1 ? '' : 's'}
-          </span>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => patch(safeUnits + 1)}
-          disabled={safeUnits >= maxUnits}
-          aria-label={`Increase ${unitLabel}`}
-          className="h-9 w-9 rounded-full border border-slate-300 grid place-items-center hover:border-brand disabled:opacity-40 transition"
-        >
-          <Plus size={14} />
-        </button>
+        <input
+          type="number"
+          min={minUnits}
+          max={maxUnits}
+          value={units}
+          onChange={handleInput}
+          onBlur={handleBlur}
+          className="w-24 px-3 py-2 rounded-lg border border-slate-200 text-lg font-bold text-center focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none"
+          aria-label={`Number of ${unitLabel}s`}
+        />
+        <span className="text-sm text-ink-muted">
+          {unitLabel}{safeUnits === 1 ? '' : 's'}
+        </span>
       </div>
 
       {/* Live total */}
