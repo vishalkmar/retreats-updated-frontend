@@ -28,7 +28,8 @@ export default function PackageDetailPage() {
   const navigate = useNavigate();
   const requireLogin = useRequireLogin();
   const [pkg, setPkg] = useState(null);
-  const [addOns, setAddOns] = useState([]);
+  const [insideAddOns, setInsideAddOns] = useState([]);
+  const [outsideAddOns, setOutsideAddOns] = useState([]);
   const [similarPackages, setSimilarPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [thumbsSwiper, setThumbsSwiper] = useState(null);
@@ -53,30 +54,25 @@ export default function PackageDetailPage() {
         const p = res.data?.data?.package;
         setPkg(p);
         if (p?.id) {
-          // Suggested add-ons. Priority: this package's own activities
-          // (+ general) → location-matched → any active add-on.
+          // Suggested add-ons, split:
+          //   • Inside  → activities attached to THIS package.
+          //   • Outside → activities physically in the same city (cityName).
           const loadAddOns = async () => {
             try {
-              const r0 = await api.get('/add-ons', { params: { packageId: p.id, limit: 8 } });
-              let items = r0.data?.data?.items || [];
-              items = [...items].sort(
-                (a, b) => (b.ownerType === 'package' ? 1 : 0) - (a.ownerType === 'package' ? 1 : 0)
-              );
-              if (items.some((i) => i.ownerType === 'package')) {
-                if (!cancelled) setAddOns(items);
-                return;
+              const inside = await api.get('/add-ons', { params: { packageId: p.id, exclusive: true, limit: 12 } });
+              const insideItems = inside.data?.data?.items || [];
+              if (!cancelled) setInsideAddOns(insideItems);
+
+              const insideIds = new Set(insideItems.map((i) => i.id));
+              const city = p.cityName || p.locationDetail;
+              if (city) {
+                const out = await api.get('/add-ons', { params: { city, limit: 12 } });
+                const outItems = (out.data?.data?.items || []).filter((i) => !insideIds.has(i.id));
+                if (!cancelled) setOutsideAddOns(outItems);
+              } else if (insideItems.length === 0) {
+                const gen = await api.get('/add-ons', { params: { scope: 'general', limit: 8 } });
+                if (!cancelled) setOutsideAddOns(gen.data?.data?.items || []);
               }
-              if (p.location?.slug) {
-                const r1 = await api.get('/add-ons', { params: { location: p.location.slug, limit: 6 } });
-                const matched = r1.data?.data?.items || [];
-                if (matched.length > 0) {
-                  if (!cancelled) setAddOns(matched);
-                  return;
-                }
-              }
-              if (items.length > 0) { if (!cancelled) setAddOns(items); return; }
-              const r2 = await api.get('/add-ons', { params: { limit: 6 } });
-              if (!cancelled) setAddOns(r2.data?.data?.items || []);
             } catch { /* swallow */ }
           };
           loadAddOns();
@@ -527,10 +523,18 @@ export default function PackageDetailPage() {
             </Section>
           )}
 
-          {/* Suggested add-on activities */}
+          {/* Activities included with / attached to this package */}
           <AddOnsCarousel
-            addOns={addOns}
-            subtitle="Enhance your retreat with these popular experiences."
+            title="Activities in this package"
+            addOns={insideAddOns}
+            subtitle="Experiences curated as part of this retreat."
+          />
+
+          {/* Nearby activities — same city, shown with full address */}
+          <AddOnsCarousel
+            title={(pkg.cityName || pkg.locationDetail) ? `Activities nearby in ${pkg.cityName || pkg.locationDetail}` : 'Other suggested activities'}
+            addOns={outsideAddOns}
+            subtitle="Popular experiences around your retreat you can add on."
             viewAllHref={pkg.location?.slug ? `/add-ons?location=${pkg.location.slug}` : '/add-ons'}
           />
 

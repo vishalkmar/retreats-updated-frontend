@@ -14,6 +14,7 @@ import 'swiper/css/thumbs';
 import 'swiper/css/pagination';
 
 import api, { fileUrl } from '../../services/api';
+import { mapEmbedSrc } from '../../utils/mapEmbed.js';
 import ReviewsBlock from '../../components/public/ReviewsBlock.jsx';
 import AddOnsCarousel from '../../components/public/AddOnsCarousel.jsx';
 import WishlistButton from '../../components/public/WishlistButton.jsx';
@@ -458,12 +459,18 @@ export default function EventDetailPage() {
         )}
 
         {/* Map */}
-        {event.mapEmbedHtml && (
+        {mapEmbedSrc(event.mapEmbedHtml) && (
           <Section title="Location on map">
-            <div
-              className="rounded-2xl overflow-hidden border [&_iframe]:w-full [&_iframe]:h-[400px] [&_iframe]:border-0"
-              dangerouslySetInnerHTML={{ __html: event.mapEmbedHtml }}
-            />
+            <div className="rounded-2xl overflow-hidden border">
+              <iframe
+                src={mapEmbedSrc(event.mapEmbedHtml)}
+                title={`${event.title || event.name || 'Event'} location`}
+                className="w-full h-[400px] border-0"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+              />
+            </div>
           </Section>
         )}
 

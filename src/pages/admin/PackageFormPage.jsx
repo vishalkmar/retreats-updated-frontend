@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
+import { onlyStateLocations } from '../../utils/indianStates.js';
 import MultiSelectChips from '../../components/admin/MultiSelectChips.jsx';
 import CheckboxChips from '../../components/admin/CheckboxChips.jsx';
 import { ItineraryEditor, FaqEditor } from '../../components/admin/KeyValueListEditor.jsx';
@@ -31,7 +32,7 @@ const blankForm = {
   name: '', slug: '',
   shortDescription: '', description: '',
   videoUrl: '',
-  cityId: '', locationId: '', locationDetail: '',
+  cityId: '', cityName: '', locationId: '', locationDetail: '',
   durationDays: 1, durationNights: 0, timing: '',
   availableAllYear: true, startDate: '', endDate: '',
   minGroupSize: 1, maxGroupSize: 30,
@@ -172,6 +173,7 @@ export default function PackageFormPage() {
         description: p.description || '',
         videoUrl: p.videoUrl || '',
         cityId: p.cityId || '',
+        cityName: p.cityName || '',
         locationId: p.locationId || '',
         locationDetail: p.locationDetail || '',
         durationDays: p.durationDays ?? 1,
@@ -462,26 +464,23 @@ export default function PackageFormPage() {
       <Section icon={MapPin} title="Location & timing">
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
-            <label className="label">Location (shared with Hotels)</label>
+            <label className="label">State</label>
             <select className="input" value={form.locationId} onChange={(e) => change('locationId', e.target.value)}>
               <option value="">— select —</option>
-              {locationsList.map((l) => (
-                <option key={l.id} value={l.id}>{l.name}{l.country ? `, ${l.country}` : ''}</option>
+              {onlyStateLocations(locationsList).map((l) => (
+                <option key={l.id} value={l.id}>{l.name}</option>
               ))}
             </select>
-            <p className="text-[11px] text-ink-muted mt-1">
-              Manage in{' '}
-              <Link to="/admin/hotels-config/locations" className="text-brand hover:underline">Locations</Link>
-            </p>
+            <p className="text-[11px] text-ink-muted mt-1">Indian states &amp; union territories.</p>
           </div>
           <div>
-            <label className="label">City (legacy)</label>
-            <select className="input" value={form.cityId} onChange={(e) => change('cityId', e.target.value)}>
-              <option value="">— select —</option>
-              {cities.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}{c.country ? `, ${c.country}` : ''}</option>
-              ))}
-            </select>
+            <label className="label">City (optional)</label>
+            <input
+              className="input"
+              value={form.cityName}
+              onChange={(e) => change('cityName', e.target.value)}
+              placeholder="Type the city name"
+            />
           </div>
           <div className="sm:col-span-2">
             <label className="label">Location detail (free text)</label>

@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Filter, X, LayoutGrid, List as ListIcon } from 'lucide-react';
 import api from '../../services/api';
+import { onlyStateLocations } from '../../utils/indianStates.js';
 import HotelCard from '../../components/public/HotelCard.jsx';
 import PriceTierFilter from '../../components/public/PriceTierFilter.jsx';
 import StarRatingFilter from '../../components/public/StarRatingFilter.jsx';
@@ -224,9 +225,9 @@ export default function HotelsListPage() {
                 />
               </FilterBlock>
 
-              <FilterBlock label="Locations">
+              <FilterBlock label="State">
                 <RadioList
-                  options={locations}
+                  options={onlyStateLocations(locations)}
                   value={filters.location}
                   onChange={(v) => update('location', v)}
                 />

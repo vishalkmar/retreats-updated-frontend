@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
+import { mapEmbedSrc } from '../../utils/mapEmbed.js';
+import { onlyStateLocations } from '../../utils/indianStates.js';
 import Dropzone from '../../components/admin/Dropzone.jsx';
 import RichTextEditor from '../../components/admin/RichTextEditor.jsx';
 import usePersistedForm from '../../hooks/usePersistedForm.js';
@@ -14,7 +16,7 @@ import DatePicker from '../../components/common/DatePicker.jsx';
 
 const blankForm = {
   name: '', slug: '',
-  eventTypeId: '', locationId: '',
+  eventTypeId: '', locationId: '', cityName: '', address: '',
   eventDate: '', endDate: '',
   startTime: '', endTime: '',
   price: 0, priceOriginal: '', currency: 'INR',
@@ -95,6 +97,8 @@ export default function EventFormPage() {
         slug: e.slug || '',
         eventTypeId: e.eventTypeId || '',
         locationId: e.locationId || '',
+        cityName: e.cityName || '',
+        address: e.address || '',
         eventDate: e.eventDate || '',
         endDate: e.endDate || '',
         startTime: e.startTime || '',
@@ -283,17 +287,35 @@ export default function EventFormPage() {
             </p>
           </div>
           <div>
-            <label className="label">Location</label>
+            <label className="label">State</label>
             <select
               className="input"
               value={form.locationId}
               onChange={(e) => change('locationId', e.target.value)}
             >
               <option value="">— Select —</option>
-              {locations.map((l) => (
-                <option key={l.id} value={l.id}>{l.name}{l.country ? ` · ${l.country}` : ''}</option>
+              {onlyStateLocations(locations).map((l) => (
+                <option key={l.id} value={l.id}>{l.name}</option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className="label">City</label>
+            <input
+              className="input"
+              value={form.cityName}
+              onChange={(e) => change('cityName', e.target.value)}
+              placeholder="Type the city name"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="label">Full address</label>
+            <input
+              className="input"
+              value={form.address}
+              onChange={(e) => change('address', e.target.value)}
+              placeholder="Venue, street, area…"
+            />
           </div>
           <div>
             <label className="label flex items-center gap-1"><Calendar size={12} /> Event date</label>
@@ -456,14 +478,20 @@ export default function EventFormPage() {
           rows={3}
           value={form.mapEmbedHtml}
           onChange={(e) => change('mapEmbedHtml', e.target.value)}
-          placeholder='<iframe src="https://www.google.com/maps/embed?pb=…" …></iframe>'
+          placeholder='Paste the Google Maps "Embed a map" <iframe …> tag, OR a maps link / address'
         />
-        {form.mapEmbedHtml && (
+        <p className="text-[11px] text-ink-muted mt-1">
+          In Google Maps → Share → <strong>Embed a map</strong> → copy the HTML and paste it. A plain link or address also works.
+        </p>
+        {mapEmbedSrc(form.mapEmbedHtml) && (
           <div className="mt-3 rounded-lg overflow-hidden border bg-surface-alt">
             <div className="text-[11px] text-ink-muted px-3 py-1.5 bg-white border-b">Preview</div>
-            <div
-              className="[&_iframe]:w-full [&_iframe]:h-[280px] [&_iframe]:border-0"
-              dangerouslySetInnerHTML={{ __html: form.mapEmbedHtml }}
+            <iframe
+              src={mapEmbedSrc(form.mapEmbedHtml)}
+              title="Map preview"
+              className="w-full h-[280px] border-0"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
             />
           </div>
         )}

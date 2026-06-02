@@ -83,11 +83,12 @@ export default function AddOnsCarousel({
       {/* Carousel */}
       <Swiper
         modules={[Navigation, Autoplay]}
-        slidesPerView={1}
+        slidesPerView={1.1}
         spaceBetween={16}
         breakpoints={{
-          640: { slidesPerView: 2 },
-          1024: { slidesPerView: addOns.length >= 3 ? 3 : addOns.length },
+          480: { slidesPerView: 1.4 },
+          768: { slidesPerView: 2 },
+          1024: { slidesPerView: 2.2 },
         }}
         navigation={{
           prevEl: prevRef.current,
@@ -101,8 +102,8 @@ export default function AddOnsCarousel({
           // eslint-disable-next-line no-param-reassign
           swiper.params.navigation.nextEl = nextRef.current;
         }}
-        autoplay={addOns.length > 3 ? { delay: 5000, disableOnInteraction: true } : false}
-        loop={addOns.length > 3}
+        autoplay={addOns.length > 4 ? { delay: 5000, disableOnInteraction: true } : false}
+        loop={addOns.length > 4}
         className="!pb-2"
       >
         {addOns.map((a) => (
@@ -179,6 +180,12 @@ function AddOnPremiumCard({ addOn: a, guestCount = 0 }) {
         <h3 className="font-display font-semibold text-base leading-snug line-clamp-2 group-hover:text-brand transition">
           {a.name}
         </h3>
+        {(a.address || a.cityName) && (
+          <p className="mt-1 flex items-start gap-1 text-[11px] text-ink-muted line-clamp-2">
+            <MapPin size={11} className="mt-0.5 shrink-0" />
+            <span>{[a.address, a.cityName].filter(Boolean).join(', ')}</span>
+          </p>
+        )}
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-ink-muted mt-2">
           {(a.minAge || a.maxAge) && (
@@ -188,32 +195,31 @@ function AddOnPremiumCard({ addOn: a, guestCount = 0 }) {
           )}
         </div>
 
-        <div className="mt-auto pt-3 border-t border-slate-100 flex items-end justify-between gap-2">
-          <div>
-            <div className="text-[10px] text-ink-muted uppercase tracking-wide">From</div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-xl font-bold text-brand">
-                {a.currency} {Number(a.price).toLocaleString()}
+        <div className="mt-auto pt-3 border-t border-slate-100">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-[10px] text-ink-muted uppercase tracking-wide mr-1">From</span>
+            <span className="text-lg font-bold text-brand">
+              {a.currency} {Number(a.price).toLocaleString()}
+            </span>
+            {a.priceOriginal && Number(a.priceOriginal) > Number(a.price) && (
+              <span className="text-xs line-through text-ink-muted">
+                {Number(a.priceOriginal).toLocaleString()}
               </span>
-              {a.priceOriginal && Number(a.priceOriginal) > Number(a.price) && (
-                <span className="text-xs line-through text-ink-muted">
-                  {Number(a.priceOriginal).toLocaleString()}
-                </span>
-              )}
-            </div>
-            <div className="text-[10px] text-ink-muted">per person</div>
-            {livePartyTotal > 0 && (
-              <div className="text-[11px] mt-1">
-                <span className="text-ink-muted">{guestCount} guests = </span>
-                <span className="font-semibold text-ink">
-                  {a.currency} {livePartyTotal.toLocaleString()}
-                </span>
-              </div>
             )}
+            <span className="text-[10px] text-ink-muted">/ person</span>
           </div>
-          <span className="relative z-20 inline-flex items-center gap-1 text-xs font-semibold text-brand bg-brand/10 px-3 py-1.5 rounded-full group-hover:bg-brand group-hover:text-white transition">
-            Book <ArrowRight size={12} />
-          </span>
+          {livePartyTotal > 0 && (
+            <div className="text-[11px] mt-0.5">
+              <span className="text-ink-muted">{guestCount} guests = </span>
+              <span className="font-semibold text-ink">{a.currency} {livePartyTotal.toLocaleString()}</span>
+            </div>
+          )}
+          <Link
+            to={`/add-ons/${a.slug}`}
+            className="relative z-20 mt-2.5 w-full inline-flex items-center justify-center gap-1 text-xs font-semibold text-white bg-brand px-3 py-2 rounded-lg hover:bg-brand-dark transition"
+          >
+            View details <ArrowRight size={12} />
+          </Link>
         </div>
       </div>
     </article>

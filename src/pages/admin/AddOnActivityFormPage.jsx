@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, Save, Image as ImageIcon, Tag, MapPin,
   DollarSign, HelpCircle, Sparkles, Settings, FileText,
@@ -10,13 +10,14 @@ import { FaqEditor } from '../../components/admin/KeyValueListEditor.jsx';
 import Dropzone from '../../components/admin/Dropzone.jsx';
 import RichTextEditor from '../../components/admin/RichTextEditor.jsx';
 import usePersistedForm from '../../hooks/usePersistedForm.js';
+import { onlyStateLocations } from '../../utils/indianStates.js';
 
 const blankForm = {
   name: '', slug: '',
   ownerType: 'general',
   hotelId: '',
   packageId: '',
-  locationId: '',
+  locationId: '', cityName: '', address: '',
   price: 0, priceOriginal: '', currency: 'INR',
   descriptionRich: '', highlightsRich: '',
   minAge: '', maxAge: '',
@@ -49,6 +50,10 @@ function Section({ icon: Icon, title, children, defaultOpen = true }) {
 
 export default function AddOnActivityFormPage() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const presetOwnerType = searchParams.get('ownerType');
+  const presetHotelId = searchParams.get('hotelId');
+  const presetPackageId = searchParams.get('packageId');
   const editing = !!id;
   const navigate = useNavigate();
 
@@ -59,7 +64,16 @@ export default function AddOnActivityFormPage() {
     clearDraft,
     discardDraft,
     hasDraft,
-  } = usePersistedForm(`addon-form:${id || 'new'}`, blankForm, { editing });
+  } = usePersistedForm(
+    `addon-form:${id || `new-${presetHotelId || presetPackageId || presetOwnerType || 'noid'}`}`,
+    {
+      ...blankForm,
+      ownerType: presetPackageId ? 'package' : presetHotelId ? 'hotel' : (presetOwnerType || 'general'),
+      hotelId: presetHotelId || '',
+      packageId: presetPackageId || '',
+    },
+    { editing },
+  );
   const [activity, setActivity] = useState(null);
   const [loading, setLoading] = useState(editing);
   const [submitting, setSubmitting] = useState(false);
@@ -92,6 +106,8 @@ export default function AddOnActivityFormPage() {
         hotelId: a.hotelId || '',
         packageId: a.packageId || '',
         locationId: a.locationId || '',
+        cityName: a.cityName || '',
+        address: a.address || '',
         price: a.price ?? 0,
         priceOriginal: a.priceOriginal ?? '',
         currency: a.currency || 'INR',
@@ -105,6 +121,13 @@ export default function AddOnActivityFormPage() {
         isRefundable: a.isRefundable ?? true,
         sortOrder: a.sortOrder ?? 0,
       });
+      // Owner is locked in edit — reflect the server's real owner.
+      setForm((s) => ({
+        ...s,
+        ownerType: a.ownerType || (a.hotelId ? 'hotel' : a.packageId ? 'package' : 'general'),
+        hotelId: a.hotelId || '',
+        packageId: a.packageId || '',
+      }));
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to load');
     } finally {
@@ -115,6 +138,21 @@ export default function AddOnActivityFormPage() {
   useEffect(() => { load(); }, [load]);
 
   const change = (k, v) => setForm((s) => ({ ...s, [k]: v }));
+
+  // Owner is already decided when creating from a hotel/package context OR when
+  // editing — don't re-ask. (General activities have no entity to lock.)
+  const lockedOwner =
+    (editing && form.ownerType !== 'general') ||
+    !!presetHotelId || !!presetPackageId || presetOwnerType === 'general';
+  const lockedOwnerName = (() => {
+    if (form.ownerType === 'general') return 'General — suggested everywhere';
+    if (form.ownerType === 'package') {
+      const pid = form.packageId || presetPackageId;
+      return packages.find((p) => String(p.id) === String(pid))?.name || activity?.package?.name || '';
+    }
+    const hid = form.hotelId || presetHotelId;
+    return hotels.find((h) => String(h.id) === String(hid))?.name || activity?.hotel?.name || '';
+  })();
 
   const submit = async (e) => {
     e.preventDefault();
@@ -241,65 +279,100 @@ export default function AddOnActivityFormPage() {
       </Section>
 
       <Section icon={Sparkles} title="Attach to">
-        <p className="text-xs text-ink-muted -mt-1">
-          A <strong>general</strong> activity is suggested everywhere. Attach to a specific hotel or package
-          to feature it on that hotel/package's page.
-        </p>
-        <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4">
+        {lockedOwner ? (
           <div>
-            <label className="label">Activity belongs to</label>
-            <div className="flex gap-2">
-              {['general', 'hotel', 'package'].map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => change('ownerType', t)}
-                  className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium capitalize transition ${
-                    form.ownerType === t
-                      ? 'border-brand bg-brand/10 text-brand'
-                      : 'border-slate-200 text-ink-muted hover:border-brand/40'
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
+            <label className="label">This activity belongs to</label>
+            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm">
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                form.ownerType === 'package' ? 'bg-purple-100 text-purple-700'
+                : form.ownerType === 'hotel' ? 'bg-blue-100 text-blue-700'
+                : 'bg-slate-200 text-slate-700'}`}>
+                {form.ownerType.toUpperCase()}
+              </span>
+              <span className="font-medium text-ink">{lockedOwnerName || '…'}</span>
             </div>
           </div>
-          {form.ownerType === 'hotel' && (
-            <div>
-              <label className="label">Hotel *</label>
-              <select className="input" value={form.hotelId} onChange={(e) => change('hotelId', e.target.value)}>
-                <option value="">— Select hotel —</option>
-                {hotels.map((h) => (<option key={h.id} value={h.id}>{h.name}</option>))}
-              </select>
+        ) : (
+          <>
+            <p className="text-xs text-ink-muted -mt-1">
+              A <strong>general</strong> activity is suggested everywhere. Attach to a specific hotel or package
+              to feature it on that hotel/package's page.
+            </p>
+            <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4">
+              <div>
+                <label className="label">Activity belongs to</label>
+                <div className="flex gap-2">
+                  {['general', 'hotel', 'package'].map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => change('ownerType', t)}
+                      className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium capitalize transition ${
+                        form.ownerType === t
+                          ? 'border-brand bg-brand/10 text-brand'
+                          : 'border-slate-200 text-ink-muted hover:border-brand/40'
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {form.ownerType === 'hotel' && (
+                <div>
+                  <label className="label">Hotel *</label>
+                  <select className="input" value={form.hotelId} onChange={(e) => change('hotelId', e.target.value)}>
+                    <option value="">— Select hotel —</option>
+                    {hotels.map((h) => (<option key={h.id} value={h.id}>{h.name}</option>))}
+                  </select>
+                </div>
+              )}
+              {form.ownerType === 'package' && (
+                <div>
+                  <label className="label">Package *</label>
+                  <select className="input" value={form.packageId} onChange={(e) => change('packageId', e.target.value)}>
+                    <option value="">— Select package —</option>
+                    {packages.map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
+                  </select>
+                </div>
+              )}
             </div>
-          )}
-          {form.ownerType === 'package' && (
-            <div>
-              <label className="label">Package *</label>
-              <select className="input" value={form.packageId} onChange={(e) => change('packageId', e.target.value)}>
-                <option value="">— Select package —</option>
-                {packages.map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
-              </select>
-            </div>
-          )}
-        </div>
+          </>
+        )}
       </Section>
 
       <Section icon={MapPin} title="Location & pricing">
         <div className="grid sm:grid-cols-4 gap-x-6 gap-y-6">
-          <div className="sm:col-span-2">
-            <label className="label">Location</label>
+          <div>
+            <label className="label">State</label>
             <select
               className="input"
               value={form.locationId}
               onChange={(e) => change('locationId', e.target.value)}
             >
               <option value="">— Select —</option>
-              {locations.map((l) => (
-                <option key={l.id} value={l.id}>{l.name}{l.country ? ` · ${l.country}` : ''}</option>
+              {onlyStateLocations(locations).map((l) => (
+                <option key={l.id} value={l.id}>{l.name}</option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className="label">City</label>
+            <input
+              className="input"
+              value={form.cityName}
+              onChange={(e) => change('cityName', e.target.value)}
+              placeholder="City (used to match nearby hotels/packages)"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="label">Full address</label>
+            <input
+              className="input"
+              value={form.address}
+              onChange={(e) => change('address', e.target.value)}
+              placeholder="Street, landmark, area…"
+            />
           </div>
           <div>
             <label className="label">Currency</label>

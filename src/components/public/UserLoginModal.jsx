@@ -87,10 +87,17 @@ export default function UserLoginModal() {
     setSubmitting(true);
     try {
       const res = await api.post('/user-auth/request-otp', { email: email.trim() });
-      setIsNewUser(!!res.data?.data?.isNewUser);
+      const data = res.data?.data || {};
+      setIsNewUser(!!data.isNewUser);
       setStep('otp');
       setResendSecs(30);
-      toast.success(res.data?.message || 'OTP sent to your email');
+      if (data.devCode) {
+        toast(`Dev code: ${data.devCode}`, { duration: 12000, icon: '🔑' });
+      } else if (data.emailDelivered === false) {
+        toast('Email service unreachable — check the server console for the code', { duration: 6000 });
+      } else {
+        toast.success(res.data?.message || 'OTP sent to your email');
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Could not send OTP');
     } finally {

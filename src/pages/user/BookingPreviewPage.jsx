@@ -2,12 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, Calendar, Users, MapPin, Loader2, Shield, ChevronRight, BedDouble, AlertCircle,
-  Tag, Wallet, Check, X as XIcon,
+  Tag, Wallet, Check, X as XIcon, Plus, Baby,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
 import { useUserAuth } from '../../context/UserAuthContext.jsx';
 import DatePicker from '../../components/common/DatePicker.jsx';
+import { matchTier } from '../../utils/roomPricing.js';
 
 const TYPE_LABEL = {
   package: 'Retreat',
@@ -66,6 +67,17 @@ export default function BookingPreviewPage() {
   // Room bookings carry an extra `rooms` count — the hotel detail page
   // seeds this from the stay picker. Defaults to 1 for non-room items.
   const [roomCount, setRoomCount] = useState(() => Math.max(1, parseInt(params.get('rooms'), 10) || 1));
+  // Extra guests priced by age band + bed (room bookings only). Each:
+  // { age, bed }. Pre-seeded from the room detail page's `extra=` param.
+  const [extraPersons, setExtraPersons] = useState(() => {
+    try {
+      const raw = params.get('extra');
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr)
+        ? arr.map((p) => ({ age: Number.isInteger(p?.age) ? p.age : '', bed: p?.bed === 'with' ? 'with' : 'without' }))
+        : [];
+    } catch { return []; }
+  });
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
@@ -102,6 +114,7 @@ export default function BookingPreviewPage() {
         scheduledEndAt: scheduledEndAt || null,
         guestCount,
         roomCount,
+        extraPersons,
         // Only send a coupon if the user actually applied one. Sending the raw
         // input as they type would spam the validator with errors.
         couponCode: appliedCouponCode,
@@ -115,7 +128,7 @@ export default function BookingPreviewPage() {
     } finally {
       setPreviewing(false);
     }
-  }, [type, id, scheduledFor, scheduledEndAt, guestCount, roomCount, appliedCouponCode, useWallet]);
+  }, [type, id, scheduledFor, scheduledEndAt, guestCount, roomCount, extraPersons, appliedCouponCode, useWallet]);
 
   useEffect(() => { fetchPreview(); }, [fetchPreview]);
 
@@ -215,6 +228,7 @@ export default function BookingPreviewPage() {
         scheduledEndAt: config.showCheckOut ? (scheduledEndAt || null) : null,
         guestCount,
         roomCount,
+        extraPersons,
         guestName: guestName.trim(),
         guestEmail: guestEmail.trim(),
         guestPhone: guestPhone.trim(),
@@ -372,6 +386,73 @@ export default function BookingPreviewPage() {
                 </Field>
               )}
             </div>
+
+            {/* Extra guests priced by age (rooms only, when configured) */}
+            {type === 'room' && Array.isArray(item?.meta?.extraPersonTiers) && item.meta.extraPersonTiers.length > 0 && (
+              <div className="mt-4 border-t pt-4">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <h3 className="text-sm font-semibold text-ink flex items-center gap-1.5">
+                    <Baby size={15} className="text-brand" /> Add extra guests
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setExtraPersons((p) => [...p, { age: '' }])}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline"
+                  >
+                    <Plus size={14} /> Add person
+                  </button>
+                </div>
+                <p className="text-[11px] text-ink-muted mb-2">
+                  Adults are counted in {config.guestLabel.toLowerCase()}. Add children/extra guests with their
+                  age — pricing updates live and a second room is added automatically once occupancy is exceeded.
+                </p>
+                {extraPersons.length === 0 ? (
+                  <p className="text-xs italic text-ink-muted">No extra guests added.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {extraPersons.map((p, idx) => {
+                      const tier = matchTier(item.meta.extraPersonTiers || [], p);
+                      const priceLabel = p.age === ''
+                        ? 'Pick an age'
+                        : !tier || tier.priceType === 'free'
+                          ? 'Free'
+                          : `${item.currency || 'INR'} ${Number(tier.price).toLocaleString()}/night`;
+                      return (
+                        <div key={idx} className="flex items-center gap-2">
+                          <select
+                            value={p.age}
+                            onChange={(e) => setExtraPersons((arr) => arr.map((x, i) => (i === idx ? { ...x, age: e.target.value === '' ? '' : parseInt(e.target.value, 10) } : x)))}
+                            className="input w-28"
+                          >
+                            <option value="">Age…</option>
+                            {Array.from({ length: 16 }, (_, a) => (
+                              <option key={a} value={a}>{a >= 15 ? '15+ (adult)' : `${a} yr`}</option>
+                            ))}
+                          </select>
+                          <select
+                            value={p.bed}
+                            onChange={(e) => setExtraPersons((arr) => arr.map((x, i) => (i === idx ? { ...x, bed: e.target.value } : x)))}
+                            className="input w-32"
+                          >
+                            <option value="without">Without bed</option>
+                            <option value="with">With bed</option>
+                          </select>
+                          <span className="flex-1 text-xs text-ink-muted truncate">{priceLabel}</span>
+                          <button
+                            type="button"
+                            onClick={() => setExtraPersons((arr) => arr.filter((_, i) => i !== idx))}
+                            className="p-1.5 rounded-lg text-red-600 hover:bg-red-50"
+                            title="Remove"
+                          >
+                            <XIcon size={14} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </section>
 
           {/* Guest details */}
@@ -439,8 +520,19 @@ export default function BookingPreviewPage() {
             <div className="text-xs text-ink-muted mb-3">
               {fmtMoney(pricing?.display?.unitPrice, pricing?.currency)} × {pricing?.quantity}
               {config.unitLabel ? ` (${config.unitLabel(pricing?.quantity)})` : ''}
+              {type === 'room' && pricing?.roomsResolved > roomCount && (
+                <div className="text-[11px] text-amber-700 mt-1">
+                  Party needs {pricing.roomsResolved} rooms — adjusted automatically.
+                </div>
+              )}
             </div>
 
+            {type === 'room' && pricing?.display?.extraPersons > 0 && (
+              <Row
+                label={`Extra guests${pricing?.extraPersonsCount ? ` (${pricing.extraPersonsCount})` : ''}`}
+                value={fmtMoney(pricing.display.extraPersons, pricing.currency)}
+              />
+            )}
             <Row label="Subtotal" value={fmtMoney(pricing?.display?.subtotal, pricing?.currency)} />
             <Row label={`Taxes (${Math.round((pricing?.taxRate || 0) * 100)}%)`} value={fmtMoney(pricing?.display?.tax, pricing?.currency)} />
             {pricing?.display?.walletDiscount > 0 && (

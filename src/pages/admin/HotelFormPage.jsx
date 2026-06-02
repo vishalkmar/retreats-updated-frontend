@@ -7,6 +7,9 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
+import { mapEmbedSrc } from '../../utils/mapEmbed.js';
+import { onlyStateLocations } from '../../utils/indianStates.js';
+import StarRatingInput from '../../components/admin/StarRatingInput.jsx';
 import MultiSelectChips from '../../components/admin/MultiSelectChips.jsx';
 import { FaqEditor } from '../../components/admin/KeyValueListEditor.jsx';
 import Dropzone from '../../components/admin/Dropzone.jsx';
@@ -34,7 +37,7 @@ const blankForm = {
   name: '', slug: '',
   shortDescription: '', description: '',
   videoUrl: '', videoType: '',
-  locationId: '', cityId: '',
+  locationId: '', cityId: '', cityName: '',
   address: '', mapEmbedHtml: '',
   rating: 0, starRating: '',
   priceFrom: 0, priceOriginal: '', currency: 'INR',
@@ -136,6 +139,7 @@ export default function HotelFormPage() {
         videoType: h.videoType || '',
         locationId: h.locationId || '',
         cityId: h.cityId || '',
+        cityName: h.cityName || '',
         address: h.address || '',
         mapEmbedHtml: h.mapEmbedHtml || '',
         rating: h.rating ?? 0,
@@ -333,34 +337,27 @@ export default function HotelFormPage() {
       <Section icon={MapPin} title="Location & map">
         <div className="grid sm:grid-cols-2 gap-x-6 gap-y-6">
           <div>
-            <label className="label">Location *</label>
+            <label className="label">State *</label>
             <select
               className="input"
               value={form.locationId}
               onChange={(e) => change('locationId', e.target.value)}
             >
               <option value="">— Select —</option>
-              {locations.map((l) => (
-                <option key={l.id} value={l.id}>{l.name}{l.country ? ` · ${l.country}` : ''}</option>
+              {onlyStateLocations(locations).map((l) => (
+                <option key={l.id} value={l.id}>{l.name}</option>
               ))}
             </select>
-            <p className="text-[11px] text-ink-muted mt-1">
-              Manage from{' '}
-              <Link to="/admin/hotels-config/locations" className="text-brand hover:underline">Locations</Link>
-            </p>
+            <p className="text-[11px] text-ink-muted mt-1">Indian states &amp; union territories.</p>
           </div>
           <div>
             <label className="label">City (optional)</label>
-            <select
+            <input
               className="input"
-              value={form.cityId}
-              onChange={(e) => change('cityId', e.target.value)}
-            >
-              <option value="">— Select —</option>
-              {cities.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+              value={form.cityName}
+              onChange={(e) => change('cityName', e.target.value)}
+              placeholder="Type the city name"
+            />
           </div>
           <div className="sm:col-span-2">
             <label className="label">Address</label>
@@ -373,21 +370,28 @@ export default function HotelFormPage() {
           </div>
           <div className="sm:col-span-2">
             <label className="label flex items-center gap-2">
-              <MapIcon size={14} /> Google Maps embed HTML
+              <MapIcon size={14} /> Google Maps
             </label>
             <textarea
               className="input font-mono text-xs"
               rows={3}
               value={form.mapEmbedHtml}
               onChange={(e) => change('mapEmbedHtml', e.target.value)}
-              placeholder='<iframe src="https://www.google.com/maps/embed?pb=…" …></iframe>'
+              placeholder='Paste the Google Maps "Embed a map" <iframe …> tag, OR a maps link / address'
             />
-            {form.mapEmbedHtml && (
+            <p className="text-[11px] text-ink-muted mt-1">
+              In Google Maps → Share → <strong>Embed a map</strong> → copy the full HTML and paste it here.
+              A plain maps link or address also works.
+            </p>
+            {mapEmbedSrc(form.mapEmbedHtml) && (
               <div className="mt-3 rounded-lg overflow-hidden border bg-surface-alt">
                 <div className="text-[11px] text-ink-muted px-3 py-1.5 bg-white border-b">Preview</div>
-                <div
-                  className="[&_iframe]:w-full [&_iframe]:h-[280px] [&_iframe]:border-0"
-                  dangerouslySetInnerHTML={{ __html: form.mapEmbedHtml }}
+                <iframe
+                  src={mapEmbedSrc(form.mapEmbedHtml)}
+                  title="Map preview"
+                  className="w-full h-[280px] border-0"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
                 />
               </div>
             )}
@@ -487,12 +491,9 @@ export default function HotelFormPage() {
           </div>
           <div>
             <label className="label flex items-center gap-1"><Star size={12} /> Hotel rating (0–5)</label>
-            <input
-              type="number" step="0.1" min="0" max="5" className="input"
-              value={form.rating}
-              onChange={(e) => change('rating', e.target.value)}
-              placeholder="4.5"
-            />
+            <div className="input !p-2.5">
+              <StarRatingInput value={Number(form.rating) || 0} onChange={(v) => change('rating', v)} />
+            </div>
             <p className="text-[11px] text-ink-muted mt-1">Review-style rating shown on cards — also filterable on the site.</p>
           </div>
         </div>

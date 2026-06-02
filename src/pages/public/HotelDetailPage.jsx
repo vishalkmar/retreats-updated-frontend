@@ -14,6 +14,7 @@ import 'swiper/css/thumbs';
 import 'swiper/css/pagination';
 
 import api, { fileUrl } from '../../services/api';
+import { mapEmbedSrc } from '../../utils/mapEmbed.js';
 import ReviewsBlock from '../../components/public/ReviewsBlock.jsx';
 import AddOnsCarousel from '../../components/public/AddOnsCarousel.jsx';
 import WishlistButton from '../../components/public/WishlistButton.jsx';
@@ -27,7 +28,8 @@ export default function HotelDetailPage() {
   const { slug } = useParams();
   const [hotel, setHotel] = useState(null);
   const [rooms, setRooms] = useState([]);
-  const [addOns, setAddOns] = useState([]);
+  const [insideAddOns, setInsideAddOns] = useState([]);
+  const [outsideAddOns, setOutsideAddOns] = useState([]);
   const [similarHotels, setSimilarHotels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [thumbsSwiper, setThumbsSwiper] = useState(null);
@@ -56,35 +58,27 @@ export default function HotelDetailPage() {
             .then((r) => { if (!cancelled) setRooms(r.data?.data?.items || []); })
             .catch(() => {});
 
-          // Suggested add-on activities. Priority:
-          //   1. Activities tagged to THIS hotel (+ general) — the admin
-          //      explicitly attached them, so they lead.
-          //   2. Location-matched general activities.
-          //   3. Any active add-ons, so the section is never empty.
+          // Suggested add-on activities split into two groups:
+          //   • Inside  → activities the admin attached to THIS hotel.
+          //   • Outside → activities physically in the same city (matched on
+          //     cityName), shown with their full address as "nearby".
           const loadAddOns = async () => {
             try {
-              const r0 = await api.get('/add-ons', { params: { hotelId: h.id, limit: 8 } });
-              let items = r0.data?.data?.items || [];
-              // Surface this hotel's own activities before the general ones.
-              items = [...items].sort(
-                (a, b) => (b.ownerType === 'hotel' ? 1 : 0) - (a.ownerType === 'hotel' ? 1 : 0)
-              );
-              if (items.some((i) => i.ownerType === 'hotel')) {
-                if (!cancelled) setAddOns(items);
-                return;
+              const inside = await api.get('/add-ons', { params: { hotelId: h.id, exclusive: true, limit: 12 } });
+              const insideItems = inside.data?.data?.items || [];
+              if (!cancelled) setInsideAddOns(insideItems);
+
+              const insideIds = new Set(insideItems.map((i) => i.id));
+              if (h.cityName) {
+                const out = await api.get('/add-ons', { params: { city: h.cityName, limit: 12 } });
+                const outItems = (out.data?.data?.items || []).filter((i) => !insideIds.has(i.id));
+                if (!cancelled) setOutsideAddOns(outItems);
+              } else if (insideItems.length === 0) {
+                // No hotel-specific & no city → fall back to general suggestions.
+                const gen = await api.get('/add-ons', { params: { scope: 'general', limit: 8 } });
+                if (!cancelled) setOutsideAddOns(gen.data?.data?.items || []);
               }
-              if (h.location?.slug) {
-                const r1 = await api.get('/add-ons', { params: { location: h.location.slug, limit: 6 } });
-                const matched = r1.data?.data?.items || [];
-                if (matched.length > 0) {
-                  if (!cancelled) setAddOns(matched);
-                  return;
-                }
-              }
-              if (items.length > 0) { if (!cancelled) setAddOns(items); return; }
-              const r2 = await api.get('/add-ons', { params: { limit: 6 } });
-              if (!cancelled) setAddOns(r2.data?.data?.items || []);
-            } catch { /* swallow — section just hides if it fails */ }
+            } catch { /* swallow — sections just hide if it fails */ }
           };
           loadAddOns();
 
@@ -401,11 +395,19 @@ export default function HotelDetailPage() {
           })()}
         </div>
 
-        {/* Suggested add-ons — passes the live guest count so each card
-            shows a per-party multiplied total alongside the per-person price. */}
+        {/* Inside-the-hotel activities — admin-attached to this hotel. */}
         <AddOnsCarousel
-          addOns={addOns}
-          subtitle="Make your stay more memorable with these popular extras."
+          title="Activities inside the hotel"
+          addOns={insideAddOns}
+          subtitle="Curated experiences offered right here at the property."
+          guestCount={(stay.adults || 0) + (stay.children || 0)}
+        />
+
+        {/* Nearby — activities physically in the same city, shown with address. */}
+        <AddOnsCarousel
+          title={hotel.cityName ? `Activities nearby in ${hotel.cityName}` : 'Other suggested activities'}
+          addOns={outsideAddOns}
+          subtitle="Popular experiences around the hotel you can add to your trip."
           viewAllHref={hotel.location?.slug ? `/add-ons?location=${hotel.location.slug}` : '/add-ons'}
           guestCount={(stay.adults || 0) + (stay.children || 0)}
         />
@@ -464,12 +466,18 @@ export default function HotelDetailPage() {
         )}
 
         {/* Map */}
-        {hotel.mapEmbedHtml && (
+        {mapEmbedSrc(hotel.mapEmbedHtml) && (
           <Section title="Location on map">
-            <div
-              className="rounded-2xl overflow-hidden border [&_iframe]:w-full [&_iframe]:h-[400px] [&_iframe]:border-0"
-              dangerouslySetInnerHTML={{ __html: hotel.mapEmbedHtml }}
-            />
+            <div className="rounded-2xl overflow-hidden border">
+              <iframe
+                src={mapEmbedSrc(hotel.mapEmbedHtml)}
+                title={`${hotel.name} location`}
+                className="w-full h-[400px] border-0"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+              />
+            </div>
             {hotel.address && (
               <p className="text-sm text-ink-muted mt-2 flex items-center gap-1">
                 <MapPin size={14} /> {hotel.address}

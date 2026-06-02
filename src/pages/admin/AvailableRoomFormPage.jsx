@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft, Save, Image as ImageIcon, Tag, Bed,
   DollarSign, Settings, Wifi, Mountain, FileText,
+  Users, Plus, Trash2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
@@ -17,7 +18,8 @@ const blankForm = {
   packageId: '',
   name: '', slug: '',
   price: 0, priceOriginal: '', currency: 'INR',
-  roomSize: '', maxOccupancy: 2, maxChildrenFree: 0,
+  roomSize: '', maxOccupancy: 2,
+  extraPersonTiers: [],
   highlightsRich: '', descriptionRich: '',
   isFeatured: false, isActive: true, isRefundable: true,
   sortOrder: 0,
@@ -122,7 +124,7 @@ export default function AvailableRoomFormPage() {
         currency: r.currency || 'INR',
         roomSize: r.roomSize || '',
         maxOccupancy: r.maxOccupancy ?? 2,
-        maxChildrenFree: r.maxChildrenFree ?? 0,
+        extraPersonTiers: Array.isArray(r.extraPersonTiers) ? r.extraPersonTiers : [],
         highlightsRich: r.highlightsRich || '',
         descriptionRich: r.descriptionRich || '',
         isFeatured: !!r.isFeatured,
@@ -132,6 +134,14 @@ export default function AvailableRoomFormPage() {
         facilityIds: (r.facilities || []).map((x) => x.id),
         viewIds: (r.views || []).map((x) => x.id),
       });
+      // Owner is locked in edit — always reflect the server's real owner even
+      // if a stale local draft (from before this field existed) was restored.
+      setForm((s) => ({
+        ...s,
+        ownerType: r.ownerType || (r.packageId ? 'package' : 'hotel'),
+        hotelId: r.hotelId || '',
+        packageId: r.packageId || '',
+      }));
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to load room');
     } finally {
@@ -211,6 +221,20 @@ export default function AvailableRoomFormPage() {
       ? `/admin/rooms?hotelId=${presetHotelId}`
       : (room?.hotelId ? `/admin/rooms?hotelId=${room.hotelId}` : '/admin/rooms');
 
+  // The owner is decided either when creating from a hotel/package context OR
+  // when editing an existing room — both already know their owner, so we never
+  // re-ask the "which hotel/package" question.
+  const lockedOwner = editing || !!presetHotelId || !!presetPackageId;
+  const lockedOwnerName = (() => {
+    if (!lockedOwner) return '';
+    if (form.ownerType === 'package') {
+      const pid = form.packageId || presetPackageId;
+      return packages.find((p) => String(p.id) === String(pid))?.name || room?.package?.name || '';
+    }
+    const hid = form.hotelId || presetHotelId;
+    return hotels.find((h) => String(h.id) === String(hid))?.name || room?.hotel?.name || '';
+  })();
+
   return (
     <form onSubmit={submit}>
       <div className="flex items-center justify-between mb-6">
@@ -263,53 +287,69 @@ export default function AvailableRoomFormPage() {
       {/* Owner + Basic */}
       <Section icon={Bed} title="Owner & basic info">
         <div className="grid sm:grid-cols-2 gap-x-6 gap-y-6">
-          <div className="sm:col-span-2">
-            <label className="label">This room belongs to *</label>
-            <div className="flex gap-2">
-              {['hotel', 'package'].map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => change('ownerType', t)}
-                  className={`flex-1 px-4 py-2 rounded-lg border text-sm font-medium capitalize transition ${
-                    form.ownerType === t
-                      ? 'border-brand bg-brand/10 text-brand'
-                      : 'border-slate-200 text-ink-muted hover:border-brand/40'
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-          </div>
-          {form.ownerType === 'package' ? (
+          {lockedOwner ? (
+            // Owner was already chosen on the list page (New under a specific
+            // hotel/package) — no need to ask again, just confirm it.
             <div className="sm:col-span-2">
-              <label className="label">Package *</label>
-              <select
-                className="input"
-                value={form.packageId}
-                onChange={(e) => change('packageId', e.target.value)}
-              >
-                <option value="">— Select package —</option>
-                {packages.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
+              <label className="label">This room belongs to</label>
+              <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm">
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${form.ownerType === 'package' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                  {form.ownerType === 'package' ? 'PACKAGE' : 'HOTEL'}
+                </span>
+                <span className="font-medium text-ink">{lockedOwnerName || '…'}</span>
+              </div>
             </div>
           ) : (
-            <div className="sm:col-span-2">
-              <label className="label">Hotel *</label>
-              <select
-                className="input"
-                value={form.hotelId}
-                onChange={(e) => change('hotelId', e.target.value)}
-              >
-                <option value="">— Select hotel —</option>
-                {hotels.map((h) => (
-                  <option key={h.id} value={h.id}>{h.name}</option>
-                ))}
-              </select>
-            </div>
+            <>
+              <div className="sm:col-span-2">
+                <label className="label">This room belongs to *</label>
+                <div className="flex gap-2">
+                  {['hotel', 'package'].map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => change('ownerType', t)}
+                      className={`flex-1 px-4 py-2 rounded-lg border text-sm font-medium capitalize transition ${
+                        form.ownerType === t
+                          ? 'border-brand bg-brand/10 text-brand'
+                          : 'border-slate-200 text-ink-muted hover:border-brand/40'
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {form.ownerType === 'package' ? (
+                <div className="sm:col-span-2">
+                  <label className="label">Package *</label>
+                  <select
+                    className="input"
+                    value={form.packageId}
+                    onChange={(e) => change('packageId', e.target.value)}
+                  >
+                    <option value="">— Select package —</option>
+                    {packages.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="sm:col-span-2">
+                  <label className="label">Hotel *</label>
+                  <select
+                    className="input"
+                    value={form.hotelId}
+                    onChange={(e) => change('hotelId', e.target.value)}
+                  >
+                    <option value="">— Select hotel —</option>
+                    {hotels.map((h) => (
+                      <option key={h.id} value={h.id}>{h.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </>
           )}
           <div className="sm:col-span-2">
             <label className="label">Room name *</label>
@@ -373,16 +413,6 @@ export default function AvailableRoomFormPage() {
               onChange={(e) => change('maxOccupancy', parseInt(e.target.value || 1, 10))}
             />
           </div>
-          <div>
-            <label className="label">Free children</label>
-            <input
-              type="number" min="0" className="input"
-              value={form.maxChildrenFree}
-              onChange={(e) => change('maxChildrenFree', parseInt(e.target.value || 0, 10))}
-              placeholder="Kids who stay free"
-            />
-            <p className="text-[11px] text-ink-muted mt-1">Children up to this many stay free.</p>
-          </div>
           <div className="sm:col-span-2">
             <label className="label">Room size</label>
             <input
@@ -393,6 +423,14 @@ export default function AvailableRoomFormPage() {
             />
           </div>
         </div>
+      </Section>
+
+      {/* Extra-person pricing */}
+      <Section icon={Users} title="Extra person pricing" defaultOpen={false}>
+        <ExtraPersonTiersEditor
+          value={form.extraPersonTiers}
+          onChange={(v) => change('extraPersonTiers', v)}
+        />
       </Section>
 
       {/* Media */}
@@ -511,5 +549,97 @@ export default function AvailableRoomFormPage() {
         </button>
       </div>
     </form>
+  );
+}
+
+// 0–14 age options for the extra-person age bands, plus "15+" which counts
+// as an adult. 15 is the sentinel for "15 and above".
+const AGE_OPTIONS = Array.from({ length: 16 }, (_, i) => i);
+const ageLabel = (a) => (a >= 15 ? '15+ (adult)' : String(a));
+
+const blankTier = () => ({ ageFrom: '', ageTo: '', priceType: 'free', price: '', bed: 'without' });
+
+function ExtraPersonTiersEditor({ value, onChange }) {
+  const tiers = Array.isArray(value) ? value : [];
+
+  const update = (idx, patch) =>
+    onChange(tiers.map((t, i) => (i === idx ? { ...t, ...patch } : t)));
+  const add = () => onChange([...tiers, blankTier()]);
+  const remove = (idx) => onChange(tiers.filter((_, i) => i !== idx));
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-ink-muted -mt-1">
+        Charge for extra guests by age band. The website uses these to calculate booking totals in
+        real time and to power the "extra guest" filters.
+      </p>
+
+      {tiers.length === 0 && (
+        <p className="text-sm italic text-ink-muted">No extra-person rules yet.</p>
+      )}
+
+      {tiers.map((t, idx) => {
+        const bothAges = t.ageFrom !== '' && t.ageTo !== '';
+        return (
+          <div key={idx} className="rounded-xl border border-slate-200 p-3 grid sm:grid-cols-[1fr_1fr_1fr_1fr_auto] gap-3 items-end">
+            <div>
+              <label className="label">Age from</label>
+              <select className="input" value={t.ageFrom} onChange={(e) => update(idx, { ageFrom: e.target.value === '' ? '' : parseInt(e.target.value, 10) })}>
+                <option value="">—</option>
+                {AGE_OPTIONS.map((a) => <option key={a} value={a}>{ageLabel(a)}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label">Age to</label>
+              <select className="input" value={t.ageTo} onChange={(e) => update(idx, { ageTo: e.target.value === '' ? '' : parseInt(e.target.value, 10) })}>
+                <option value="">—</option>
+                {AGE_OPTIONS.map((a) => <option key={a} value={a}>{ageLabel(a)}</option>)}
+              </select>
+            </div>
+
+            {/* Price + bed only matter once an age band is set */}
+            <div className={bothAges ? '' : 'opacity-50 pointer-events-none'}>
+              <label className="label">Price</label>
+              <select className="input" value={t.priceType} onChange={(e) => update(idx, { priceType: e.target.value })}>
+                <option value="free">Free</option>
+                <option value="custom">Custom</option>
+              </select>
+              {t.priceType === 'custom' && (
+                <input
+                  type="number" min="0" step="0.01" className="input mt-2"
+                  value={t.price}
+                  onChange={(e) => update(idx, { price: e.target.value })}
+                  placeholder="₹ per person / night"
+                />
+              )}
+            </div>
+            <div className={bothAges ? '' : 'opacity-50 pointer-events-none'}>
+              <label className="label">Bed</label>
+              <select className="input" value={t.bed} onChange={(e) => update(idx, { bed: e.target.value })}>
+                <option value="without">Without bed</option>
+                <option value="with">With bed</option>
+              </select>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => remove(idx)}
+              className="p-2 rounded-lg text-red-600 hover:bg-red-50"
+              title="Remove"
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+        );
+      })}
+
+      <button
+        type="button"
+        onClick={add}
+        className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline"
+      >
+        <Plus size={15} /> Add extra person
+      </button>
+    </div>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Filter, X, LayoutGrid, List as ListIcon } from 'lucide-react';
 import api from '../../services/api';
+import { onlyStateLocations } from '../../utils/indianStates.js';
 import PackageCard from '../../components/public/PackageCard.jsx';
 import PriceTierFilter from '../../components/public/PriceTierFilter.jsx';
 import StarRatingFilter from '../../components/public/StarRatingFilter.jsx';
@@ -241,8 +242,8 @@ export default function RetreatsPage() {
                 />
               </FilterBlock>
 
-              <FilterBlock label="Locations">
-                <RadioList options={locations} value={filters.location} onChange={(v) => update('location', v)} />
+              <FilterBlock label="State">
+                <RadioList options={onlyStateLocations(locations)} value={filters.location} onChange={(v) => update('location', v)} />
               </FilterBlock>
 
               <FilterBlock label="Activities">

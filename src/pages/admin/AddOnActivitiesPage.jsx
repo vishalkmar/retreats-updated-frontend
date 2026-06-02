@@ -16,6 +16,9 @@ export default function AddOnActivitiesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [ownerFilter, setOwnerFilter] = useState('all'); // all | general | hotel | package
+  const [entityId, setEntityId] = useState(''); // selected hotel/package id when filtering
+  const [hotels, setHotels] = useState([]);
+  const [packages, setPackages] = useState([]);
   const [deleteId, setDeleteId] = useState(null);
   const [duplicatingId, setDuplicatingId] = useState(null);
   const [viewItem, setViewItem] = useState(null);
@@ -33,12 +36,27 @@ export default function AddOnActivitiesPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    api.get('/hotels/admin/all').then((r) => setHotels(r.data.data.items || [])).catch(() => {});
+    api.get('/packages/admin/all').then((r) => setPackages(r.data.data.items || [])).catch(() => {});
+  }, []);
 
-  const filtered = items.filter((it) =>
-    (!search || it.name.toLowerCase().includes(search.toLowerCase())) &&
-    (ownerFilter === 'all' || (it.ownerType || 'general') === ownerFilter)
-  );
+  const filtered = items.filter((it) => {
+    if (search && !it.name.toLowerCase().includes(search.toLowerCase())) return false;
+    if (ownerFilter !== 'all' && (it.ownerType || 'general') !== ownerFilter) return false;
+    if (ownerFilter === 'hotel' && entityId && String(it.hotelId) !== String(entityId)) return false;
+    if (ownerFilter === 'package' && entityId && String(it.packageId) !== String(entityId)) return false;
+    return true;
+  });
   const reorderingDisabled = !!search || ownerFilter !== 'all';
+
+  // "New" carries the current owner context so the form pre-locks it.
+  const newHref = (() => {
+    if (ownerFilter === 'general') return '/admin/add-ons/new?ownerType=general';
+    if (ownerFilter === 'hotel') return entityId ? `/admin/add-ons/new?hotelId=${entityId}` : '/admin/add-ons/new?ownerType=hotel';
+    if (ownerFilter === 'package') return entityId ? `/admin/add-ons/new?packageId=${entityId}` : '/admin/add-ons/new?ownerType=package';
+    return '/admin/add-ons/new';
+  })();
 
   const persistOrder = async (ordered) => {
     setItems(ordered);
@@ -105,7 +123,7 @@ export default function AddOnActivitiesPage() {
           <select
             className="input"
             value={ownerFilter}
-            onChange={(e) => setOwnerFilter(e.target.value)}
+            onChange={(e) => { setOwnerFilter(e.target.value); setEntityId(''); }}
             title="Filter by attachment"
           >
             <option value="all">All activities</option>
@@ -113,7 +131,19 @@ export default function AddOnActivitiesPage() {
             <option value="hotel">Hotel-specific</option>
             <option value="package">Package-specific</option>
           </select>
-          <Link to="/admin/add-ons/new" className="btn-primary whitespace-nowrap">
+          {ownerFilter === 'hotel' && (
+            <select className="input" value={entityId} onChange={(e) => setEntityId(e.target.value)}>
+              <option value="">All hotels</option>
+              {hotels.map((h) => (<option key={h.id} value={h.id}>{h.name}</option>))}
+            </select>
+          )}
+          {ownerFilter === 'package' && (
+            <select className="input" value={entityId} onChange={(e) => setEntityId(e.target.value)}>
+              <option value="">All packages</option>
+              {packages.map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
+            </select>
+          )}
+          <Link to={newHref} className="btn-primary whitespace-nowrap">
             <Plus size={18} /> New
           </Link>
         </div>
