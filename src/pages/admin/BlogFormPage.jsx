@@ -171,7 +171,7 @@ export default function BlogFormPage() {
             />
           </div>
           <div>
-            <label className="label">Slug (auto if empty)</label>
+            <label className="label">Property name</label>
             <input
               className="input" value={form.slug}
               onChange={(e) => change('slug', e.target.value)}

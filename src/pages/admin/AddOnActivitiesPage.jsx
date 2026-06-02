@@ -7,14 +7,18 @@ import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
 import ConfirmDialog from '../../components/admin/ConfirmDialog.jsx';
 import SortableList, { DragHandle } from '../../components/admin/SortableList.jsx';
+import ToggleSwitch from '../../components/admin/ToggleSwitch.jsx';
+import RowDetailsModal from '../../components/admin/RowDetailsModal.jsx';
 
 export default function AddOnActivitiesPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [ownerFilter, setOwnerFilter] = useState('all'); // all | general | hotel | package
   const [deleteId, setDeleteId] = useState(null);
   const [duplicatingId, setDuplicatingId] = useState(null);
+  const [viewItem, setViewItem] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -31,9 +35,10 @@ export default function AddOnActivitiesPage() {
   useEffect(() => { load(); }, [load]);
 
   const filtered = items.filter((it) =>
-    !search || it.name.toLowerCase().includes(search.toLowerCase())
+    (!search || it.name.toLowerCase().includes(search.toLowerCase())) &&
+    (ownerFilter === 'all' || (it.ownerType || 'general') === ownerFilter)
   );
-  const reorderingDisabled = !!search;
+  const reorderingDisabled = !!search || ownerFilter !== 'all';
 
   const persistOrder = async (ordered) => {
     setItems(ordered);
@@ -97,6 +102,17 @@ export default function AddOnActivitiesPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          <select
+            className="input"
+            value={ownerFilter}
+            onChange={(e) => setOwnerFilter(e.target.value)}
+            title="Filter by attachment"
+          >
+            <option value="all">All activities</option>
+            <option value="general">General</option>
+            <option value="hotel">Hotel-specific</option>
+            <option value="package">Package-specific</option>
+          </select>
           <Link to="/admin/add-ons/new" className="btn-primary whitespace-nowrap">
             <Plus size={18} /> New
           </Link>
@@ -146,7 +162,19 @@ export default function AddOnActivitiesPage() {
                   </div>
                 </div>
                 <div className="col-span-4">
-                  <div className="font-medium text-sm leading-tight line-clamp-2">{it.name}</div>
+                  <div className="font-medium text-sm leading-tight line-clamp-2 flex items-center gap-2">
+                    {it.name}
+                    {it.ownerType === 'hotel' && it.hotel && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold whitespace-nowrap">
+                        🏨 {it.hotel.name}
+                      </span>
+                    )}
+                    {it.ownerType === 'package' && it.package && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 font-semibold whitespace-nowrap">
+                        📦 {it.package.name}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 text-[11px] text-ink-muted mt-0.5">
                     {it.location?.name && (
                       <span className="inline-flex items-center gap-1">
@@ -176,9 +204,10 @@ export default function AddOnActivitiesPage() {
                     {it.isActive ? 'LIVE' : 'DRAFT'}
                   </span>
                 </div>
-                <div className="col-span-2 flex items-center justify-end gap-1">
-                  <button onClick={() => toggle(it)} className="p-1.5 hover:bg-surface-alt rounded" title={it.isActive ? 'Unpublish' : 'Publish'}>
-                    {it.isActive ? <Eye size={16} /> : <EyeOff size={16} />}
+                <div className="col-span-2 flex items-center justify-end gap-1.5">
+                  <ToggleSwitch checked={it.isActive} onChange={() => toggle(it)} size="sm" />
+                  <button onClick={() => setViewItem(it)} className="p-1.5 hover:bg-surface-alt rounded" title="View details">
+                    <Eye size={16} />
                   </button>
                   <button
                     onClick={() => duplicate(it)}
@@ -216,6 +245,13 @@ export default function AddOnActivitiesPage() {
         confirmLabel="Delete"
         onConfirm={confirmDelete}
         onClose={() => setDeleteId(null)}
+      />
+
+      <RowDetailsModal
+        open={!!viewItem}
+        onClose={() => setViewItem(null)}
+        title={viewItem?.name}
+        data={viewItem}
       />
     </div>
   );

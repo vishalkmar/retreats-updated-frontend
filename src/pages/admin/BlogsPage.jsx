@@ -4,6 +4,8 @@ import { Plus, Edit, Trash2, Eye, EyeOff, FileText, Calendar, Tag, Copy } from '
 import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
 import ConfirmDialog from '../../components/admin/ConfirmDialog.jsx';
+import ToggleSwitch from '../../components/admin/ToggleSwitch.jsx';
+import RowDetailsModal from '../../components/admin/RowDetailsModal.jsx';
 
 export default function BlogsPage() {
   const navigate = useNavigate();
@@ -12,6 +14,7 @@ export default function BlogsPage() {
   const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState(null);
   const [duplicatingId, setDuplicatingId] = useState(null);
+  const [viewItem, setViewItem] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -141,15 +144,15 @@ export default function BlogsPage() {
                   <span>· {b.viewCount || 0} views</span>
                 </div>
 
-                <div className="flex items-center gap-1 mt-4 pt-3 border-t">
-                  <button onClick={() => toggle(b)} className="flex-1 btn-ghost text-xs">
-                    {b.isPublished ? <EyeOff size={14} /> : <Eye size={14} />}
-                    {b.isPublished ? 'Unpublish' : 'Publish'}
+                <div className="flex items-center gap-2 mt-4 pt-3 border-t">
+                  <ToggleSwitch checked={b.isPublished} onChange={() => toggle(b)} showLabel />
+                  <button onClick={() => setViewItem(b)} className="ml-auto btn-ghost text-xs">
+                    <Eye size={14} /> View
                   </button>
                   <button
                     onClick={() => duplicate(b)}
                     disabled={duplicatingId === b.id}
-                    className="flex-1 btn-ghost text-xs disabled:opacity-50"
+                    className="btn-ghost text-xs disabled:opacity-50"
                   >
                     <Copy size={14} /> Duplicate
                   </button>
@@ -176,6 +179,13 @@ export default function BlogsPage() {
         confirmLabel="Delete"
         onConfirm={confirmDelete}
         onClose={() => setDeleteId(null)}
+      />
+
+      <RowDetailsModal
+        open={!!viewItem}
+        onClose={() => setViewItem(null)}
+        title={viewItem?.title || viewItem?.name}
+        data={viewItem}
       />
     </div>
   );

@@ -243,7 +243,7 @@ export default function EventFormPage() {
             />
           </div>
           <div>
-            <label className="label">Slug (auto if empty)</label>
+            <label className="label">Property name</label>
             <input
               className="input"
               value={form.slug}

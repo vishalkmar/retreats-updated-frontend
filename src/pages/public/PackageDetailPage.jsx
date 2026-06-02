@@ -53,11 +53,19 @@ export default function PackageDetailPage() {
         const p = res.data?.data?.package;
         setPkg(p);
         if (p?.id) {
-          // Suggested add-ons — try location-matched first, fall back to any
-          // active add-on so the section isn't empty just because the admin
-          // hasn't tagged add-ons with this package's location yet.
+          // Suggested add-ons. Priority: this package's own activities
+          // (+ general) → location-matched → any active add-on.
           const loadAddOns = async () => {
             try {
+              const r0 = await api.get('/add-ons', { params: { packageId: p.id, limit: 8 } });
+              let items = r0.data?.data?.items || [];
+              items = [...items].sort(
+                (a, b) => (b.ownerType === 'package' ? 1 : 0) - (a.ownerType === 'package' ? 1 : 0)
+              );
+              if (items.some((i) => i.ownerType === 'package')) {
+                if (!cancelled) setAddOns(items);
+                return;
+              }
               if (p.location?.slug) {
                 const r1 = await api.get('/add-ons', { params: { location: p.location.slug, limit: 6 } });
                 const matched = r1.data?.data?.items || [];
@@ -66,6 +74,7 @@ export default function PackageDetailPage() {
                   return;
                 }
               }
+              if (items.length > 0) { if (!cancelled) setAddOns(items); return; }
               const r2 = await api.get('/add-ons', { params: { limit: 6 } });
               if (!cancelled) setAddOns(r2.data?.data?.items || []);
             } catch { /* swallow */ }

@@ -1,9 +1,13 @@
-import { useRef, useState } from 'react';
-import { UploadCloud, Image as ImageIcon, Video, X, FileVideo } from 'lucide-react';
-import { fileUrl } from '../../services/api';
+import { useEffect, useRef, useState } from 'react';
+import { UploadCloud, X, FileVideo, Link2, Clipboard } from 'lucide-react';
+import toast from 'react-hot-toast';
+import api, { fileUrl } from '../../services/api';
 
 /**
- * Reusable upload dropzone — supports click-to-pick AND drag-and-drop.
+ * Reusable upload dropzone — click-to-pick, drag-and-drop, paste an image
+ * from the clipboard, AND paste an image URL (server-proxied so CORS can't
+ * block it). New picks are **appended** in multiple mode (never replace the
+ * previous selection) and each can be removed individually.
  *
  * Props:
  *   accept         — MIME pattern, default 'image/*'
@@ -16,6 +20,7 @@ import { fileUrl } from '../../services/api';
  *   subLabel       — secondary text
  *   className      — extra classes for outer wrapper
  *   onClearExisting — optional callback when user clicks "X" on existing item
+ *   allowLink      — show the "paste image link" row (default true)
  */
 export default function Dropzone({
   accept = 'image/*',
@@ -28,48 +33,108 @@ export default function Dropzone({
   subLabel,
   className = '',
   onClearExisting,
+  allowLink = true,
 }) {
   const inputRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState('');
+  const [fetchingLink, setFetchingLink] = useState(false);
 
   const isVideoMode = accept.includes('video');
 
-  const handleFiles = (fileList) => {
-    if (!fileList?.length) return;
+  const selectedFiles = multiple
+    ? Array.isArray(value) ? value : []
+    : value ? [value] : [];
+
+  // De-dupe by name+size so re-picking the same file doesn't double it.
+  const appendFiles = (incoming) => {
+    const list = Array.from(incoming).filter(Boolean);
+    if (!list.length) return;
     if (multiple) {
-      onChange?.(Array.from(fileList));
+      const seen = new Set(selectedFiles.map((f) => `${f.name}:${f.size}`));
+      const merged = [...selectedFiles];
+      list.forEach((f) => {
+        const key = `${f.name}:${f.size}`;
+        if (!seen.has(key)) { seen.add(key); merged.push(f); }
+      });
+      onChange?.(merged);
     } else {
-      onChange?.(fileList[0]);
+      onChange?.(list[0]);
     }
   };
 
-  const onDragOver = (e) => {
-    e.preventDefault();
-    setDragOver(true);
+  const handleFiles = (fileList) => {
+    if (!fileList?.length) return;
+    appendFiles(fileList);
   };
-  const onDragLeave = (e) => {
-    e.preventDefault();
-    setDragOver(false);
-  };
+
+  const onDragOver = (e) => { e.preventDefault(); setDragOver(true); };
+  const onDragLeave = (e) => { e.preventDefault(); setDragOver(false); };
   const onDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
     handleFiles(e.dataTransfer?.files);
   };
 
-  const selectedFiles = multiple
-    ? Array.isArray(value) ? value : []
-    : value ? [value] : [];
+  // Paste a copied image straight onto the dropzone (Ctrl/Cmd+V while focused).
+  const onPaste = (e) => {
+    const items = e.clipboardData?.items || [];
+    const files = [];
+    for (const it of items) {
+      if (it.kind === 'file' && it.type.startsWith(isVideoMode ? 'video/' : 'image/')) {
+        const f = it.getAsFile();
+        if (f) files.push(f);
+      }
+    }
+    if (files.length) {
+      e.preventDefault();
+      appendFiles(files);
+      toast.success(`Pasted ${files.length} image${files.length > 1 ? 's' : ''}`);
+      return;
+    }
+    // If the clipboard holds a URL, treat it as a link to fetch.
+    const text = e.clipboardData?.getData('text');
+    if (text && /^https?:\/\/\S+$/i.test(text.trim())) {
+      e.preventDefault();
+      setLinkOpen(true);
+      addFromUrl(text.trim());
+    }
+  };
+
+  // Turn a pasted/entered image URL into a File via the same-origin proxy so
+  // it rides the normal upload path (works for any host, CORS-proof).
+  const addFromUrl = async (rawUrl) => {
+    const url = (rawUrl ?? linkUrl).trim();
+    if (!url) return;
+    if (!/^https?:\/\//i.test(url)) { toast.error('Enter a valid http(s) link'); return; }
+    setFetchingLink(true);
+    try {
+      const res = await api.get('/uploads/proxy-image', {
+        params: { url },
+        responseType: 'blob',
+      });
+      const blob = res.data;
+      const ext = (blob.type && blob.type.split('/')[1]) || 'jpg';
+      const name = `linked-${Date.now()}.${ext.split('+')[0]}`;
+      const file = new File([blob], name, { type: blob.type || 'image/jpeg' });
+      appendFiles([file]);
+      setLinkUrl('');
+      toast.success('Image added from link');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not load that image link');
+    } finally {
+      setFetchingLink(false);
+    }
+  };
 
   const hasSelection = selectedFiles.length > 0;
-  const hasExisting = existingUrl || existingUrls.length > 0;
 
   const Icon = isVideoMode ? FileVideo : UploadCloud;
 
   const removeOne = (idx) => {
     if (multiple) {
-      const next = selectedFiles.filter((_, i) => i !== idx);
-      onChange?.(next);
+      onChange?.(selectedFiles.filter((_, i) => i !== idx));
     } else {
       onChange?.(null);
     }
@@ -82,7 +147,8 @@ export default function Dropzone({
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
-        className={`relative border-2 border-dashed rounded-xl p-6 cursor-pointer transition flex flex-col items-center justify-center text-center min-h-[140px] ${
+        onPaste={onPaste}
+        className={`relative border-2 border-dashed rounded-xl p-6 cursor-pointer transition flex flex-col items-center justify-center text-center min-h-[140px] outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 ${
           dragOver
             ? 'border-brand bg-brand/5 ring-4 ring-brand/20 scale-[1.01]'
             : 'border-slate-300 hover:border-brand hover:bg-surface-alt/50'
@@ -98,50 +164,82 @@ export default function Dropzone({
           {dragOver
             ? 'Drop to upload'
             : (hasSelection
-                ? `${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''} selected`
+                ? `${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''} selected${multiple ? ' · add more anytime' : ''}`
                 : (placeholder || (multiple ? 'Drag & drop files, or click to browse' : 'Drag & drop a file, or click to browse')))}
         </div>
-        {(subLabel || !hasSelection) && (
-          <p className="text-xs text-ink-muted mt-1">
-            {subLabel || (isVideoMode ? 'Videos: MP4, WebM, MOV (max 50MB)' : 'Images: JPG, PNG, WebP, GIF, SVG')}
-          </p>
-        )}
+        <p className="text-xs text-ink-muted mt-1">
+          {subLabel || (isVideoMode ? 'Videos: MP4, WebM, MOV (max 50MB)' : 'Images: JPG, PNG, WebP, GIF, SVG')}
+          {' · '}<span className="inline-flex items-center gap-0.5"><Clipboard size={10} /> paste works too</span>
+        </p>
         <input
           ref={inputRef}
           type="file"
           accept={accept}
           multiple={multiple}
           className="hidden"
-          onChange={(e) => handleFiles(e.target.files)}
+          onChange={(e) => { handleFiles(e.target.files); e.target.value = ''; }}
         />
       </div>
+
+      {/* Paste / add an image link */}
+      {allowLink && (
+        <div className="mt-2">
+          {!linkOpen ? (
+            <button
+              type="button"
+              onClick={() => setLinkOpen(true)}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:underline"
+            >
+              <Link2 size={13} /> Add image from a link
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <input
+                type="url"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addFromUrl(); } }}
+                placeholder="https://…/image.jpg — paste a link"
+                className="input flex-1 text-sm"
+                autoFocus
+              />
+              <button
+                type="button"
+                onClick={() => addFromUrl()}
+                disabled={fetchingLink || !linkUrl.trim()}
+                className="btn-primary whitespace-nowrap text-sm disabled:opacity-50"
+              >
+                {fetchingLink ? 'Adding…' : (multiple ? 'Add' : 'Set')}
+              </button>
+              {multiple && (
+                <button
+                  type="button"
+                  onClick={() => { setLinkUrl(''); }}
+                  className="text-xs text-ink-muted hover:underline whitespace-nowrap"
+                  title="Clear input to add another"
+                >
+                  Add more
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => { setLinkOpen(false); setLinkUrl(''); }}
+                className="p-1 text-ink-muted hover:text-red-500"
+                title="Close"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Selected file previews */}
       {hasSelection && (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-3">
-          {selectedFiles.map((f, i) => {
-            const url = URL.createObjectURL(f);
-            const isVideo = f.type?.startsWith('video/');
-            return (
-              <div key={i} className="relative group rounded-lg overflow-hidden border bg-slate-100 aspect-[4/3]">
-                {isVideo ? (
-                  <video src={url} className="w-full h-full object-cover" muted />
-                ) : (
-                  <img src={url} className="w-full h-full object-cover" alt={f.name} />
-                )}
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); removeOne(i); }}
-                  className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition"
-                >
-                  <X size={12} />
-                </button>
-                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] px-1.5 py-0.5 truncate">
-                  {f.name}
-                </div>
-              </div>
-            );
-          })}
+          {selectedFiles.map((f, i) => (
+            <FilePreview key={`${f.name}:${f.size}:${i}`} file={f} onRemove={() => removeOne(i)} />
+          ))}
         </div>
       )}
 
@@ -172,6 +270,37 @@ export default function Dropzone({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// Isolated preview so each object URL is created once and revoked on unmount
+// (no leaks, no flicker on re-render).
+function FilePreview({ file, onRemove }) {
+  const [url, setUrl] = useState('');
+  const isVideo = file.type?.startsWith('video/');
+  useEffect(() => {
+    const u = URL.createObjectURL(file);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [file]);
+  return (
+    <div className="relative group rounded-lg overflow-hidden border bg-slate-100 aspect-[4/3]">
+      {url && (isVideo ? (
+        <video src={url} className="w-full h-full object-cover" muted />
+      ) : (
+        <img src={url} className="w-full h-full object-cover" alt={file.name} />
+      ))}
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onRemove(); }}
+        className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition"
+      >
+        <X size={12} />
+      </button>
+      <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] px-1.5 py-0.5 truncate">
+        {file.name}
+      </div>
     </div>
   );
 }

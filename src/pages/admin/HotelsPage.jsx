@@ -8,6 +8,8 @@ import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
 import ConfirmDialog from '../../components/admin/ConfirmDialog.jsx';
 import SortableList, { DragHandle } from '../../components/admin/SortableList.jsx';
+import ToggleSwitch from '../../components/admin/ToggleSwitch.jsx';
+import RowDetailsModal from '../../components/admin/RowDetailsModal.jsx';
 
 export default function HotelsPage() {
   const navigate = useNavigate();
@@ -17,6 +19,7 @@ export default function HotelsPage() {
   const [deleteId, setDeleteId] = useState(null);
   const [duplicatingId, setDuplicatingId] = useState(null);
   const [view, setView] = useState('list');
+  const [viewItem, setViewItem] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -211,9 +214,10 @@ export default function HotelsPage() {
                     <div className="text-[9px] mt-1 text-amber-700 font-semibold">FEATURED</div>
                   )}
                 </div>
-                <div className="col-span-2 flex items-center justify-end gap-1">
-                  <button onClick={() => toggle(h)} className="p-1.5 hover:bg-surface-alt rounded" title={h.isActive ? 'Unpublish' : 'Publish'}>
-                    {h.isActive ? <Eye size={16} /> : <EyeOff size={16} />}
+                <div className="col-span-2 flex items-center justify-end gap-1.5">
+                  <ToggleSwitch checked={h.isActive} onChange={() => toggle(h)} size="sm" />
+                  <button onClick={() => setViewItem(h)} className="p-1.5 hover:bg-surface-alt rounded" title="View details">
+                    <Eye size={16} />
                   </button>
                   <button
                     onClick={() => duplicate(h)}
@@ -293,18 +297,18 @@ export default function HotelsPage() {
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-1 mt-4 pt-3 border-t">
+                <div className="flex items-center gap-2 mt-4 pt-3 border-t">
+                  <ToggleSwitch checked={h.isActive} onChange={() => toggle(h)} showLabel />
                   <button
-                    onClick={() => toggle(h)}
-                    className="flex-1 btn-ghost text-xs"
+                    onClick={() => setViewItem(h)}
+                    className="ml-auto btn-ghost text-xs"
                   >
-                    {h.isActive ? <EyeOff size={14} /> : <Eye size={14} />}
-                    {h.isActive ? 'Unpublish' : 'Publish'}
+                    <Eye size={14} /> View
                   </button>
                   <button
                     onClick={() => duplicate(h)}
                     disabled={duplicatingId === h.id}
-                    className="flex-1 btn-ghost text-xs disabled:opacity-50"
+                    className="btn-ghost text-xs disabled:opacity-50"
                   >
                     <Copy size={14} /> Duplicate
                   </button>
@@ -334,6 +338,13 @@ export default function HotelsPage() {
         confirmLabel="Delete"
         onConfirm={confirmDelete}
         onClose={() => setDeleteId(null)}
+      />
+
+      <RowDetailsModal
+        open={!!viewItem}
+        onClose={() => setViewItem(null)}
+        title={viewItem?.name}
+        data={viewItem}
       />
     </div>
   );

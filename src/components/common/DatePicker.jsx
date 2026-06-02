@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 const MONTH_NAMES = [
@@ -69,6 +70,10 @@ export default function DatePicker({
   const triggerRef = useRef(null);
   const popoverRef = useRef(null);
   const [open, setOpen] = useState(false);
+  // Fixed-position coords for the portalled popover so it can never be
+  // clipped by an ancestor's `overflow-hidden`, and flips above the trigger
+  // when there isn't enough room below.
+  const [coords, setCoords] = useState({ top: 0, left: 0, placement: 'bottom' });
   const [view, setView] = useState('days'); // 'days' | 'months' | 'years'
   const today = useMemo(() => new Date(), []);
   const selectedDate = useMemo(() => fromISO(value), [value]);
@@ -110,6 +115,40 @@ export default function DatePicker({
       document.removeEventListener('keydown', handleKey);
     };
   }, [open]);
+
+  // Position the portalled popover relative to the trigger. Recomputes on
+  // open, scroll and resize. Flips above the field when there is more room
+  // up top (so it never gets cut off at the bottom of the viewport).
+  const POPOVER_W = 320;
+  const POPOVER_H = 430; // header + grid + footer, generous estimate
+  const computePosition = useCallback(() => {
+    const el = triggerRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const gap = 8;
+    const spaceBelow = window.innerHeight - r.bottom;
+    const spaceAbove = r.top;
+    const placeAbove = spaceBelow < POPOVER_H + gap && spaceAbove > spaceBelow;
+    let left = r.left;
+    // Keep within the viewport horizontally.
+    left = Math.max(8, Math.min(left, window.innerWidth - POPOVER_W - 8));
+    const top = placeAbove
+      ? Math.max(8, r.top - gap) // bottom edge sits here (translateY -100%)
+      : r.bottom + gap;
+    setCoords({ top, left, placement: placeAbove ? 'top' : 'bottom' });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return undefined;
+    computePosition();
+    const onScroll = () => computePosition();
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [open, view, computePosition]);
 
   const isDisabledDay = useCallback((d) => {
     if (minDate && d < new Date(minDate.getFullYear(), minDate.getMonth(), minDate.getDate())) return true;
@@ -191,12 +230,17 @@ export default function DatePicker({
         )}
       </button>
 
-      {open && (
+      {open && createPortal(
         <div
           ref={popoverRef}
           role="dialog"
-          className="absolute z-50 mt-2 w-[320px] rounded-2xl bg-white border border-slate-200 shadow-[0_20px_60px_-15px_rgba(15,23,42,0.25)] overflow-hidden animate-[fadeIn_0.15s_ease-out]"
-          style={{ animationFillMode: 'both' }}
+          className="fixed z-[1000] w-[320px] rounded-2xl bg-white border border-slate-200 shadow-[0_20px_60px_-15px_rgba(15,23,42,0.25)] overflow-hidden animate-[fadeIn_0.15s_ease-out]"
+          style={{
+            top: coords.top,
+            left: coords.left,
+            transform: coords.placement === 'top' ? 'translateY(-100%)' : 'none',
+            animationFillMode: 'both',
+          }}
         >
           {/* Header — month/year navigation */}
           <div className="flex items-center justify-between gap-2 px-3 py-3 border-b bg-gradient-to-r from-brand/5 to-transparent">
@@ -366,7 +410,8 @@ export default function DatePicker({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

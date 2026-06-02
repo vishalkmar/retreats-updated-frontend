@@ -3,6 +3,8 @@ import { Plus, Edit, Trash2, Eye, EyeOff, X, ImageIcon, LayoutGrid, List as List
 import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
 import ConfirmDialog from './ConfirmDialog.jsx';
+import ToggleSwitch from './ToggleSwitch.jsx';
+import RowDetailsModal from './RowDetailsModal.jsx';
 import Dropzone from './Dropzone.jsx';
 import SortableList, { DragHandle } from './SortableList.jsx';
 
@@ -34,6 +36,7 @@ export default function TaxonomyManager({
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
+  const [viewItem, setViewItem] = useState(null);
   const [view, setView] = useState('list');
 
   const load = useCallback(async () => {
@@ -175,9 +178,10 @@ export default function TaxonomyManager({
                     {it.isActive ? 'ENABLED' : 'DISABLED'}
                   </span>
                 </div>
-                <div className="col-span-2 flex items-center justify-end gap-1">
-                  <button onClick={() => toggle(it)} className="p-1.5 hover:bg-surface-alt rounded" title={it.isActive ? 'Disable' : 'Enable'}>
-                    {it.isActive ? <Eye size={16} /> : <EyeOff size={16} />}
+                <div className="col-span-2 flex items-center justify-end gap-1.5">
+                  <ToggleSwitch checked={it.isActive} onChange={() => toggle(it)} size="sm" />
+                  <button onClick={() => setViewItem(it)} className="p-1.5 hover:bg-surface-alt rounded" title="View details">
+                    <Eye size={16} />
                   </button>
                   <button
                     onClick={() => { setEditing(it); setShowForm(true); }}
@@ -226,14 +230,14 @@ export default function TaxonomyManager({
                 {it.description && (
                   <p className="text-sm mt-2 line-clamp-2 text-ink-muted">{it.description}</p>
                 )}
-                <div className="flex items-center gap-1 mt-4 pt-3 border-t">
-                  <button onClick={() => toggle(it)} className="flex-1 btn-ghost text-xs">
-                    {it.isActive ? <EyeOff size={14} /> : <Eye size={14} />}
-                    {it.isActive ? 'Disable' : 'Enable'}
+                <div className="flex items-center gap-2 mt-4 pt-3 border-t">
+                  <ToggleSwitch checked={it.isActive} onChange={() => toggle(it)} showLabel labelOn="Enabled" labelOff="Disabled" />
+                  <button onClick={() => setViewItem(it)} className="ml-auto btn-ghost text-xs">
+                    <Eye size={14} /> View
                   </button>
                   <button
                     onClick={() => { setEditing(it); setShowForm(true); }}
-                    className="flex-1 btn-ghost text-xs"
+                    className="btn-ghost text-xs"
                   >
                     <Edit size={14} /> Edit
                   </button>
@@ -267,6 +271,13 @@ export default function TaxonomyManager({
         confirmLabel="Delete"
         onConfirm={confirmDelete}
         onClose={() => setDeleteId(null)}
+      />
+
+      <RowDetailsModal
+        open={!!viewItem}
+        onClose={() => setViewItem(null)}
+        title={viewItem?.name}
+        data={viewItem}
       />
     </div>
   );

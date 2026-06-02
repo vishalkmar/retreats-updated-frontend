@@ -6,39 +6,49 @@ import {
 import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
 import ConfirmDialog from '../../components/admin/ConfirmDialog.jsx';
+import ToggleSwitch from '../../components/admin/ToggleSwitch.jsx';
+import RowDetailsModal from '../../components/admin/RowDetailsModal.jsx';
 
 export default function AvailableRoomsPage() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
+  const ownerType = params.get('ownerType') === 'package' ? 'package' : 'hotel';
   const hotelIdFilter = params.get('hotelId') || '';
+  const packageIdFilter = params.get('packageId') || '';
+  const isPackage = ownerType === 'package';
 
   const [rooms, setRooms] = useState([]);
   const [hotels, setHotels] = useState([]);
+  const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState(null);
   const [duplicatingId, setDuplicatingId] = useState(null);
+  const [viewItem, setViewItem] = useState(null);
 
-  // Hotel dropdown options
+  // Owner dropdown options
   useEffect(() => {
-    api.get('/hotels/admin/all')
-      .then((r) => setHotels(r.data.data.items))
-      .catch(() => {});
+    api.get('/hotels/admin/all').then((r) => setHotels(r.data.data.items)).catch(() => {});
+    api.get('/packages/admin/all').then((r) => setPackages(r.data.data.items || [])).catch(() => {});
   }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get('/rooms/admin/all', {
-        params: hotelIdFilter ? { hotelId: hotelIdFilter } : {},
-      });
+      const query = { ownerType };
+      if (isPackage) {
+        if (packageIdFilter) query.packageId = packageIdFilter;
+      } else if (hotelIdFilter) {
+        query.hotelId = hotelIdFilter;
+      }
+      const res = await api.get('/rooms/admin/all', { params: query });
       setRooms(res.data.data.items);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to load');
     } finally {
       setLoading(false);
     }
-  }, [hotelIdFilter]);
+  }, [ownerType, isPackage, hotelIdFilter, packageIdFilter]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -46,9 +56,25 @@ export default function AvailableRoomsPage() {
     !search || r.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  const onOwnerTypeChange = (t) => {
+    const next = new URLSearchParams();
+    next.set('ownerType', t);
+    setParams(next, { replace: true });
+  };
+
   const onHotelChange = (id) => {
     const next = new URLSearchParams(params);
+    next.set('ownerType', 'hotel');
+    next.delete('packageId');
     if (id) next.set('hotelId', id); else next.delete('hotelId');
+    setParams(next, { replace: true });
+  };
+
+  const onPackageChange = (id) => {
+    const next = new URLSearchParams(params);
+    next.set('ownerType', 'package');
+    next.delete('hotelId');
+    if (id) next.set('packageId', id); else next.delete('packageId');
     setParams(next, { replace: true });
   };
 
@@ -88,18 +114,23 @@ export default function AvailableRoomsPage() {
     }
   };
 
-  // Group by hotel for nicer display
+  // Group by owner (hotel or package) for nicer display
   const grouped = useMemo(() => {
     const map = new Map();
     filtered.forEach((r) => {
-      const key = r.hotel?.id || r.hotelId;
-      if (!map.has(key)) map.set(key, { hotel: r.hotel, items: [] });
+      const owner = r.ownerType === 'package' ? r.package : r.hotel;
+      const key = `${r.ownerType}-${owner?.id || r.packageId || r.hotelId}`;
+      if (!map.has(key)) map.set(key, { owner, ownerType: r.ownerType, items: [] });
       map.get(key).items.push(r);
     });
     return Array.from(map.values());
   }, [filtered]);
 
   const selectedHotel = hotels.find((h) => String(h.id) === String(hotelIdFilter));
+  const selectedPackage = packages.find((p) => String(p.id) === String(packageIdFilter));
+  const newRoomHref = isPackage
+    ? (packageIdFilter ? `/admin/rooms/new?packageId=${packageIdFilter}` : '/admin/rooms/new?ownerType=package')
+    : (hotelIdFilter ? `/admin/rooms/new?hotelId=${hotelIdFilter}` : '/admin/rooms/new');
 
   return (
     <div>
@@ -107,10 +138,10 @@ export default function AvailableRoomsPage() {
         <div>
           <h1 className="text-2xl font-display font-bold">Available Rooms</h1>
           <p className="text-ink-muted text-sm">
-            Rooms are bound to a hotel. Pick a hotel below to focus the list, or browse all.
+            Rooms belong to a hotel or a package. Pick the owner type, then a specific one to focus the list.
           </p>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <input
             className="input"
             placeholder="Search by name…"
@@ -119,18 +150,29 @@ export default function AvailableRoomsPage() {
           />
           <select
             className="input"
-            value={hotelIdFilter}
-            onChange={(e) => onHotelChange(e.target.value)}
+            value={ownerType}
+            onChange={(e) => onOwnerTypeChange(e.target.value)}
+            title="Owner type"
           >
-            <option value="">All hotels</option>
-            {hotels.map((h) => (
-              <option key={h.id} value={h.id}>{h.name}</option>
-            ))}
+            <option value="hotel">Hotels</option>
+            <option value="package">Packages</option>
           </select>
-          <Link
-            to={hotelIdFilter ? `/admin/rooms/new?hotelId=${hotelIdFilter}` : '/admin/rooms/new'}
-            className="btn-primary whitespace-nowrap"
-          >
+          {isPackage ? (
+            <select className="input" value={packageIdFilter} onChange={(e) => onPackageChange(e.target.value)}>
+              <option value="">All packages</option>
+              {packages.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          ) : (
+            <select className="input" value={hotelIdFilter} onChange={(e) => onHotelChange(e.target.value)}>
+              <option value="">All hotels</option>
+              {hotels.map((h) => (
+                <option key={h.id} value={h.id}>{h.name}</option>
+              ))}
+            </select>
+          )}
+          <Link to={newRoomHref} className="btn-primary whitespace-nowrap">
             <Plus size={18} /> New
           </Link>
         </div>
@@ -140,6 +182,14 @@ export default function AvailableRoomsPage() {
         <div className="mb-4 text-xs text-ink-muted">
           Showing rooms for <strong>{selectedHotel.name}</strong> ·{' '}
           <button type="button" onClick={() => onHotelChange('')} className="text-brand hover:underline">
+            Clear filter
+          </button>
+        </div>
+      )}
+      {selectedPackage && (
+        <div className="mb-4 text-xs text-ink-muted">
+          Showing rooms for package <strong>{selectedPackage.name}</strong> ·{' '}
+          <button type="button" onClick={() => onPackageChange('')} className="text-brand hover:underline">
             Clear filter
           </button>
         </div>
@@ -155,18 +205,21 @@ export default function AvailableRoomsPage() {
           <p className="text-ink-muted">No rooms{hotelIdFilter ? ' for this hotel' : ''} yet. Click <strong>New</strong> to add one.</p>
         </div>
       ) : (
-        grouped.map(({ hotel, items }) => (
-          <div key={hotel?.id || 'unknown'} className="card overflow-hidden mb-5">
+        grouped.map(({ owner, ownerType: groupType, items }) => (
+          <div key={`${groupType}-${owner?.id || 'unknown'}`} className="card overflow-hidden mb-5">
             <div className="px-4 py-3 bg-surface-alt text-xs uppercase font-semibold tracking-wide text-ink-muted flex items-center justify-between">
               <span>
-                {hotel?.name || 'Unknown hotel'}{' '}
+                {owner?.name || (groupType === 'package' ? 'Unknown package' : 'Unknown hotel')}{' '}
                 <span className="text-ink-muted/70 font-normal normal-case">
-                  · {items.length} room{items.length === 1 ? '' : 's'}
+                  · {groupType === 'package' ? 'Package' : 'Hotel'} · {items.length} room{items.length === 1 ? '' : 's'}
                 </span>
               </span>
-              {hotel?.id && (
-                <Link to={`/admin/hotels/${hotel.id}/edit`} className="text-brand hover:underline normal-case">
-                  Edit hotel →
+              {owner?.id && (
+                <Link
+                  to={groupType === 'package' ? `/admin/packages/${owner.id}/edit` : `/admin/hotels/${owner.id}/edit`}
+                  className="text-brand hover:underline normal-case"
+                >
+                  Edit {groupType === 'package' ? 'package' : 'hotel'} →
                 </Link>
               )}
             </div>
@@ -216,9 +269,10 @@ export default function AvailableRoomsPage() {
                     {r.isActive ? 'LIVE' : 'DRAFT'}
                   </span>
                 </div>
-                <div className="col-span-2 flex items-center justify-end gap-1">
-                  <button onClick={() => toggle(r)} className="p-1.5 hover:bg-surface-alt rounded" title={r.isActive ? 'Unpublish' : 'Publish'}>
-                    {r.isActive ? <Eye size={16} /> : <EyeOff size={16} />}
+                <div className="col-span-2 flex items-center justify-end gap-1.5">
+                  <ToggleSwitch checked={r.isActive} onChange={() => toggle(r)} size="sm" />
+                  <button onClick={() => setViewItem(r)} className="p-1.5 hover:bg-surface-alt rounded" title="View details">
+                    <Eye size={16} />
                   </button>
                   <button
                     onClick={() => duplicate(r)}
@@ -256,6 +310,13 @@ export default function AvailableRoomsPage() {
         confirmLabel="Delete"
         onConfirm={confirmDelete}
         onClose={() => setDeleteId(null)}
+      />
+
+      <RowDetailsModal
+        open={!!viewItem}
+        onClose={() => setViewItem(null)}
+        title={viewItem?.name}
+        data={viewItem}
       />
     </div>
   );

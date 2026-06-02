@@ -5,6 +5,8 @@ import api, { fileUrl } from '../../services/api';
 import HeroFormModal from '../../components/admin/HeroFormModal.jsx';
 import ConfirmDialog from '../../components/admin/ConfirmDialog.jsx';
 import SortableList, { DragHandle } from '../../components/admin/SortableList.jsx';
+import ToggleSwitch from '../../components/admin/ToggleSwitch.jsx';
+import RowDetailsModal from '../../components/admin/RowDetailsModal.jsx';
 
 const TYPE_LABELS = {
   image: 'Single Image',
@@ -30,6 +32,7 @@ export default function HeroManagementPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
+  const [viewItem, setViewItem] = useState(null);
   const [pageOptions, setPageOptions] = useState([{ key: 'home', label: 'Home' }]);
 
   // Pull header links so the page filter only shows pages the admin has registered.
@@ -176,9 +179,10 @@ export default function HeroManagementPage() {
                   </div>
                   <div className="col-span-2 text-sm text-ink-muted">{h.pageKey}</div>
                   <div className="col-span-1 text-[11px] text-ink-muted">{TYPE_LABELS[h.type]}</div>
-                  <div className="col-span-2 flex items-center justify-end gap-1">
-                    <button onClick={() => toggle(h)} className="p-1.5 hover:bg-surface-alt rounded" title={h.isActive ? 'Disable' : 'Enable'}>
-                      {h.isActive ? <Eye size={16} /> : <EyeOff size={16} />}
+                  <div className="col-span-2 flex items-center justify-end gap-1.5">
+                    <ToggleSwitch checked={h.isActive} onChange={() => toggle(h)} size="sm" />
+                    <button onClick={() => setViewItem(h)} className="p-1.5 hover:bg-surface-alt rounded" title="View details">
+                      <Eye size={16} />
                     </button>
                     <button
                       onClick={() => { setEditing(h); setShowForm(true); }}
@@ -216,6 +220,13 @@ export default function HeroManagementPage() {
         confirmLabel="Delete"
         onConfirm={confirmDelete}
         onClose={() => setDeleteId(null)}
+      />
+
+      <RowDetailsModal
+        open={!!viewItem}
+        onClose={() => setViewItem(null)}
+        title={viewItem?.title || viewItem?.name || viewItem?.pageKey}
+        data={viewItem}
       />
     </div>
   );

@@ -56,11 +56,23 @@ export default function HotelDetailPage() {
             .then((r) => { if (!cancelled) setRooms(r.data?.data?.items || []); })
             .catch(() => {});
 
-          // Suggested add-on activities — try location-matched first, fall
-          // back to any active add-ons so the section isn't empty just because
-          // the admin hasn't tagged add-ons with this hotel's location yet.
+          // Suggested add-on activities. Priority:
+          //   1. Activities tagged to THIS hotel (+ general) — the admin
+          //      explicitly attached them, so they lead.
+          //   2. Location-matched general activities.
+          //   3. Any active add-ons, so the section is never empty.
           const loadAddOns = async () => {
             try {
+              const r0 = await api.get('/add-ons', { params: { hotelId: h.id, limit: 8 } });
+              let items = r0.data?.data?.items || [];
+              // Surface this hotel's own activities before the general ones.
+              items = [...items].sort(
+                (a, b) => (b.ownerType === 'hotel' ? 1 : 0) - (a.ownerType === 'hotel' ? 1 : 0)
+              );
+              if (items.some((i) => i.ownerType === 'hotel')) {
+                if (!cancelled) setAddOns(items);
+                return;
+              }
               if (h.location?.slug) {
                 const r1 = await api.get('/add-ons', { params: { location: h.location.slug, limit: 6 } });
                 const matched = r1.data?.data?.items || [];
@@ -69,6 +81,7 @@ export default function HotelDetailPage() {
                   return;
                 }
               }
+              if (items.length > 0) { if (!cancelled) setAddOns(items); return; }
               const r2 = await api.get('/add-ons', { params: { limit: 6 } });
               if (!cancelled) setAddOns(r2.data?.data?.items || []);
             } catch { /* swallow — section just hides if it fails */ }

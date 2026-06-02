@@ -8,6 +8,8 @@ import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
 import ConfirmDialog from '../../components/admin/ConfirmDialog.jsx';
 import SortableList, { DragHandle } from '../../components/admin/SortableList.jsx';
+import ToggleSwitch from '../../components/admin/ToggleSwitch.jsx';
+import RowDetailsModal from '../../components/admin/RowDetailsModal.jsx';
 
 export default function PackagesPage() {
   const navigate = useNavigate();
@@ -16,6 +18,7 @@ export default function PackagesPage() {
   const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState(null);
   const [duplicatingId, setDuplicatingId] = useState(null);
+  const [viewItem, setViewItem] = useState(null);
   const [view, setView] = useState('list');
 
   const load = useCallback(async () => {
@@ -208,8 +211,9 @@ export default function PackagesPage() {
                   )}
                 </div>
                 <div className="col-span-2 flex items-center justify-end gap-1">
-                  <button onClick={() => toggle(p)} className="p-1.5 hover:bg-surface-alt rounded" title={p.isActive ? 'Unpublish' : 'Publish'}>
-                    {p.isActive ? <Eye size={16} /> : <EyeOff size={16} />}
+                  <ToggleSwitch checked={p.isActive} onChange={() => toggle(p)} size="sm" />
+                  <button onClick={() => setViewItem(p)} className="p-1.5 hover:bg-surface-alt rounded" title="View details">
+                    <Eye size={16} />
                   </button>
                   <button
                     onClick={() => duplicate(p)}
@@ -300,18 +304,18 @@ export default function PackagesPage() {
                     ))}
                   </div>
                 )}
-                <div className="flex items-center gap-1 mt-4 pt-3 border-t">
+                <div className="flex items-center gap-2 mt-4 pt-3 border-t">
+                  <ToggleSwitch checked={p.isActive} onChange={() => toggle(p)} showLabel />
                   <button
-                    onClick={() => toggle(p)}
-                    className="flex-1 btn-ghost text-xs"
+                    onClick={() => setViewItem(p)}
+                    className="ml-auto btn-ghost text-xs"
                   >
-                    {p.isActive ? <EyeOff size={14} /> : <Eye size={14} />}
-                    {p.isActive ? 'Unpublish' : 'Publish'}
+                    <Eye size={14} /> View
                   </button>
                   <button
                     onClick={() => duplicate(p)}
                     disabled={duplicatingId === p.id}
-                    className="flex-1 btn-ghost text-xs disabled:opacity-50"
+                    className="btn-ghost text-xs disabled:opacity-50"
                   >
                     <Copy size={14} /> Duplicate
                   </button>
@@ -341,6 +345,13 @@ export default function PackagesPage() {
         confirmLabel="Delete"
         onConfirm={confirmDelete}
         onClose={() => setDeleteId(null)}
+      />
+
+      <RowDetailsModal
+        open={!!viewItem}
+        onClose={() => setViewItem(null)}
+        title={viewItem?.name}
+        data={viewItem}
       />
     </div>
   );

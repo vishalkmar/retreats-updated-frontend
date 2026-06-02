@@ -8,6 +8,8 @@ import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
 import TestimonialFormModal from '../../components/admin/TestimonialFormModal.jsx';
 import ConfirmDialog from '../../components/admin/ConfirmDialog.jsx';
+import ToggleSwitch from '../../components/admin/ToggleSwitch.jsx';
+import RowDetailsModal from '../../components/admin/RowDetailsModal.jsx';
 
 const TYPES = [
   { value: '', label: 'All types' },
@@ -51,6 +53,7 @@ export default function TestimonialsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
+  const [viewItem, setViewItem] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -236,13 +239,14 @@ export default function TestimonialsPage() {
                       </td>
                       <td className="px-6 py-4 text-xs text-ink-muted">{formatDate(t.createdAt)}</td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center justify-center gap-1">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <ToggleSwitch checked={t.isActive} onChange={() => toggle(t)} size="sm" />
                           <button
-                            onClick={() => toggle(t)}
+                            onClick={() => setViewItem(t)}
                             className="p-2 text-ink-muted hover:text-ink hover:bg-surface-alt rounded-lg transition"
-                            title={t.isActive ? 'Disable' : 'Enable'}
+                            title="View details"
                           >
-                            {t.isActive ? <Eye size={16} /> : <EyeOff size={16} />}
+                            <Eye size={16} />
                           </button>
                           <button
                             onClick={() => { setEditing(t); setShowForm(true); }}
@@ -284,6 +288,13 @@ export default function TestimonialsPage() {
         confirmLabel="Delete"
         onConfirm={confirmDelete}
         onClose={() => setDeleteId(null)}
+      />
+
+      <RowDetailsModal
+        open={!!viewItem}
+        onClose={() => setViewItem(null)}
+        title={viewItem?.name || viewItem?.authorName}
+        data={viewItem}
       />
     </div>
   );

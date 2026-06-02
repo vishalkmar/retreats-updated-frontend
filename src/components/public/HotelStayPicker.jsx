@@ -1,4 +1,4 @@
-import { Calendar, Bed, User, Baby } from 'lucide-react';
+import { Calendar, Bed, User, Baby, Moon } from 'lucide-react';
 import DatePicker from '../common/DatePicker.jsx';
 
 // MMT-style stay picker — sits on the hotel detail page above the room
@@ -60,6 +60,13 @@ export default function HotelStayPicker({ value, onChange }) {
   const nights = nightsBetween(checkIn, checkOut);
   const totalGuests = adults + children;
 
+  // Direct "number of nights" control — keeps check-out in sync so dates stay
+  // the single source of truth and the room prices below re-flow instantly.
+  const setNights = (n) => {
+    const safe = Math.max(1, Math.min(30, n));
+    patch({ checkOut: addDaysISO(checkIn, safe) });
+  };
+
   return (
     <div className="rounded-2xl border border-slate-200 bg-white shadow-soft overflow-hidden">
       {/* Top row — dates */}
@@ -92,7 +99,15 @@ export default function HotelStayPicker({ value, onChange }) {
       </div>
 
       {/* Bottom row — counters always visible */}
-      <div className="grid grid-cols-3 border-t border-slate-100 bg-slate-50/60">
+      <div className="grid grid-cols-2 sm:grid-cols-4 border-t border-slate-100 bg-slate-50/60">
+        <CounterCell
+          icon={Moon}
+          label="Nights"
+          value={nights}
+          onChange={(v) => setNights(v)}
+          min={1}
+          max={30}
+        />
         <CounterCell
           icon={Bed}
           label="Rooms"
@@ -100,6 +115,7 @@ export default function HotelStayPicker({ value, onChange }) {
           onChange={(v) => patch({ rooms: Math.max(1, v) })}
           min={1}
           max={10}
+          divider
         />
         <CounterCell
           icon={User}

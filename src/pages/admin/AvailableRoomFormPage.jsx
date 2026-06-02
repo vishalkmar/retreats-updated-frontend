@@ -12,10 +12,12 @@ import RichTextEditor from '../../components/admin/RichTextEditor.jsx';
 import usePersistedForm from '../../hooks/usePersistedForm.js';
 
 const blankForm = {
+  ownerType: 'hotel',
   hotelId: '',
+  packageId: '',
   name: '', slug: '',
   price: 0, priceOriginal: '', currency: 'INR',
-  roomSize: '', maxOccupancy: 2,
+  roomSize: '', maxOccupancy: 2, maxChildrenFree: 0,
   highlightsRich: '', descriptionRich: '',
   isFeatured: false, isActive: true, isRefundable: true,
   sortOrder: 0,
@@ -48,6 +50,7 @@ export default function AvailableRoomFormPage() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const presetHotelId = searchParams.get('hotelId');
+  const presetPackageId = searchParams.get('packageId');
   const editing = !!id;
   const navigate = useNavigate();
 
@@ -59,8 +62,13 @@ export default function AvailableRoomFormPage() {
     discardDraft,
     hasDraft,
   } = usePersistedForm(
-    `room-form:${id || `new-${presetHotelId || 'noid'}`}`,
-    { ...blankForm, hotelId: presetHotelId || '' },
+    `room-form:${id || `new-${presetHotelId || presetPackageId || 'noid'}`}`,
+    {
+      ...blankForm,
+      ownerType: presetPackageId ? 'package' : 'hotel',
+      hotelId: presetHotelId || '',
+      packageId: presetPackageId || '',
+    },
     { editing },
   );
   const [room, setRoom] = useState(null);
@@ -72,18 +80,21 @@ export default function AvailableRoomFormPage() {
   const [replaceGallery, setReplaceGallery] = useState(false);
 
   const [hotels, setHotels] = useState([]);
+  const [packages, setPackages] = useState([]);
   const [facilities, setFacilities] = useState([]);
   const [roomViews, setRoomViews] = useState([]);
 
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const [h, f, rv] = await Promise.all([
+        const [h, p, f, rv] = await Promise.all([
           api.get('/hotels/admin/all'),
+          api.get('/packages/admin/all'),
           api.get('/facilities/all'),
           api.get('/room-views/all'),
         ]);
         setHotels(h.data.data.items);
+        setPackages(p.data.data.items || []);
         setFacilities(f.data.data.items);
         setRoomViews(rv.data.data.items);
       } catch (err) {
@@ -101,7 +112,9 @@ export default function AvailableRoomFormPage() {
       const r = res.data.data.room;
       setRoom(r);
       hydrateFromServer({
+        ownerType: r.ownerType || (r.packageId ? 'package' : 'hotel'),
         hotelId: r.hotelId || '',
+        packageId: r.packageId || '',
         name: r.name || '',
         slug: r.slug || '',
         price: r.price ?? 0,
@@ -109,6 +122,7 @@ export default function AvailableRoomFormPage() {
         currency: r.currency || 'INR',
         roomSize: r.roomSize || '',
         maxOccupancy: r.maxOccupancy ?? 2,
+        maxChildrenFree: r.maxChildrenFree ?? 0,
         highlightsRich: r.highlightsRich || '',
         descriptionRich: r.descriptionRich || '',
         isFeatured: !!r.isFeatured,
@@ -132,7 +146,8 @@ export default function AvailableRoomFormPage() {
   const submit = async (e) => {
     e.preventDefault();
     if (!form.name?.trim()) return toast.error('Name is required');
-    if (!form.hotelId) return toast.error('Please select a hotel');
+    if (form.ownerType === 'package' && !form.packageId) return toast.error('Please select a package');
+    if (form.ownerType !== 'package' && !form.hotelId) return toast.error('Please select a hotel');
 
     const fd = new FormData();
     Object.entries(form).forEach(([k, v]) => {
@@ -190,9 +205,11 @@ export default function AvailableRoomFormPage() {
     );
   }
 
-  const backHref = presetHotelId
-    ? `/admin/rooms?hotelId=${presetHotelId}`
-    : (room?.hotelId ? `/admin/rooms?hotelId=${room.hotelId}` : '/admin/rooms');
+  const backHref = presetPackageId || room?.packageId
+    ? `/admin/rooms?ownerType=package&packageId=${presetPackageId || room?.packageId}`
+    : presetHotelId
+      ? `/admin/rooms?hotelId=${presetHotelId}`
+      : (room?.hotelId ? `/admin/rooms?hotelId=${room.hotelId}` : '/admin/rooms');
 
   return (
     <form onSubmit={submit}>
@@ -210,6 +227,14 @@ export default function AvailableRoomFormPage() {
                 Hotel:{' '}
                 <Link to={`/admin/hotels/${room.hotel.id}/edit`} className="text-brand hover:underline">
                   {room.hotel.name}
+                </Link>
+              </p>
+            )}
+            {room?.package && (
+              <p className="text-xs text-ink-muted">
+                Package:{' '}
+                <Link to={`/admin/packages/${room.package.id}/edit`} className="text-brand hover:underline">
+                  {room.package.name}
                 </Link>
               </p>
             )}
@@ -235,23 +260,57 @@ export default function AvailableRoomFormPage() {
         </div>
       </div>
 
-      {/* Hotel + Basic */}
-      <Section icon={Bed} title="Hotel & basic info">
+      {/* Owner + Basic */}
+      <Section icon={Bed} title="Owner & basic info">
         <div className="grid sm:grid-cols-2 gap-x-6 gap-y-6">
           <div className="sm:col-span-2">
-            <label className="label">Hotel *</label>
-            <select
-              className="input"
-              value={form.hotelId}
-              onChange={(e) => change('hotelId', e.target.value)}
-              required
-            >
-              <option value="">— Select hotel —</option>
-              {hotels.map((h) => (
-                <option key={h.id} value={h.id}>{h.name}</option>
+            <label className="label">This room belongs to *</label>
+            <div className="flex gap-2">
+              {['hotel', 'package'].map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => change('ownerType', t)}
+                  className={`flex-1 px-4 py-2 rounded-lg border text-sm font-medium capitalize transition ${
+                    form.ownerType === t
+                      ? 'border-brand bg-brand/10 text-brand'
+                      : 'border-slate-200 text-ink-muted hover:border-brand/40'
+                  }`}
+                >
+                  {t}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
+          {form.ownerType === 'package' ? (
+            <div className="sm:col-span-2">
+              <label className="label">Package *</label>
+              <select
+                className="input"
+                value={form.packageId}
+                onChange={(e) => change('packageId', e.target.value)}
+              >
+                <option value="">— Select package —</option>
+                {packages.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="sm:col-span-2">
+              <label className="label">Hotel *</label>
+              <select
+                className="input"
+                value={form.hotelId}
+                onChange={(e) => change('hotelId', e.target.value)}
+              >
+                <option value="">— Select hotel —</option>
+                {hotels.map((h) => (
+                  <option key={h.id} value={h.id}>{h.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="sm:col-span-2">
             <label className="label">Room name *</label>
             <input
@@ -263,7 +322,7 @@ export default function AvailableRoomFormPage() {
             />
           </div>
           <div>
-            <label className="label">Slug (unique per hotel)</label>
+            <label className="label">Property name</label>
             <input
               className="input"
               value={form.slug}
@@ -313,6 +372,16 @@ export default function AvailableRoomFormPage() {
               value={form.maxOccupancy}
               onChange={(e) => change('maxOccupancy', parseInt(e.target.value || 1, 10))}
             />
+          </div>
+          <div>
+            <label className="label">Free children</label>
+            <input
+              type="number" min="0" className="input"
+              value={form.maxChildrenFree}
+              onChange={(e) => change('maxChildrenFree', parseInt(e.target.value || 0, 10))}
+              placeholder="Kids who stay free"
+            />
+            <p className="text-[11px] text-ink-muted mt-1">Children up to this many stay free.</p>
           </div>
           <div className="sm:col-span-2">
             <label className="label">Room size</label>

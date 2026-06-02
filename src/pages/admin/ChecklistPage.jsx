@@ -9,6 +9,8 @@ import {
 import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
 import ConfirmDialog from '../../components/admin/ConfirmDialog.jsx';
+import ToggleSwitch from '../../components/admin/ToggleSwitch.jsx';
+import RowDetailsModal from '../../components/admin/RowDetailsModal.jsx';
 import Dropzone from '../../components/admin/Dropzone.jsx';
 import SortableList, { DragHandle } from '../../components/admin/SortableList.jsx';
 
@@ -47,6 +49,7 @@ export default function ChecklistPage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null); // item being edited / new
   const [deleteId, setDeleteId] = useState(null);
+  const [viewItem, setViewItem] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -160,9 +163,10 @@ export default function ChecklistPage() {
                       {it.isActive ? 'LIVE' : 'OFF'}
                     </span>
                   </div>
-                  <div className="col-span-1 flex items-center justify-end gap-1">
-                    <button onClick={() => toggle(it)} className="p-1.5 hover:bg-surface-alt rounded" title={it.isActive ? 'Disable' : 'Enable'}>
-                      {it.isActive ? <Eye size={16} /> : <EyeOff size={16} />}
+                  <div className="col-span-1 flex items-center justify-end gap-1.5">
+                    <ToggleSwitch checked={it.isActive} onChange={() => toggle(it)} size="sm" />
+                    <button onClick={() => setViewItem(it)} className="p-1.5 hover:bg-surface-alt rounded" title="View details">
+                      <Eye size={16} />
                     </button>
                     <button onClick={() => setEditing(it)} className="p-1.5 hover:bg-surface-alt rounded" title="Edit">
                       <Edit size={16} />
@@ -197,6 +201,13 @@ export default function ChecklistPage() {
         confirmLabel="Delete"
         onConfirm={confirmDelete}
         onClose={() => setDeleteId(null)}
+      />
+
+      <RowDetailsModal
+        open={!!viewItem}
+        onClose={() => setViewItem(null)}
+        title={viewItem?.title || viewItem?.label || viewItem?.name}
+        data={viewItem}
       />
     </div>
   );

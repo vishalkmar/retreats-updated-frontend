@@ -13,6 +13,9 @@ import usePersistedForm from '../../hooks/usePersistedForm.js';
 
 const blankForm = {
   name: '', slug: '',
+  ownerType: 'general',
+  hotelId: '',
+  packageId: '',
   locationId: '',
   price: 0, priceOriginal: '', currency: 'INR',
   descriptionRich: '', highlightsRich: '',
@@ -66,9 +69,13 @@ export default function AddOnActivityFormPage() {
   const [replaceGallery, setReplaceGallery] = useState(false);
 
   const [locations, setLocations] = useState([]);
+  const [hotels, setHotels] = useState([]);
+  const [packages, setPackages] = useState([]);
 
   useEffect(() => {
     api.get('/locations/all').then((r) => setLocations(r.data.data.items)).catch(() => {});
+    api.get('/hotels/admin/all').then((r) => setHotels(r.data.data.items || [])).catch(() => {});
+    api.get('/packages/admin/all').then((r) => setPackages(r.data.data.items || [])).catch(() => {});
   }, []);
 
   const load = useCallback(async () => {
@@ -81,6 +88,9 @@ export default function AddOnActivityFormPage() {
       hydrateFromServer({
         name: a.name || '',
         slug: a.slug || '',
+        ownerType: a.ownerType || (a.hotelId ? 'hotel' : a.packageId ? 'package' : 'general'),
+        hotelId: a.hotelId || '',
+        packageId: a.packageId || '',
         locationId: a.locationId || '',
         price: a.price ?? 0,
         priceOriginal: a.priceOriginal ?? '',
@@ -109,6 +119,8 @@ export default function AddOnActivityFormPage() {
   const submit = async (e) => {
     e.preventDefault();
     if (!form.name?.trim()) return toast.error('Name is required');
+    if (form.ownerType === 'hotel' && !form.hotelId) return toast.error('Please select a hotel');
+    if (form.ownerType === 'package' && !form.packageId) return toast.error('Please select a package');
 
     const fd = new FormData();
     Object.entries(form).forEach(([k, v]) => {
@@ -210,7 +222,7 @@ export default function AddOnActivityFormPage() {
             />
           </div>
           <div>
-            <label className="label">Slug (auto if empty)</label>
+            <label className="label">Property name</label>
             <input
               className="input"
               value={form.slug}
@@ -225,6 +237,52 @@ export default function AddOnActivityFormPage() {
               onChange={(e) => change('sortOrder', parseInt(e.target.value || 0, 10))}
             />
           </div>
+        </div>
+      </Section>
+
+      <Section icon={Sparkles} title="Attach to">
+        <p className="text-xs text-ink-muted -mt-1">
+          A <strong>general</strong> activity is suggested everywhere. Attach to a specific hotel or package
+          to feature it on that hotel/package's page.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4">
+          <div>
+            <label className="label">Activity belongs to</label>
+            <div className="flex gap-2">
+              {['general', 'hotel', 'package'].map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => change('ownerType', t)}
+                  className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium capitalize transition ${
+                    form.ownerType === t
+                      ? 'border-brand bg-brand/10 text-brand'
+                      : 'border-slate-200 text-ink-muted hover:border-brand/40'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+          {form.ownerType === 'hotel' && (
+            <div>
+              <label className="label">Hotel *</label>
+              <select className="input" value={form.hotelId} onChange={(e) => change('hotelId', e.target.value)}>
+                <option value="">— Select hotel —</option>
+                {hotels.map((h) => (<option key={h.id} value={h.id}>{h.name}</option>))}
+              </select>
+            </div>
+          )}
+          {form.ownerType === 'package' && (
+            <div>
+              <label className="label">Package *</label>
+              <select className="input" value={form.packageId} onChange={(e) => change('packageId', e.target.value)}>
+                <option value="">— Select package —</option>
+                {packages.map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
+              </select>
+            </div>
+          )}
         </div>
       </Section>
 

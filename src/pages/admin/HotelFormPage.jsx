@@ -292,7 +292,7 @@ export default function HotelFormPage() {
             />
           </div>
           <div>
-            <label className="label">Slug (auto if empty)</label>
+            <label className="label">Property name</label>
             <input
               className="input"
               value={form.slug}
@@ -468,37 +468,12 @@ export default function HotelFormPage() {
         </div>
       </Section>
 
-      {/* Pricing & Rating */}
-      <Section icon={DollarSign} title="Pricing & ratings">
-        <div className="grid sm:grid-cols-4 gap-x-6 gap-y-6">
+      {/* Ratings — pricing is driven by the hotel's rooms, so only the two
+          rating signals (used by the website's hotel filters) live here. */}
+      <Section icon={Star} title="Ratings">
+        <div className="grid sm:grid-cols-2 gap-x-6 gap-y-6">
           <div>
-            <label className="label">Currency</label>
-            <input
-              className="input"
-              value={form.currency}
-              onChange={(e) => change('currency', e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="label">Price from</label>
-            <input
-              type="number" step="0.01" className="input"
-              value={form.priceFrom}
-              onChange={(e) => change('priceFrom', e.target.value)}
-            />
-            <p className="text-[11px] text-ink-muted mt-1">Override or auto-set from cheapest room.</p>
-          </div>
-          <div>
-            <label className="label">Original price</label>
-            <input
-              type="number" step="0.01" className="input"
-              value={form.priceOriginal}
-              onChange={(e) => change('priceOriginal', e.target.value)}
-              placeholder="For strike-through"
-            />
-          </div>
-          <div>
-            <label className="label flex items-center gap-1"><Star size={12} /> Star category</label>
+            <label className="label flex items-center gap-1"><Star size={12} /> Hotel type (star category)</label>
             <select
               className="input"
               value={form.starRating}
@@ -508,16 +483,17 @@ export default function HotelFormPage() {
                 <option key={s.value} value={s.value}>{s.label}</option>
               ))}
             </select>
+            <p className="text-[11px] text-ink-muted mt-1">1★ to 5★ hotel class — used in the website hotel filter.</p>
           </div>
-          <div className="sm:col-span-2">
-            <label className="label">Display rating (0–5)</label>
+          <div>
+            <label className="label flex items-center gap-1"><Star size={12} /> Hotel rating (0–5)</label>
             <input
-              type="number" step="0.01" min="0" max="5" className="input"
+              type="number" step="0.1" min="0" max="5" className="input"
               value={form.rating}
               onChange={(e) => change('rating', e.target.value)}
               placeholder="4.5"
             />
-            <p className="text-[11px] text-ink-muted mt-1">Shown next to a star on cards. Separate from star category.</p>
+            <p className="text-[11px] text-ink-muted mt-1">Review-style rating shown on cards — also filterable on the site.</p>
           </div>
         </div>
       </Section>

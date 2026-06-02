@@ -7,6 +7,8 @@ import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
 import ConfirmDialog from '../../components/admin/ConfirmDialog.jsx';
 import SortableList, { DragHandle } from '../../components/admin/SortableList.jsx';
+import ToggleSwitch from '../../components/admin/ToggleSwitch.jsx';
+import RowDetailsModal from '../../components/admin/RowDetailsModal.jsx';
 
 export default function TrainersPage() {
   const navigate = useNavigate();
@@ -15,6 +17,7 @@ export default function TrainersPage() {
   const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState(null);
   const [duplicatingId, setDuplicatingId] = useState(null);
+  const [viewItem, setViewItem] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -190,9 +193,10 @@ export default function TrainersPage() {
                     {it.isActive ? 'LIVE' : 'DRAFT'}
                   </span>
                 </div>
-                <div className="col-span-2 flex items-center justify-end gap-1">
-                  <button onClick={() => toggle(it)} className="p-1.5 hover:bg-surface-alt rounded" title={it.isActive ? 'Disable' : 'Enable'}>
-                    {it.isActive ? <Eye size={16} /> : <EyeOff size={16} />}
+                <div className="col-span-2 flex items-center justify-end gap-1.5">
+                  <ToggleSwitch checked={it.isActive} onChange={() => toggle(it)} size="sm" />
+                  <button onClick={() => setViewItem(it)} className="p-1.5 hover:bg-surface-alt rounded" title="View details">
+                    <Eye size={16} />
                   </button>
                   <button
                     onClick={() => duplicate(it)}
@@ -230,6 +234,13 @@ export default function TrainersPage() {
         confirmLabel="Delete"
         onConfirm={confirmDelete}
         onClose={() => setDeleteId(null)}
+      />
+
+      <RowDetailsModal
+        open={!!viewItem}
+        onClose={() => setViewItem(null)}
+        title={viewItem?.name}
+        data={viewItem}
       />
     </div>
   );

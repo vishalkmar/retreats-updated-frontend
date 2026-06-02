@@ -6,6 +6,8 @@ import {
   RemoveFormatting, Undo, Redo, Minus, Subscript, Superscript,
   IndentDecrease, IndentIncrease, Type, Palette,
   ChevronDown, List, ListOrdered, Smile, Image as ImageIcon,
+  Table as TableIcon, Trash2,
+  ArrowUpToLine, ArrowDownToLine, ArrowLeftToLine, ArrowRightToLine,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -286,6 +288,97 @@ export default function RichTextEditor({
     }
   };
 
+  // ----- Tables ------------------------------------------------------------
+  // Inline styles (not just classes) so the table renders identically in the
+  // public site's `.rich-prose` without depending on extra CSS.
+  const CELL_STYLE = 'border:1px solid #cbd5e1;padding:8px 10px;min-width:48px;vertical-align:top;';
+  const TABLE_STYLE = 'border-collapse:collapse;width:100%;margin:10px 0;';
+
+  // Find the <td>/<th> the caret is currently inside (or null).
+  const getCurrentCell = () => {
+    const sel = window.getSelection();
+    let node = sel?.anchorNode;
+    if (node && node.nodeType === Node.TEXT_NODE) node = node.parentNode;
+    while (node && node !== editorRef.current && !['TD', 'TH'].includes(node.tagName)) {
+      node = node.parentNode;
+    }
+    return node && node !== editorRef.current ? node : null;
+  };
+
+  const insertTable = (rows, cols) => {
+    const r = Math.max(1, Math.min(20, rows));
+    const c = Math.max(1, Math.min(10, cols));
+    let html = `<table class="rte-table" style="${TABLE_STYLE}"><tbody>`;
+    for (let i = 0; i < r; i++) {
+      html += '<tr>';
+      for (let j = 0; j < c; j++) {
+        // First row as header cells for a sensible default look.
+        const tag = i === 0 ? 'th' : 'td';
+        const extra = i === 0 ? 'background:#f1f5f9;font-weight:600;text-align:left;' : '';
+        html += `<${tag} style="${CELL_STYLE}${extra}"><br></${tag}>`;
+      }
+      html += '</tr>';
+    }
+    html += '</tbody></table><p><br></p>';
+    insertHtml(html);
+  };
+
+  // Run a mutation against the current cell, then re-emit. Shows a hint if the
+  // caret isn't inside a table.
+  const withCell = (fn) => {
+    const cell = getCurrentCell();
+    if (!cell) { toast.error('Place the cursor inside a table cell first'); return; }
+    fn(cell);
+    emit();
+  };
+
+  const makeCell = (tagName) => {
+    const el = document.createElement(tagName || 'td');
+    el.style.cssText = CELL_STYLE;
+    el.innerHTML = '<br>';
+    return el;
+  };
+
+  const addRow = (below) => withCell((cell) => {
+    const tr = cell.parentNode;
+    const count = tr.children.length;
+    const newTr = document.createElement('tr');
+    for (let i = 0; i < count; i++) newTr.appendChild(makeCell('td'));
+    tr.parentNode.insertBefore(newTr, below ? tr.nextSibling : tr);
+  });
+
+  const deleteRow = () => withCell((cell) => {
+    const tr = cell.parentNode;
+    const table = cell.closest('table');
+    tr.remove();
+    if (!table.querySelector('tr')) table.remove();
+  });
+
+  const addColumn = (right) => withCell((cell) => {
+    const table = cell.closest('table');
+    const idx = Array.from(cell.parentNode.children).indexOf(cell);
+    table.querySelectorAll('tr').forEach((tr) => {
+      const ref = tr.children[idx];
+      const tagName = ref ? ref.tagName.toLowerCase() : 'td';
+      const nc = makeCell(tagName);
+      if (tagName === 'th') nc.style.cssText = CELL_STYLE + 'background:#f1f5f9;font-weight:600;text-align:left;';
+      tr.insertBefore(nc, right ? (ref ? ref.nextSibling : null) : ref);
+    });
+  });
+
+  const deleteColumn = () => withCell((cell) => {
+    const table = cell.closest('table');
+    const idx = Array.from(cell.parentNode.children).indexOf(cell);
+    table.querySelectorAll('tr').forEach((tr) => {
+      if (tr.children[idx]) tr.children[idx].remove();
+    });
+    if (!table.querySelector('td, th')) table.remove();
+  });
+
+  const deleteTable = () => withCell((cell) => {
+    cell.closest('table')?.remove();
+  });
+
   const onInput = () => emit();
 
   const onPaste = (e) => {
@@ -411,6 +504,20 @@ export default function RichTextEditor({
             title="Upload custom icon"
             icon={<ImageIcon size={15} />}
             onPick={uploadIconFile}
+          />
+        </Group>
+
+        {/* Group: table */}
+        <Group>
+          <TableMenu
+            onInsert={insertTable}
+            onAddRowAbove={() => addRow(false)}
+            onAddRowBelow={() => addRow(true)}
+            onDeleteRow={deleteRow}
+            onAddColLeft={() => addColumn(false)}
+            onAddColRight={() => addColumn(true)}
+            onDeleteCol={deleteColumn}
+            onDeleteTable={deleteTable}
           />
         </Group>
 
@@ -589,6 +696,85 @@ function IconUploader({ title, icon, onPick }) {
           e.target.value = '';
         }}
       />
+    </span>
+  );
+}
+
+function TableMenu({
+  onInsert, onAddRowAbove, onAddRowBelow, onDeleteRow,
+  onAddColLeft, onAddColRight, onDeleteCol, onDeleteTable,
+}) {
+  const [open, setOpen] = useState(false);
+  const [hover, setHover] = useState({ r: 0, c: 0 });
+  const ref = useRef(null);
+  const GRID = 6;
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDocClick = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [open]);
+
+  const close = () => { setOpen(false); setHover({ r: 0, c: 0 }); };
+
+  const Action = ({ onClick, icon, label, danger }) => (
+    <button
+      type="button"
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={() => { onClick(); close(); }}
+      className={`flex items-center gap-2 w-full text-left px-2.5 py-1.5 text-xs rounded hover:bg-slate-100 ${danger ? 'text-red-600 hover:bg-red-50' : 'text-slate-700'}`}
+    >
+      {icon} {label}
+    </button>
+  );
+
+  return (
+    <span ref={ref} className="relative" onMouseDown={(e) => e.preventDefault()}>
+      <IconBtn title="Table" onClick={() => setOpen((o) => !o)}><TableIcon size={15} /></IconBtn>
+      {open && (
+        <div className="absolute z-30 mt-1 left-0 top-full bg-white border border-slate-200 rounded-lg shadow-lg p-3 w-[210px]">
+          {/* Size picker */}
+          <p className="text-[11px] font-semibold text-slate-500 mb-1.5">
+            Insert table {hover.r > 0 ? `· ${hover.r}×${hover.c}` : ''}
+          </p>
+          <div
+            className="grid gap-0.5 mb-3"
+            style={{ gridTemplateColumns: `repeat(${GRID}, 1fr)` }}
+            onMouseLeave={() => setHover({ r: 0, c: 0 })}
+          >
+            {Array.from({ length: GRID * GRID }).map((_, i) => {
+              const r = Math.floor(i / GRID) + 1;
+              const c = (i % GRID) + 1;
+              const on = r <= hover.r && c <= hover.c;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onMouseEnter={() => setHover({ r, c })}
+                  onClick={() => { onInsert(r, c); close(); }}
+                  className={`h-5 rounded-sm border ${on ? 'bg-brand/70 border-brand' : 'bg-slate-50 border-slate-200'}`}
+                  title={`${r} × ${c}`}
+                />
+              );
+            })}
+          </div>
+
+          <div className="border-t border-slate-100 pt-2 space-y-0.5">
+            <Action onClick={onAddRowAbove} icon={<ArrowUpToLine size={13} />} label="Row above" />
+            <Action onClick={onAddRowBelow} icon={<ArrowDownToLine size={13} />} label="Row below" />
+            <Action onClick={onAddColLeft} icon={<ArrowLeftToLine size={13} />} label="Column left" />
+            <Action onClick={onAddColRight} icon={<ArrowRightToLine size={13} />} label="Column right" />
+            <div className="border-t border-slate-100 my-1" />
+            <Action onClick={onDeleteRow} icon={<Trash2 size={13} />} label="Delete row" danger />
+            <Action onClick={onDeleteCol} icon={<Trash2 size={13} />} label="Delete column" danger />
+            <Action onClick={onDeleteTable} icon={<Trash2 size={13} />} label="Drop table" danger />
+          </div>
+        </div>
+      )}
     </span>
   );
 }
