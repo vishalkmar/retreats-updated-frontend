@@ -9,6 +9,7 @@ import api, { fileUrl } from '../../services/api';
 import { FaqEditor } from '../../components/admin/KeyValueListEditor.jsx';
 import Dropzone from '../../components/admin/Dropzone.jsx';
 import RichTextEditor from '../../components/admin/RichTextEditor.jsx';
+import GstSelect from '../../components/admin/GstSelect.jsx';
 import usePersistedForm from '../../hooks/usePersistedForm.js';
 import { onlyStateLocations } from '../../utils/indianStates.js';
 
@@ -19,7 +20,7 @@ const blankForm = {
   packageId: '',
   locationId: '', cityName: '', address: '',
   mainImageUrl: '', galleryUrls: [],
-  price: 0, priceOriginal: '', currency: 'INR',
+  price: 0, priceOriginal: '', gstRate: 0, currency: 'INR',
   descriptionRich: '', highlightsRich: '',
   minAge: '', maxAge: '',
   faqs: [],
@@ -111,6 +112,7 @@ export default function AddOnActivityFormPage() {
         address: a.address || '',
         price: a.price ?? 0,
         priceOriginal: a.priceOriginal ?? '',
+        gstRate: a.gstRate ?? 0,
         currency: a.currency || 'INR',
         descriptionRich: a.descriptionRich || '',
         highlightsRich: a.highlightsRich || '',
@@ -401,6 +403,7 @@ export default function AddOnActivityFormPage() {
               onChange={(e) => change('priceOriginal', e.target.value)}
             />
           </div>
+          <GstSelect value={form.gstRate} onChange={(v) => change('gstRate', v)} />
           <div>
             <label className="label">Min age</label>
             <input

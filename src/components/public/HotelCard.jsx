@@ -4,6 +4,7 @@ import {
   Wifi, Coffee, Utensils, Waves,
 } from 'lucide-react';
 import { fileUrl } from '../../services/api';
+import { fromPriceLabel, hasPrice } from '../../utils/price.js';
 
 const stripHtml = (s) =>
   (s || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
@@ -219,15 +220,15 @@ function CardBody({ hotel, teaser, locLabel, ratingLabel, detailHref, expanded }
           <div className="text-[11px] text-ink-muted uppercase tracking-wide">From</div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-bold text-brand">
-              {hotel.currency} {Number(hotel.priceFrom).toLocaleString()}
+              {fromPriceLabel(hotel.priceFrom, hotel.currency)}
             </span>
-            {hotel.priceOriginal && Number(hotel.priceOriginal) > Number(hotel.priceFrom) && (
+            {hasPrice(hotel.priceFrom) && hotel.priceOriginal && Number(hotel.priceOriginal) > now && (
               <span className="text-sm line-through text-ink-muted">
                 {Number(hotel.priceOriginal).toLocaleString()}
               </span>
             )}
           </div>
-          <div className="text-[10px] text-ink-muted">+ taxes & fees · per night</div>
+          {hasPrice(hotel.priceFrom) && <div className="text-[10px] text-ink-muted">+ taxes & fees · per night</div>}
         </div>
         <div className="relative z-20 flex flex-col gap-2 items-stretch">
           <Link

@@ -4,6 +4,7 @@ import {
   Moon, Sun, Sparkles, BadgePercent, Users,
 } from 'lucide-react';
 import { fileUrl } from '../../services/api';
+import { fromPriceLabel, hasPrice } from '../../utils/price.js';
 import WishlistButton from './WishlistButton.jsx';
 import useRequireLogin from '../../hooks/useRequireLogin.js';
 
@@ -164,15 +165,15 @@ export default function PackageCard({ pkg }) {
             <div className="text-[11px] text-ink-muted uppercase tracking-wide">From</div>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-bold text-brand">
-                {pkg.currency} {Number(pkg.priceFrom).toLocaleString()}
+                {fromPriceLabel(pkg.priceFrom, pkg.currency)}
               </span>
-              {pkg.priceOriginal && Number(pkg.priceOriginal) > Number(pkg.priceFrom) && (
+              {hasPrice(pkg.priceFrom) && pkg.priceOriginal && Number(pkg.priceOriginal) > Number(pkg.priceFrom) && (
                 <span className="text-sm line-through text-ink-muted">
                   {Number(pkg.priceOriginal).toLocaleString()}
                 </span>
               )}
             </div>
-            <div className="text-[10px] text-ink-muted">+ taxes · {reviewsLine}</div>
+            <div className="text-[10px] text-ink-muted">{hasPrice(pkg.priceFrom) ? '+ taxes · ' : ''}{reviewsLine}</div>
           </div>
 
           <div className="relative z-20 flex gap-2">

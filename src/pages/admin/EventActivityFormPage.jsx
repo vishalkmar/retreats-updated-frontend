@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import api from '../../services/api';
 import Dropzone from '../../components/admin/Dropzone.jsx';
 import RichTextEditor from '../../components/admin/RichTextEditor.jsx';
+import { GST_OPTIONS } from '../../utils/gst.js';
 import DatePicker from '../../components/common/DatePicker.jsx';
 import StarRatingInput from '../../components/admin/StarRatingInput.jsx';
 import { FaqEditor } from '../../components/admin/KeyValueListEditor.jsx';
@@ -28,7 +29,7 @@ const blankForm = {
   mapEmbed: '', latitude: '', longitude: '',
   startDate: '', endDate: '', startTime: '', endTime: '', duration: '',
   totalSeats: '', availableSeats: '', minParticipants: '', maxParticipants: '',
-  isPaid: true, currency: 'INR', adultPrice: '', childPrice: '', couplePrice: '', groupPrice: '',
+  isPaid: true, currency: 'INR', gstRate: 0, adultPrice: '', childPrice: '', couplePrice: '', groupPrice: '',
   shortDescription: '', longDescription: '', highlights: '', whatMakesSpecial: '', inclusions: '', exclusions: '',
   refundPolicy: '', cancellationPolicy: '', termsConditions: '',
   faqs: [],
@@ -88,6 +89,15 @@ function EventField({ field, value, onChange }) {
         <select className="input" value={value || ''} onChange={(e) => onChange(e.target.value)}>
           <option value="">— select —</option>
           {(options || []).map((o) => <option key={o} value={o}>{o}</option>)}
+        </select>
+      </div>
+    );
+  }
+  if (type === 'gst') {
+    return (
+      <div>{Lbl}
+        <select className="input" value={Number(value) || 0} onChange={(e) => onChange(Number(e.target.value))}>
+          {GST_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </div>
     );

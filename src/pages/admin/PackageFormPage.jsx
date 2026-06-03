@@ -14,6 +14,7 @@ import CheckboxChips from '../../components/admin/CheckboxChips.jsx';
 import { ItineraryEditor, FaqEditor } from '../../components/admin/KeyValueListEditor.jsx';
 import Dropzone from '../../components/admin/Dropzone.jsx';
 import RichTextEditor from '../../components/admin/RichTextEditor.jsx';
+import GstSelect from '../../components/admin/GstSelect.jsx';
 import usePersistedForm from '../../hooks/usePersistedForm.js';
 import DatePicker from '../../components/common/DatePicker.jsx';
 
@@ -37,7 +38,7 @@ const blankForm = {
   durationDays: 1, durationNights: 0, timing: '',
   availableAllYear: true, startDate: '', endDate: '',
   minGroupSize: 1, maxGroupSize: 30,
-  priceFrom: 0, priceOriginal: '', currency: 'INR',
+  priceFrom: 0, priceOriginal: '', gstRate: 0, currency: 'INR',
   freeCancellation: true, isRefundable: true, isGoldHost: false,
   isFeatured: false, isPopular: false, isActive: true,
   richContent: '',
@@ -187,6 +188,7 @@ export default function PackageFormPage() {
         maxGroupSize: p.maxGroupSize ?? 30,
         priceFrom: p.priceFrom ?? 0,
         priceOriginal: p.priceOriginal ?? '',
+        gstRate: p.gstRate ?? 0,
         currency: p.currency || 'INR',
         freeCancellation: p.freeCancellation ?? true,
         isRefundable: p.isRefundable ?? true,
@@ -589,6 +591,7 @@ export default function PackageFormPage() {
               placeholder="INR / USD / EUR"
             />
           </div>
+          <GstSelect value={form.gstRate} onChange={(v) => change('gstRate', v)} />
         </div>
       </Section>
 

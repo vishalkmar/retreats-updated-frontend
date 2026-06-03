@@ -16,6 +16,7 @@ import 'swiper/css/thumbs';
 import 'swiper/css/pagination';
 
 import api, { fileUrl } from '../../services/api';
+import { fromPriceLabel, hasPrice } from '../../utils/price.js';
 import WishlistButton from '../../components/public/WishlistButton.jsx';
 import useRequireLogin from '../../hooks/useRequireLogin.js';
 import ReviewsBlock from '../../components/public/ReviewsBlock.jsx';
@@ -272,6 +273,19 @@ export default function PackageDetailPage() {
               <RichHtml html={pkg.description} />
             </Section>
           )}
+
+          {/* Admin-added additional fields — each as its own block */}
+          {(Array.isArray(pkg.extraSections) ? pkg.extraSections : [])
+            .filter((s) => s && s.value)
+            .map((s, i) => (
+              <Section key={`xs-${i}`} title={s.name || 'More information'}>
+                {s.type === 'image' ? (
+                  <img src={fileUrl(s.value)} alt={s.name || ''} className="rounded-xl max-h-[28rem] w-full object-cover" />
+                ) : (
+                  <RichHtml html={s.value} />
+                )}
+              </Section>
+            ))}
 
           {/* Highlights — independent rich-text */}
           {hasHighlightsRich && (
@@ -570,15 +584,15 @@ export default function PackageDetailPage() {
             <div className="text-xs text-ink-muted uppercase tracking-widest">From</div>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-3xl font-bold text-brand">
-                {pkg.currency} {Number(pkg.priceFrom).toLocaleString()}
+                {fromPriceLabel(pkg.priceFrom, pkg.currency)}
               </span>
-              {pkg.priceOriginal && Number(pkg.priceOriginal) > Number(pkg.priceFrom) && (
+              {hasPrice(pkg.priceFrom) && pkg.priceOriginal && Number(pkg.priceOriginal) > Number(pkg.priceFrom) && (
                 <span className="line-through text-sm text-ink-muted">
                   {Number(pkg.priceOriginal).toLocaleString()}
                 </span>
               )}
             </div>
-            <div className="text-[11px] text-ink-muted mt-0.5">per traveller</div>
+            {hasPrice(pkg.priceFrom) && <div className="text-[11px] text-ink-muted mt-0.5">per traveller</div>}
 
             <div className="mt-4">
               <LivePriceEstimator
@@ -1191,7 +1205,7 @@ function SimilarPackageCard({ pkg: p }) {
         )}
         <div className="mt-2 flex items-baseline gap-1.5">
           <span className="text-base font-bold text-brand">
-            {p.currency} {Number(p.priceFrom).toLocaleString()}
+            {fromPriceLabel(p.priceFrom, p.currency)}
           </span>
           {p.durationDays && (
             <span className="text-[10px] text-ink-muted ml-auto">

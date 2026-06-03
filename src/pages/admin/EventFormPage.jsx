@@ -11,6 +11,7 @@ import { mapEmbedSrc } from '../../utils/mapEmbed.js';
 import { onlyStateLocations } from '../../utils/indianStates.js';
 import Dropzone from '../../components/admin/Dropzone.jsx';
 import RichTextEditor from '../../components/admin/RichTextEditor.jsx';
+import GstSelect from '../../components/admin/GstSelect.jsx';
 import usePersistedForm from '../../hooks/usePersistedForm.js';
 import DatePicker from '../../components/common/DatePicker.jsx';
 
@@ -20,7 +21,7 @@ const blankForm = {
   mainImageUrl: '', galleryUrls: [],
   eventDate: '', endDate: '',
   startTime: '', endTime: '',
-  price: 0, priceOriginal: '', currency: 'INR',
+  price: 0, priceOriginal: '', gstRate: 0, currency: 'INR',
   minAge: '', maxAge: '',
   mapEmbedHtml: '',
   aboutRich: '', highlightsRich: '',
@@ -106,6 +107,7 @@ export default function EventFormPage() {
         endTime: e.endTime || '',
         price: e.price ?? 0,
         priceOriginal: e.priceOriginal ?? '',
+        gstRate: e.gstRate ?? 0,
         currency: e.currency || 'INR',
         minAge: e.minAge ?? '',
         maxAge: e.maxAge ?? '',
@@ -377,6 +379,7 @@ export default function EventFormPage() {
               onChange={(e) => change('priceOriginal', e.target.value)}
             />
           </div>
+          <GstSelect value={form.gstRate} onChange={(v) => change('gstRate', v)} />
           <div>
             <label className="label">Min age</label>
             <input

@@ -21,6 +21,7 @@ import AddOnsCarousel from '../../components/public/AddOnsCarousel.jsx';
 import WishlistButton from '../../components/public/WishlistButton.jsx';
 import HotelStayPicker, { todayISO, addDaysISO, nightsBetween } from '../../components/public/HotelStayPicker.jsx';
 import useRequireLogin from '../../hooks/useRequireLogin.js';
+import { fromPriceLabel, hasPrice, hotelFromPrice } from '../../utils/price.js';
 
 const stripHtml = (s) =>
   (s || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
@@ -235,15 +236,17 @@ export default function HotelDetailPage() {
                   <div className="text-xs text-ink-muted">From</div>
                   <div>
                     <span className="text-3xl font-bold text-brand">
-                      {hotel.currency} {Number(hotel.priceFrom).toLocaleString()}
+                      {fromPriceLabel(hotelFromPrice(hotel, rooms), hotel.currency)}
                     </span>
-                    {hotel.priceOriginal && Number(hotel.priceOriginal) > Number(hotel.priceFrom) && (
+                    {hasPrice(hotelFromPrice(hotel, rooms)) && hotel.priceOriginal && Number(hotel.priceOriginal) > hotelFromPrice(hotel, rooms) && (
                       <span className="ml-2 line-through text-ink-muted">
                         {Number(hotel.priceOriginal).toLocaleString()}
                       </span>
                     )}
                   </div>
-                  <div className="text-[11px] text-ink-muted mt-0.5">+ taxes & fees · per night</div>
+                  {hasPrice(hotelFromPrice(hotel, rooms)) && (
+                    <div className="text-[11px] text-ink-muted mt-0.5">+ taxes & fees · per night</div>
+                  )}
                 </div>
 
                 <a href="#rooms" className="btn-primary w-full mt-4">
@@ -305,6 +308,9 @@ export default function HotelDetailPage() {
             <div className="rich-prose" dangerouslySetInnerHTML={{ __html: hotel.description }} />
           </Section>
         )}
+
+        {/* Admin-added additional fields — each as its own block */}
+        <ExtraSections sections={hotel.extraSections} />
 
         {/* Facilities */}
         {hotel.facilities?.length > 0 && (
@@ -539,6 +545,26 @@ function Section({ icon: Icon, title, children, compact }) {
   );
 }
 
+// Renders the admin's "additional fields" — each a standalone titled block.
+// Text values are rich-text HTML; image values are URLs.
+export function ExtraSections({ sections }) {
+  const list = (Array.isArray(sections) ? sections : []).filter((s) => s && s.value);
+  if (!list.length) return null;
+  return (
+    <>
+      {list.map((s, i) => (
+        <Section key={i} title={s.name || 'More information'}>
+          {s.type === 'image' ? (
+            <img src={fileUrl(s.value)} alt={s.name || ''} className="rounded-xl max-h-[28rem] w-full object-cover" />
+          ) : (
+            <div className="rich-prose" dangerouslySetInnerHTML={{ __html: s.value }} />
+          )}
+        </Section>
+      ))}
+    </>
+  );
+}
+
 function FaqItem({ q, a }) {
   const [open, setOpen] = useState(false);
   return (
@@ -598,14 +624,14 @@ function SimilarHotelCard({ hotel }) {
         )}
         <div className="mt-2 flex items-baseline gap-1.5">
           <span className="text-base font-bold text-brand">
-            {hotel.currency} {Number(hotel.priceFrom).toLocaleString()}
+            {fromPriceLabel(hotel.priceFrom, hotel.currency)}
           </span>
-          {hotel.priceOriginal && Number(hotel.priceOriginal) > Number(hotel.priceFrom) && (
+          {hasPrice(hotel.priceFrom) && hotel.priceOriginal && Number(hotel.priceOriginal) > Number(hotel.priceFrom) && (
             <span className="line-through text-ink-muted text-xs">
               {Number(hotel.priceOriginal).toLocaleString()}
             </span>
           )}
-          <span className="text-[10px] text-ink-muted ml-auto">/ night</span>
+          {hasPrice(hotel.priceFrom) && <span className="text-[10px] text-ink-muted ml-auto">/ night</span>}
         </div>
       </div>
     </Link>

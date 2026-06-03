@@ -10,6 +10,7 @@ import api, { fileUrl } from '../../services/api';
 import MultiSelectChips from '../../components/admin/MultiSelectChips.jsx';
 import Dropzone from '../../components/admin/Dropzone.jsx';
 import RichTextEditor from '../../components/admin/RichTextEditor.jsx';
+import GstSelect from '../../components/admin/GstSelect.jsx';
 import usePersistedForm from '../../hooks/usePersistedForm.js';
 
 const blankForm = {
@@ -17,7 +18,7 @@ const blankForm = {
   hotelId: '',
   packageId: '',
   name: '', slug: '',
-  price: 0, priceOriginal: '', currency: 'INR',
+  price: 0, priceOriginal: '', gstRate: 0, currency: 'INR',
   roomSize: '', maxOccupancy: 2,
   extraPersonTiers: [],
   mainImageUrl: '', galleryUrls: [],
@@ -120,6 +121,7 @@ export default function AvailableRoomFormPage() {
         slug: r.slug || '',
         price: r.price ?? 0,
         priceOriginal: r.priceOriginal ?? '',
+        gstRate: r.gstRate ?? 0,
         currency: r.currency || 'INR',
         roomSize: r.roomSize || '',
         maxOccupancy: r.maxOccupancy ?? 2,
@@ -404,6 +406,7 @@ export default function AvailableRoomFormPage() {
               placeholder="Strike-through"
             />
           </div>
+          <GstSelect value={form.gstRate} onChange={(v) => change('gstRate', v)} />
           <div>
             <label className="label">Occupancy</label>
             <select

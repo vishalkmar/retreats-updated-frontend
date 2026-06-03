@@ -81,6 +81,7 @@ import AuditorsPage from './pages/admin/AuditorsPage.jsx';
 import OfficersPage from './pages/admin/OfficersPage.jsx';
 import SignedPropertiesPage from './pages/admin/SignedPropertiesPage.jsx';
 import PwaListingPage from './pages/admin/PwaListingPage.jsx';
+import PwaListingConfigPage from './pages/admin/PwaListingConfigPage.jsx';
 import PropertyListingImagesPage from './pages/admin/PropertyListingImagesPage.jsx';
 import SalespeoplePage from './pages/admin/SalespeoplePage.jsx';
 
@@ -221,6 +222,7 @@ export default function App() {
         <Route path="blogs/:id/edit" element={<BlogFormPage />} />
         <Route path="reviews" element={<ReviewsPage />} />
         <Route path="pwa/listings" element={<PwaListingPage />} />
+        <Route path="pwa/listings/:propertyId" element={<PwaListingConfigPage />} />
         <Route path="pwa/auditors" element={<AuditorsPage />} />
         <Route path="pwa/signed-properties" element={<SignedPropertiesPage />} />
         <Route path="pwa/listing-images" element={<PropertyListingImagesPage />} />

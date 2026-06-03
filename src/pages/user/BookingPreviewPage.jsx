@@ -546,7 +546,9 @@ export default function BookingPreviewPage() {
               />
             )}
             <Row label="Subtotal" value={fmtMoney(pricing?.display?.subtotal, pricing?.currency)} />
-            <Row label={`Taxes (${Math.round((pricing?.taxRate || 0) * 100)}%)`} value={fmtMoney(pricing?.display?.tax, pricing?.currency)} />
+            {Number(pricing?.display?.tax) > 0 && (
+              <Row label={`GST (${Math.round((pricing?.taxRate || 0) * 100)}%)`} value={fmtMoney(pricing?.display?.tax, pricing?.currency)} />
+            )}
             {pricing?.display?.walletDiscount > 0 && (
               <Row label="Wallet credit" value={`− ${fmtMoney(pricing.display.walletDiscount, pricing.currency)}`} accent="text-emerald-600" />
             )}

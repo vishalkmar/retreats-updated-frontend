@@ -73,6 +73,7 @@ export const COMMON_SECTIONS = [
     fields: [
       { key: 'isPaid', label: 'Paid event', type: 'bool' },
       { key: 'currency', label: 'Currency', type: 'text' },
+      { key: 'gstRate', label: 'GST (added to every price)', type: 'gst' },
       { key: 'adultPrice', label: 'Adult price', type: 'price' },
       { key: 'childPrice', label: 'Child price', type: 'price' },
       { key: 'couplePrice', label: 'Couple price', type: 'price' },
