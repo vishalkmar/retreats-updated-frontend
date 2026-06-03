@@ -15,6 +15,7 @@ const TYPE_LABEL = {
   room: 'Hotel Room',
   event: 'Event',
   addon: 'Add-on Activity',
+  event_activity: 'Event / Activity',
 };
 
 const fmtMoney = (n, currency = 'INR') =>
@@ -178,6 +179,17 @@ export default function BookingPreviewPage() {
         guestLabel: 'Travellers',
         guestMax: item?.meta?.maxGroupSize || 30,
         unitLabel: (n) => `${item?.meta?.durationDays || 1} day${item?.meta?.durationDays === 1 ? '' : 's'}`,
+      };
+    }
+    if (type === 'event_activity') {
+      return {
+        showCheckOut: false,
+        scheduledLabel: 'Preferred date',
+        scheduledEndLabel: null,
+        showGuestCount: true,
+        guestLabel: 'Tickets',
+        guestMax: 30,
+        unitLabel: () => '',
       };
     }
     // addon
@@ -415,7 +427,7 @@ export default function BookingPreviewPage() {
                       const priceLabel = p.age === ''
                         ? 'Pick an age'
                         : !tier || tier.priceType === 'free'
-                          ? 'Free'
+                          ? 'Complementary'
                           : `${item.currency || 'INR'} ${Number(tier.price).toLocaleString()}/night`;
                       return (
                         <div key={idx} className="flex items-center gap-2">

@@ -18,6 +18,7 @@ const blankForm = {
   hotelId: '',
   packageId: '',
   locationId: '', cityName: '', address: '',
+  mainImageUrl: '', galleryUrls: [],
   price: 0, priceOriginal: '', currency: 'INR',
   descriptionRich: '', highlightsRich: '',
   minAge: '', maxAge: '',
@@ -78,8 +79,6 @@ export default function AddOnActivityFormPage() {
   const [loading, setLoading] = useState(editing);
   const [submitting, setSubmitting] = useState(false);
 
-  const [mainImage, setMainImage] = useState(null);
-  const [galleryFiles, setGalleryFiles] = useState([]);
   const [replaceGallery, setReplaceGallery] = useState(false);
 
   const [locations, setLocations] = useState([]);
@@ -107,6 +106,8 @@ export default function AddOnActivityFormPage() {
         packageId: a.packageId || '',
         locationId: a.locationId || '',
         cityName: a.cityName || '',
+        mainImageUrl: a.mainImage || '',
+        galleryUrls: [],
         address: a.address || '',
         price: a.price ?? 0,
         priceOriginal: a.priceOriginal ?? '',
@@ -169,8 +170,7 @@ export default function AddOnActivityFormPage() {
         fd.append(k, v);
       }
     });
-    if (mainImage) fd.append('mainImage', mainImage);
-    galleryFiles.forEach((f) => fd.append('gallery', f));
+    // Images uploaded instantly → URLs travel in the form.
     if (editing && replaceGallery) fd.append('replaceGallery', 'true');
 
     setSubmitting(true);
@@ -187,8 +187,7 @@ export default function AddOnActivityFormPage() {
         return;
       }
       load();
-      setMainImage(null);
-      setGalleryFiles([]);
+      change('galleryUrls', []);
       setReplaceGallery(false);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Save failed');
@@ -429,10 +428,10 @@ export default function AddOnActivityFormPage() {
             <label className="label">Main image</label>
             <Dropzone
               accept="image/*"
-              value={mainImage}
-              onChange={setMainImage}
-              existingUrl={activity?.mainImage}
-              placeholder={activity?.mainImage ? 'Drag a new image to replace, or click' : 'Drag & drop main image, or click'}
+              instant
+              value={form.mainImageUrl}
+              onChange={(u) => change('mainImageUrl', u || '')}
+              placeholder="Drag & drop main image, or click"
             />
           </div>
           <div>
@@ -440,8 +439,9 @@ export default function AddOnActivityFormPage() {
             <Dropzone
               accept="image/*"
               multiple
-              value={galleryFiles}
-              onChange={(v) => setGalleryFiles(v || [])}
+              instant
+              value={form.galleryUrls}
+              onChange={(v) => change('galleryUrls', v || [])}
               placeholder="Drag & drop images, or click"
             />
             {editing && activity?.gallery?.length > 0 && (

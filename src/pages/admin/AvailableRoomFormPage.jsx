@@ -20,6 +20,7 @@ const blankForm = {
   price: 0, priceOriginal: '', currency: 'INR',
   roomSize: '', maxOccupancy: 2,
   extraPersonTiers: [],
+  mainImageUrl: '', galleryUrls: [],
   highlightsRich: '', descriptionRich: '',
   isFeatured: false, isActive: true, isRefundable: true,
   sortOrder: 0,
@@ -77,8 +78,6 @@ export default function AvailableRoomFormPage() {
   const [loading, setLoading] = useState(editing);
   const [submitting, setSubmitting] = useState(false);
 
-  const [mainImage, setMainImage] = useState(null);
-  const [galleryFiles, setGalleryFiles] = useState([]);
   const [replaceGallery, setReplaceGallery] = useState(false);
 
   const [hotels, setHotels] = useState([]);
@@ -125,6 +124,8 @@ export default function AvailableRoomFormPage() {
         roomSize: r.roomSize || '',
         maxOccupancy: r.maxOccupancy ?? 2,
         extraPersonTiers: Array.isArray(r.extraPersonTiers) ? r.extraPersonTiers : [],
+        mainImageUrl: r.mainImage || '',
+        galleryUrls: [],
         highlightsRich: r.highlightsRich || '',
         descriptionRich: r.descriptionRich || '',
         isFeatured: !!r.isFeatured,
@@ -168,8 +169,7 @@ export default function AvailableRoomFormPage() {
         fd.append(k, v);
       }
     });
-    if (mainImage) fd.append('mainImage', mainImage);
-    galleryFiles.forEach((f) => fd.append('gallery', f));
+    // Images are uploaded instantly and carried as URLs in the form.
     if (editing && replaceGallery) fd.append('replaceGallery', 'true');
 
     setSubmitting(true);
@@ -186,8 +186,7 @@ export default function AvailableRoomFormPage() {
         return;
       }
       loadRoom();
-      setMainImage(null);
-      setGalleryFiles([]);
+      change('galleryUrls', []);
       setReplaceGallery(false);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Save failed');
@@ -406,12 +405,16 @@ export default function AvailableRoomFormPage() {
             />
           </div>
           <div>
-            <label className="label">Max occupancy</label>
-            <input
-              type="number" min="1" className="input"
+            <label className="label">Occupancy</label>
+            <select
+              className="input"
               value={form.maxOccupancy}
-              onChange={(e) => change('maxOccupancy', parseInt(e.target.value || 1, 10))}
-            />
+              onChange={(e) => change('maxOccupancy', parseInt(e.target.value, 10))}
+            >
+              <option value={1}>Single occupancy</option>
+              <option value={2}>Double occupancy</option>
+              <option value={3}>Triple occupancy</option>
+            </select>
           </div>
           <div className="sm:col-span-2">
             <label className="label">Room size</label>
@@ -440,10 +443,10 @@ export default function AvailableRoomFormPage() {
             <label className="label">Main image</label>
             <Dropzone
               accept="image/*"
-              value={mainImage}
-              onChange={setMainImage}
-              existingUrl={room?.mainImage}
-              placeholder={room?.mainImage ? 'Drag a new image to replace, or click' : 'Drag & drop main image, or click'}
+              instant
+              value={form.mainImageUrl}
+              onChange={(u) => change('mainImageUrl', u || '')}
+              placeholder="Drag & drop main image, or click"
             />
           </div>
           <div>
@@ -451,8 +454,9 @@ export default function AvailableRoomFormPage() {
             <Dropzone
               accept="image/*"
               multiple
-              value={galleryFiles}
-              onChange={(v) => setGalleryFiles(v || [])}
+              instant
+              value={form.galleryUrls}
+              onChange={(v) => change('galleryUrls', v || [])}
               placeholder="Drag & drop images, or click"
             />
             {editing && room?.gallery?.length > 0 && (
@@ -579,29 +583,40 @@ function ExtraPersonTiersEditor({ value, onChange }) {
       )}
 
       {tiers.map((t, idx) => {
-        const bothAges = t.ageFrom !== '' && t.ageTo !== '';
+        const isAdult = t.ageFrom === 15;
+        // "15+ (adult)" is an open-ended band — picking it as the start needs
+        // no end age, so we auto-fill the end and lock it.
+        const bothAges = isAdult || (t.ageFrom !== '' && t.ageTo !== '');
+        const onFrom = (val) => {
+          const v = val === '' ? '' : parseInt(val, 10);
+          update(idx, v === 15 ? { ageFrom: 15, ageTo: 15 } : { ageFrom: v });
+        };
         return (
           <div key={idx} className="rounded-xl border border-slate-200 p-3 grid sm:grid-cols-[1fr_1fr_1fr_1fr_auto] gap-3 items-end">
             <div>
               <label className="label">Age from</label>
-              <select className="input" value={t.ageFrom} onChange={(e) => update(idx, { ageFrom: e.target.value === '' ? '' : parseInt(e.target.value, 10) })}>
+              <select className="input" value={t.ageFrom} onChange={(e) => onFrom(e.target.value)}>
                 <option value="">—</option>
                 {AGE_OPTIONS.map((a) => <option key={a} value={a}>{ageLabel(a)}</option>)}
               </select>
             </div>
             <div>
               <label className="label">Age to</label>
-              <select className="input" value={t.ageTo} onChange={(e) => update(idx, { ageTo: e.target.value === '' ? '' : parseInt(e.target.value, 10) })}>
-                <option value="">—</option>
-                {AGE_OPTIONS.map((a) => <option key={a} value={a}>{ageLabel(a)}</option>)}
-              </select>
+              {isAdult ? (
+                <input className="input bg-slate-50 text-ink-muted" value="Adult (15+)" disabled />
+              ) : (
+                <select className="input" value={t.ageTo} onChange={(e) => update(idx, { ageTo: e.target.value === '' ? '' : parseInt(e.target.value, 10) })}>
+                  <option value="">—</option>
+                  {AGE_OPTIONS.map((a) => <option key={a} value={a}>{ageLabel(a)}</option>)}
+                </select>
+              )}
             </div>
 
             {/* Price + bed only matter once an age band is set */}
             <div className={bothAges ? '' : 'opacity-50 pointer-events-none'}>
               <label className="label">Price</label>
               <select className="input" value={t.priceType} onChange={(e) => update(idx, { priceType: e.target.value })}>
-                <option value="free">Free</option>
+                <option value="free">Complementary</option>
                 <option value="custom">Custom</option>
               </select>
               {t.priceType === 'custom' && (

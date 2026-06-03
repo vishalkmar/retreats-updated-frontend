@@ -17,6 +17,7 @@ import DatePicker from '../../components/common/DatePicker.jsx';
 const blankForm = {
   name: '', slug: '',
   eventTypeId: '', locationId: '', cityName: '', address: '',
+  mainImageUrl: '', galleryUrls: [],
   eventDate: '', endDate: '',
   startTime: '', endTime: '',
   price: 0, priceOriginal: '', currency: 'INR',
@@ -71,8 +72,6 @@ export default function EventFormPage() {
   const [loading, setLoading] = useState(editing);
   const [submitting, setSubmitting] = useState(false);
 
-  const [mainImage, setMainImage] = useState(null);
-  const [galleryFiles, setGalleryFiles] = useState([]);
   const [replaceGallery, setReplaceGallery] = useState(false);
 
   const [eventTypes, setEventTypes] = useState([]);
@@ -98,6 +97,8 @@ export default function EventFormPage() {
         eventTypeId: e.eventTypeId || '',
         locationId: e.locationId || '',
         cityName: e.cityName || '',
+        mainImageUrl: e.mainImage || '',
+        galleryUrls: [],
         address: e.address || '',
         eventDate: e.eventDate || '',
         endDate: e.endDate || '',
@@ -146,8 +147,7 @@ export default function EventFormPage() {
         fd.append(k, v);
       }
     });
-    if (mainImage) fd.append('mainImage', mainImage);
-    galleryFiles.forEach((f) => fd.append('gallery', f));
+    // Images uploaded instantly → URLs travel in the form.
     if (editing && replaceGallery) fd.append('replaceGallery', 'true');
 
     setSubmitting(true);
@@ -164,8 +164,7 @@ export default function EventFormPage() {
         return;
       }
       load();
-      setMainImage(null);
-      setGalleryFiles([]);
+      change('galleryUrls', []);
       setReplaceGallery(false);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Save failed');
@@ -403,10 +402,10 @@ export default function EventFormPage() {
             <label className="label">Main image</label>
             <Dropzone
               accept="image/*"
-              value={mainImage}
-              onChange={setMainImage}
-              existingUrl={event?.mainImage}
-              placeholder={event?.mainImage ? 'Drag a new image to replace, or click' : 'Drag & drop main image, or click'}
+              instant
+              value={form.mainImageUrl}
+              onChange={(u) => change('mainImageUrl', u || '')}
+              placeholder="Drag & drop main image, or click"
             />
           </div>
           <div>
@@ -414,8 +413,9 @@ export default function EventFormPage() {
             <Dropzone
               accept="image/*"
               multiple
-              value={galleryFiles}
-              onChange={(v) => setGalleryFiles(v || [])}
+              instant
+              value={form.galleryUrls}
+              onChange={(v) => change('galleryUrls', v || [])}
               placeholder="Drag & drop images, or click"
             />
             {editing && event?.gallery?.length > 0 && (

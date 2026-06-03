@@ -16,6 +16,7 @@ import api, { fileUrl } from '../../services/api';
 import WishlistButton from '../../components/public/WishlistButton.jsx';
 import useRequireLogin from '../../hooks/useRequireLogin.js';
 import { computeRoomEstimate, matchTier } from '../../utils/roomPricing.js';
+import { occupancyLabel } from '../../utils/occupancy.js';
 
 export default function RoomDetailPage() {
   const { hotelSlug, roomSlug } = useParams();
@@ -169,7 +170,7 @@ export default function RoomDetailPage() {
 
                 <div className="grid grid-cols-3 gap-3 mt-4 text-xs">
                   <Spec icon={Maximize2} label="Size" value={room.roomSize || '—'} />
-                  <Spec icon={Users} label="Guests" value={`Up to ${room.maxOccupancy}`} />
+                  <Spec icon={Users} label="Occupancy" value={occupancyLabel(room.maxOccupancy)} />
                   <Spec icon={Bed} label="Type" value="Private room" />
                 </div>
 
@@ -222,7 +223,7 @@ export default function RoomDetailPage() {
                           const label = p.age === ''
                             ? 'Pick age'
                             : !tier || tier.priceType === 'free'
-                              ? 'Free'
+                              ? 'Complementary'
                               : `${room.currency} ${Number(tier.price).toLocaleString()}/night`;
                           return (
                             <div key={idx} className="flex items-center gap-1.5">

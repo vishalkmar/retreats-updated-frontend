@@ -31,6 +31,7 @@ import {
   Map as MapIcon,
   Sparkles,
   CalendarDays,
+  PartyPopper,
   Megaphone,
   Trophy,
   Users as UsersIcon,
@@ -64,10 +65,9 @@ const contentItems = [
 ];
 
 const pwaItems = [
+  { to: '/admin/pwa/listings', label: 'Website Listing', icon: Layers },
   { to: '/admin/pwa/auditors', label: 'Auditors', icon: UserCog },
   { to: '/admin/pwa/officers', label: 'Officers', icon: ShieldCheck },
-  { to: '/admin/pwa/salespersons', label: 'Salespersons', icon: UsersIcon },
-  { to: '/admin/pwa/signed-properties', label: 'Signed Property', icon: FileCheck2 },
   { to: '/admin/pwa/listing-images', label: 'Listing Images', icon: Image },
 ];
 
@@ -208,6 +208,10 @@ export default function AdminSidebar({ open, onClose }) {
 
           <NavLink to="/admin/events" className={linkClass}>
             <CalendarDays size={18} /> Events
+          </NavLink>
+
+          <NavLink to="/admin/event-activities" className={linkClass}>
+            <PartyPopper size={18} /> Events &amp; Activity
           </NavLink>
 
           <NavLink to="/admin/reviews" className={linkClass}>

@@ -33,6 +33,7 @@ const blankForm = {
   shortDescription: '', description: '',
   videoUrl: '',
   cityId: '', cityName: '', locationId: '', locationDetail: '',
+  primaryImageUrl: '', hostImageUrl: '', galleryUrls: [],
   durationDays: 1, durationNights: 0, timing: '',
   availableAllYear: true, startDate: '', endDate: '',
   minGroupSize: 1, maxGroupSize: 30,
@@ -98,9 +99,6 @@ export default function PackageFormPage() {
   const [loading, setLoading] = useState(editing);
   const [submitting, setSubmitting] = useState(false);
 
-  const [primaryImage, setPrimaryImage] = useState(null);
-  const [hostImage, setHostImage] = useState(null);
-  const [galleryFiles, setGalleryFiles] = useState([]);
   const [replaceGallery, setReplaceGallery] = useState(false);
 
   const [cities, setCities] = useState([]);
@@ -174,6 +172,9 @@ export default function PackageFormPage() {
         videoUrl: p.videoUrl || '',
         cityId: p.cityId || '',
         cityName: p.cityName || '',
+        primaryImageUrl: p.primaryImage || '',
+        hostImageUrl: p.hostImage || '',
+        galleryUrls: [],
         locationId: p.locationId || '',
         locationDetail: p.locationDetail || '',
         durationDays: p.durationDays ?? 1,
@@ -253,9 +254,7 @@ export default function PackageFormPage() {
         fd.append(k, v);
       }
     });
-    if (primaryImage) fd.append('primaryImage', primaryImage);
-    if (hostImage) fd.append('hostImage', hostImage);
-    galleryFiles.forEach((f) => fd.append('gallery', f));
+    // Images uploaded instantly → URLs travel in the form.
     if (editing && replaceGallery) fd.append('replaceGallery', 'true');
 
     setSubmitting(true);
@@ -272,9 +271,7 @@ export default function PackageFormPage() {
         return;
       }
       loadPkg();
-      setPrimaryImage(null);
-      setHostImage(null);
-      setGalleryFiles([]);
+      change('galleryUrls', []);
       setReplaceGallery(false);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Save failed');
@@ -414,10 +411,10 @@ export default function PackageFormPage() {
             <label className="label">Primary image</label>
             <Dropzone
               accept="image/*"
-              value={primaryImage}
-              onChange={setPrimaryImage}
-              existingUrl={pkg?.primaryImage}
-              placeholder={pkg?.primaryImage ? 'Drag a new image to replace, or click' : 'Drag & drop primary image, or click'}
+              instant
+              value={form.primaryImageUrl}
+              onChange={(u) => change('primaryImageUrl', u || '')}
+              placeholder="Drag & drop primary image, or click"
             />
           </div>
 
@@ -426,8 +423,9 @@ export default function PackageFormPage() {
             <Dropzone
               accept="image/*"
               multiple
-              value={galleryFiles}
-              onChange={(v) => setGalleryFiles(v || [])}
+              instant
+              value={form.galleryUrls}
+              onChange={(v) => change('galleryUrls', v || [])}
               placeholder="Drag & drop multiple images, or click"
             />
             {editing && pkg?.gallery?.length > 0 && (
@@ -881,9 +879,9 @@ export default function PackageFormPage() {
             <label className="label">Host image</label>
             <Dropzone
               accept="image/*"
-              value={hostImage}
-              onChange={setHostImage}
-              existingUrl={pkg?.hostImage}
+              instant
+              value={form.hostImageUrl}
+              onChange={(u) => change('hostImageUrl', u || '')}
               placeholder="Drag host photo, or click"
             />
           </div>

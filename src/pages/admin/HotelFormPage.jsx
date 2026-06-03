@@ -39,6 +39,7 @@ const blankForm = {
   videoUrl: '', videoType: '',
   locationId: '', cityId: '', cityName: '',
   address: '', mapEmbedHtml: '',
+  primaryImageUrl: '', galleryUrls: [],
   rating: 0, starRating: '',
   priceFrom: 0, priceOriginal: '', currency: 'INR',
   highlightsRich: '', inclusionsRich: '', exclusionsRich: '',
@@ -92,8 +93,6 @@ export default function HotelFormPage() {
   const [loading, setLoading] = useState(editing);
   const [submitting, setSubmitting] = useState(false);
 
-  const [primaryImage, setPrimaryImage] = useState(null);
-  const [galleryFiles, setGalleryFiles] = useState([]);
   const [replaceGallery, setReplaceGallery] = useState(false);
 
   const [locations, setLocations] = useState([]);
@@ -141,6 +140,8 @@ export default function HotelFormPage() {
         cityId: h.cityId || '',
         cityName: h.cityName || '',
         address: h.address || '',
+        primaryImageUrl: h.primaryImage || '',
+        galleryUrls: [],
         mapEmbedHtml: h.mapEmbedHtml || '',
         rating: h.rating ?? 0,
         starRating: h.starRating ?? '',
@@ -185,8 +186,9 @@ export default function HotelFormPage() {
         fd.append(k, v);
       }
     });
-    if (primaryImage) fd.append('primaryImage', primaryImage);
-    galleryFiles.forEach((f) => fd.append('gallery', f));
+    // Images are uploaded instantly (instant Dropzone) and travel as URLs in
+    // the persisted form (primaryImageUrl / galleryUrls), so they survive a
+    // refresh. No File appends needed here.
     if (editing && replaceGallery) fd.append('replaceGallery', 'true');
 
     setSubmitting(true);
@@ -203,8 +205,7 @@ export default function HotelFormPage() {
         return;
       }
       loadHotel();
-      setPrimaryImage(null);
-      setGalleryFiles([]);
+      change('galleryUrls', []);
       setReplaceGallery(false);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Save failed');
@@ -406,10 +407,10 @@ export default function HotelFormPage() {
             <label className="label">Primary image</label>
             <Dropzone
               accept="image/*"
-              value={primaryImage}
-              onChange={setPrimaryImage}
-              existingUrl={hotel?.primaryImage}
-              placeholder={hotel?.primaryImage ? 'Drag a new image to replace, or click' : 'Drag & drop primary image, or click'}
+              instant
+              value={form.primaryImageUrl}
+              onChange={(u) => change('primaryImageUrl', u || '')}
+              placeholder="Drag & drop primary image, or click"
             />
           </div>
           <div>
@@ -417,8 +418,9 @@ export default function HotelFormPage() {
             <Dropzone
               accept="image/*"
               multiple
-              value={galleryFiles}
-              onChange={(v) => setGalleryFiles(v || [])}
+              instant
+              value={form.galleryUrls}
+              onChange={(v) => change('galleryUrls', v || [])}
               placeholder="Drag & drop multiple images, or click"
             />
             {editing && hotel?.gallery?.length > 0 && (

@@ -34,23 +34,66 @@ export default function Dropzone({
   className = '',
   onClearExisting,
   allowLink = true,
+  // Instant mode: upload each pick to the server immediately and emit URL
+  // string(s) instead of File objects. URLs survive a page refresh (they're
+  // stored in the persisted form draft) and are already saved server-side.
+  instant = false,
 }) {
   const inputRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [fetchingLink, setFetchingLink] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const isVideoMode = accept.includes('video');
 
-  const selectedFiles = multiple
-    ? Array.isArray(value) ? value : []
-    : value ? [value] : [];
+  // In instant mode the value is URL string(s); otherwise File object(s).
+  const selectedUrls = instant
+    ? (multiple ? (Array.isArray(value) ? value : []) : (value ? [value] : []))
+    : [];
+  const selectedFiles = instant ? [] : (multiple
+    ? (Array.isArray(value) ? value : [])
+    : (value ? [value] : []));
+
+  const uploadOne = async (file) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await api.post('/uploads/inline', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+    return res.data?.data?.url;
+  };
+
+  const appendUrls = (urls) => {
+    const list = urls.filter(Boolean);
+    if (!list.length) return;
+    if (multiple) {
+      const existing = Array.isArray(value) ? value : [];
+      const set = new Set(existing);
+      onChange?.([...existing, ...list.filter((u) => !set.has(u))]);
+    } else {
+      onChange?.(list[0]);
+    }
+  };
 
   // De-dupe by name+size so re-picking the same file doesn't double it.
-  const appendFiles = (incoming) => {
+  const appendFiles = async (incoming) => {
     const list = Array.from(incoming).filter(Boolean);
     if (!list.length) return;
+    if (instant) {
+      setUploading(true);
+      try {
+        const urls = [];
+        for (const f of list) {
+          try { const u = await uploadOne(f); if (u) urls.push(u); }
+          catch { toast.error(`Failed to upload ${f.name || 'image'}`); }
+        }
+        appendUrls(urls);
+        if (urls.length) toast.success(`Uploaded ${urls.length} image${urls.length > 1 ? 's' : ''}`);
+      } finally {
+        setUploading(false);
+      }
+      return;
+    }
     if (multiple) {
       const seen = new Set(selectedFiles.map((f) => `${f.name}:${f.size}`));
       const merged = [...selectedFiles];
@@ -108,6 +151,13 @@ export default function Dropzone({
     const url = (rawUrl ?? linkUrl).trim();
     if (!url) return;
     if (!/^https?:\/\//i.test(url)) { toast.error('Enter a valid http(s) link'); return; }
+    // In instant mode a link is already a hosted URL — just store it.
+    if (instant) {
+      appendUrls([url]);
+      setLinkUrl('');
+      toast.success('Image added from link');
+      return;
+    }
     setFetchingLink(true);
     try {
       const res = await api.get('/uploads/proxy-image', {
@@ -128,11 +178,16 @@ export default function Dropzone({
     }
   };
 
-  const hasSelection = selectedFiles.length > 0;
+  const hasSelection = instant ? selectedUrls.length > 0 : selectedFiles.length > 0;
 
   const Icon = isVideoMode ? FileVideo : UploadCloud;
 
   const removeOne = (idx) => {
+    if (instant) {
+      if (multiple) onChange?.(selectedUrls.filter((_, i) => i !== idx));
+      else onChange?.('');
+      return;
+    }
     if (multiple) {
       onChange?.(selectedFiles.filter((_, i) => i !== idx));
     } else {
@@ -161,11 +216,13 @@ export default function Dropzone({
           className={`mb-2 transition ${dragOver ? 'text-brand' : 'text-ink-muted'}`}
         />
         <div className={`text-sm font-medium ${dragOver ? 'text-brand' : 'text-ink'}`}>
-          {dragOver
-            ? 'Drop to upload'
-            : (hasSelection
-                ? `${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''} selected${multiple ? ' · add more anytime' : ''}`
-                : (placeholder || (multiple ? 'Drag & drop files, or click to browse' : 'Drag & drop a file, or click to browse')))}
+          {uploading
+            ? 'Uploading…'
+            : dragOver
+              ? 'Drop to upload'
+              : (hasSelection
+                  ? `${(instant ? selectedUrls : selectedFiles).length} file${(instant ? selectedUrls : selectedFiles).length > 1 ? 's' : ''} selected${multiple ? ' · add more anytime' : ''}`
+                  : (placeholder || (multiple ? 'Drag & drop files, or click to browse' : 'Drag & drop a file, or click to browse')))}
         </div>
         <p className="text-xs text-ink-muted mt-1">
           {subLabel || (isVideoMode ? 'Videos: MP4, WebM, MOV (max 50MB)' : 'Images: JPG, PNG, WebP, GIF, SVG')}
@@ -234,8 +291,24 @@ export default function Dropzone({
         </div>
       )}
 
-      {/* Selected file previews */}
-      {hasSelection && (
+      {/* Selected previews — uploaded URLs (instant) or local Files */}
+      {hasSelection && instant && (
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-3">
+          {selectedUrls.map((u, i) => (
+            <div key={`${u}:${i}`} className="relative group rounded-lg overflow-hidden border bg-slate-100 aspect-[4/3]">
+              <img src={fileUrl(u)} className="w-full h-full object-cover" alt="" />
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); removeOne(i); }}
+                className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      {hasSelection && !instant && (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-3">
           {selectedFiles.map((f, i) => (
             <FilePreview key={`${f.name}:${f.size}:${i}`} file={f} onRemove={() => removeOne(i)} />

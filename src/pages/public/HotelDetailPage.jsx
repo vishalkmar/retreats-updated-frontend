@@ -15,6 +15,7 @@ import 'swiper/css/pagination';
 
 import api, { fileUrl } from '../../services/api';
 import { mapEmbedSrc } from '../../utils/mapEmbed.js';
+import { occupancyLabel } from '../../utils/occupancy.js';
 import ReviewsBlock from '../../components/public/ReviewsBlock.jsx';
 import AddOnsCarousel from '../../components/public/AddOnsCarousel.jsx';
 import WishlistButton from '../../components/public/WishlistButton.jsx';
@@ -722,7 +723,7 @@ function RoomRow({ hotel, room, stay, nights }) {
           {room.maxOccupancy && (
             <>
               <span>·</span>
-              <span>Up to {room.maxOccupancy} guests</span>
+              <span>{occupancyLabel(room.maxOccupancy)}</span>
             </>
           )}
           {room.views?.length > 0 && (

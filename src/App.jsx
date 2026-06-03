@@ -24,6 +24,8 @@ import RoomDetailPage from './pages/public/RoomDetailPage.jsx';
 import EventsListPage from './pages/public/EventsListPage.jsx';
 import EventDetailPage from './pages/public/EventDetailPage.jsx';
 import AddOnDetailPage from './pages/public/AddOnDetailPage.jsx';
+import EventActivitiesListPage from './pages/public/EventActivitiesListPage.jsx';
+import EventActivityDetailPage from './pages/public/EventActivityDetailPage.jsx';
 import BlogsListPage from './pages/public/BlogsListPage.jsx';
 import BlogDetailPage from './pages/public/BlogDetailPage.jsx';
 import NotFoundPage from './pages/public/NotFoundPage.jsx';
@@ -55,6 +57,8 @@ import AvailableRoomsPage from './pages/admin/AvailableRoomsPage.jsx';
 import AvailableRoomFormPage from './pages/admin/AvailableRoomFormPage.jsx';
 import AddOnActivitiesPage from './pages/admin/AddOnActivitiesPage.jsx';
 import AddOnActivityFormPage from './pages/admin/AddOnActivityFormPage.jsx';
+import EventActivitiesPage from './pages/admin/EventActivitiesPage.jsx';
+import EventActivityFormPage from './pages/admin/EventActivityFormPage.jsx';
 import EventTypesPage from './pages/admin/EventTypesPage.jsx';
 import EventsPage from './pages/admin/EventsPage.jsx';
 import EventFormPage from './pages/admin/EventFormPage.jsx';
@@ -76,6 +80,7 @@ import PersonalisedRecommendationPage from './pages/admin/PersonalisedRecommenda
 import AuditorsPage from './pages/admin/AuditorsPage.jsx';
 import OfficersPage from './pages/admin/OfficersPage.jsx';
 import SignedPropertiesPage from './pages/admin/SignedPropertiesPage.jsx';
+import PwaListingPage from './pages/admin/PwaListingPage.jsx';
 import PropertyListingImagesPage from './pages/admin/PropertyListingImagesPage.jsx';
 import SalespeoplePage from './pages/admin/SalespeoplePage.jsx';
 
@@ -92,6 +97,8 @@ export default function App() {
         <Route path="/hotels/:hotelSlug/rooms/:roomSlug" element={<RoomDetailPage />} />
         <Route path="/events" element={<EventsListPage />} />
         <Route path="/events/:slug" element={<EventDetailPage />} />
+        <Route path="/events-activities" element={<EventActivitiesListPage />} />
+        <Route path="/events-activities/:slug" element={<EventActivityDetailPage />} />
         <Route path="/add-ons/:slug" element={<AddOnDetailPage />} />
         <Route path="/blogs" element={<BlogsListPage />} />
         <Route path="/blogs/:slug" element={<BlogDetailPage />} />
@@ -189,6 +196,9 @@ export default function App() {
         <Route path="add-ons" element={<AddOnActivitiesPage />} />
         <Route path="add-ons/new" element={<AddOnActivityFormPage />} />
         <Route path="add-ons/:id/edit" element={<AddOnActivityFormPage />} />
+        <Route path="event-activities" element={<EventActivitiesPage />} />
+        <Route path="event-activities/new" element={<EventActivityFormPage />} />
+        <Route path="event-activities/:id/edit" element={<EventActivityFormPage />} />
         <Route path="content/event-types" element={<EventTypesPage />} />
         <Route path="events" element={<EventsPage />} />
         <Route path="events/new" element={<EventFormPage />} />
@@ -210,8 +220,8 @@ export default function App() {
         <Route path="blogs/new" element={<BlogFormPage />} />
         <Route path="blogs/:id/edit" element={<BlogFormPage />} />
         <Route path="reviews" element={<ReviewsPage />} />
+        <Route path="pwa/listings" element={<PwaListingPage />} />
         <Route path="pwa/auditors" element={<AuditorsPage />} />
-        <Route path="pwa/officers" element={<OfficersPage />} />
         <Route path="pwa/signed-properties" element={<SignedPropertiesPage />} />
         <Route path="pwa/listing-images" element={<PropertyListingImagesPage />} />
         <Route path="pwa/salespersons" element={<SalespeoplePage />} />
