@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { fileUrl } from '../../services/api';
 import { fromPriceLabel, hasPrice } from '../../utils/price.js';
+import { addressShort } from '../../utils/address.js';
 
 const stripHtml = (s) =>
   (s || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
@@ -30,7 +31,7 @@ const FACILITY_ICONS = {
  */
 export default function HotelCard({ hotel, variant = 'horizontal' }) {
   const teaser = stripHtml(hotel.shortDescription);
-  const locLabel = hotel.location?.name || hotel.city?.name || '';
+  const locLabel = hotel.location?.name || hotel.city?.name || hotel.cityName || addressShort(hotel.address) || '';
   const orig = Number(hotel.priceOriginal || 0);
   const now = Number(hotel.priceFrom || 0);
   const discountPct = orig > now && orig > 0 ? Math.round(((orig - now) / orig) * 100) : 0;

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Globe, Loader2, Building2, Package as PackageIcon, CalendarDays,
@@ -68,9 +68,22 @@ export default function PwaListingConfigPage() {
   const [gallery, setGallery] = useState({ removed: [], added: [] });
   const [roomConfig, setRoomConfig] = useState({});
   const [sectionConfig, setSectionConfig] = useState({});
+  const [shortDescription, setShortDescription] = useState('');
+  const [longDescription, setLongDescription] = useState('');
+  const [highlights, setHighlights] = useState('');
+  const [hydrated, setHydrated] = useState(false);
+
+  const draftKey = `pwa-listing-draft:${propertyId}`;
+  const didInitDraft = useRef(false);
+  // The server config version (updatedAt) the current edits are based on. A
+  // draft is only valid for the EXACT version it was started from — this makes
+  // persistence bulletproof regardless of clock/precision quirks.
+  const baseVersionRef = useRef('');
 
   const load = useCallback(async () => {
     setLoading(true);
+    setHydrated(false);
+    didInitDraft.current = false;
     try {
       const res = await api.get(`/pwa/admin/listings/${propertyId}`);
       const prop = res.data.data.property;
@@ -83,24 +96,80 @@ export default function PwaListingConfigPage() {
       setGallery({ removed: [], added: [], ...(cfg.gallery || {}) });
       setRoomConfig(cfg.roomConfig && typeof cfg.roomConfig === 'object' ? cfg.roomConfig : {});
       setSectionConfig(cfg.sectionConfig && typeof cfg.sectionConfig === 'object' ? cfg.sectionConfig : {});
+      setShortDescription(cfg.shortDescription || '');
+      setLongDescription(cfg.longDescription || '');
+      setHighlights(cfg.highlights || '');
+
+      // Record the server version these edits are based on.
+      const serverVersion = cfg.updatedAt ? String(cfg.updatedAt) : '';
+      baseVersionRef.current = serverVersion;
+
+      // Restore a local draft ONLY when it was started from the SAME server
+      // version that just loaded — i.e. genuine unsaved edits on top of the
+      // current saved config. Any other draft is stale and is discarded so it
+      // can never shadow the saved data (that looked like "data loss").
+      try {
+        const raw = localStorage.getItem(draftKey);
+        if (raw) {
+          const d = JSON.parse(raw);
+          if (d && d.baseVersion === serverVersion && d.dirty) {
+            if (d.propertyType !== undefined) setPropertyType(d.propertyType);
+            if (d.customType !== undefined) setCustomType(d.customType);
+            if (d.markup) setMarkup(d.markup);
+            if (d.customFields) setCustomFields(d.customFields);
+            if (d.gallery) setGallery(d.gallery);
+            if (d.roomConfig) setRoomConfig(d.roomConfig);
+            if (d.sectionConfig) setSectionConfig(d.sectionConfig);
+            if (d.shortDescription !== undefined) setShortDescription(d.shortDescription);
+            if (d.longDescription !== undefined) setLongDescription(d.longDescription);
+            if (d.highlights !== undefined) setHighlights(d.highlights);
+            toast('Restored your unsaved changes', { icon: '↩️' });
+          } else {
+            localStorage.removeItem(draftKey);
+          }
+        }
+      } catch { localStorage.removeItem(draftKey); }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to load property');
     } finally {
       setLoading(false);
+      setHydrated(true);
     }
-  }, [propertyId]);
+  }, [propertyId, draftKey]);
 
   useEffect(() => { load(); }, [load]);
 
   const rooms = roomsOf(property);
   const sections = sectionsOf(property);
   const listed = property?.listingConfig?.listingStatus === 'listed';
-  const payload = () => ({ propertyType, customType, markup, customFields, gallery, roomConfig, sectionConfig });
+  const payload = () => ({
+    propertyType, customType, markup, customFields, gallery, roomConfig, sectionConfig,
+    shortDescription, longDescription, highlights,
+  });
+
+  // Persist an unsaved draft to localStorage so a refresh never loses edits.
+  // We skip the very first run (triggered when the page finishes hydrating) so
+  // simply opening a saved listing doesn't create a phantom draft. Drafts carry
+  // the base server version + a `dirty` flag so only real unsaved edits restore.
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!didInitDraft.current) { didInitDraft.current = true; return; }
+    try {
+      localStorage.setItem(draftKey, JSON.stringify({ ...payload(), baseVersion: baseVersionRef.current, dirty: true, _ts: Date.now() }));
+    } catch { /* quota */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, propertyType, customType, markup, customFields, gallery, roomConfig, sectionConfig, shortDescription, longDescription, highlights]);
+
+  const clearDraft = () => { try { localStorage.removeItem(draftKey); } catch { /* */ } };
 
   const saveConfig = async () => {
     setSaving(true);
     try {
-      await api.put(`/pwa/admin/listings/${propertyId}/config`, payload());
+      const res = await api.put(`/pwa/admin/listings/${propertyId}/config`, payload());
+      // Advance the base version so any further edits become a valid new draft.
+      const savedAt = res?.data?.data?.config?.updatedAt;
+      if (savedAt) baseVersionRef.current = String(savedAt);
+      clearDraft();
       toast.success('Configuration saved');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Save failed');
@@ -115,6 +184,7 @@ export default function PwaListingConfigPage() {
     try {
       await api.put(`/pwa/admin/listings/${propertyId}/config`, payload());
       await api.post(`/pwa/admin/listings/${propertyId}/publish`);
+      clearDraft();
       toast.success('Property is now live on the website');
       navigate('/admin/pwa/listings');
     } catch (err) {
@@ -187,6 +257,17 @@ export default function PwaListingConfigPage() {
           {propertyType === 'custom' && (
             <input className="input mt-3" value={customType} onChange={(e) => setCustomType(e.target.value)} placeholder="Custom type label (lists as a hotel)" />
           )}
+        </Card>
+
+        {/* Predefined listing content — shows as proper About / Highlights on
+            the website (so PWA listings read like normal hotels). */}
+        <Card title="Listing content" hint="These show as the website's headline, About and Highlights sections. Leave blank to skip a section.">
+          <label className="label">Short description (one-liner under the title)</label>
+          <RichTextEditor value={shortDescription} onChange={setShortDescription} placeholder="A short teaser shown on the card and at the top of the detail page" minHeight={90} />
+          <label className="label mt-3">Long description (“About this property”)</label>
+          <RichTextEditor value={longDescription} onChange={setLongDescription} placeholder="Full description shown in the About section" minHeight={140} />
+          <label className="label mt-3">Highlights</label>
+          <RichTextEditor value={highlights} onChange={setHighlights} placeholder="Key highlights — bullet list works great" minHeight={120} />
         </Card>
 
         {/* Pricing mode */}
@@ -274,8 +355,11 @@ export default function PwaListingConfigPage() {
           </div>
         )}
 
-        {/* Listing gallery (the onboarding listing images) */}
-        <ListingGallery property={property} gallery={gallery} setGallery={setGallery} />
+        {/* Extra website photos — section photos already feed the gallery; this
+            is only for adding your own extra images. */}
+        <Card title="Extra website photos" hint="Section photos above already publish to the website gallery. Add any extra images here.">
+          <Dropzone accept="image/*" multiple instant value={gallery.added || []} onChange={(v) => setGallery((g) => ({ ...g, added: v || [] }))} placeholder="Drag, drop, upload or paste a link" />
+        </Card>
 
         {/* Global additional fields */}
         <Card title="Additional fields (whole property)" hint="Extra text or images shown as their own titled blocks on the website — not merged into the description.">
@@ -368,7 +452,13 @@ function RoomCard({ room, index, markup, setMarkup, cfg, onCfg }) {
 
       {open && (
         <div className="px-4 pb-4 border-t pt-3 space-y-4 text-sm">
-          {/* Full PWA details */}
+          {/* Editable room name (defaults to PWA category) */}
+          <div>
+            <label className="label">Room name</label>
+            <input className="input" value={cfg.name ?? (room.category || '')} onChange={(e) => onCfg({ name: e.target.value })} placeholder="Room name shown on the website" />
+          </div>
+
+          {/* Full PWA specs (as captured) */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs">
             {room.sizeSqft != null && <Detail label="Size" value={`${room.sizeSqft} sqft`} />}
             {room.washroomType && <Detail label="Washroom" value={room.washroomType} />}
@@ -380,12 +470,21 @@ function RoomCard({ room, index, markup, setMarkup, cfg, onCfg }) {
               {flags.map((k) => <span key={k} className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700">{k}</span>)}
             </div>
           )}
-          {Array.isArray(room.facilities) && room.facilities.length > 0 && (
-            <div className="text-xs"><b>Facilities:</b> {room.facilities.join(', ')}</div>
-          )}
-          {room.highlights && <div className="text-xs"><b>Highlights:</b> {room.highlights}</div>}
+
+          {/* Extra-person pricing — exactly as captured in the PWA */}
           {Array.isArray(room.extraPersonTiers) && room.extraPersonTiers.length > 0 && (
-            <div className="text-xs"><b>Extra-person rules:</b> {room.extraPersonTiers.length}</div>
+            <div>
+              <label className="label">Extra-person pricing (from PWA)</label>
+              <div className="rounded-lg border border-slate-200 divide-y text-xs">
+                {room.extraPersonTiers.map((t, ti) => (
+                  <div key={ti} className="flex items-center justify-between px-3 py-1.5">
+                    <span>Age {t.ageFrom}{t.ageTo != null ? `–${t.ageTo}` : '+'} · {t.bed === 'with' ? 'With bed' : 'Without bed'}</span>
+                    <span className="font-semibold">{t.priceType === 'custom' ? `₹${Number(t.price || 0).toLocaleString()}/person` : 'Complimentary'}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] text-ink-muted mt-1">Carried to the website room automatically.</p>
+            </div>
           )}
 
           {/* Inline pricing — base price + markup/discount + GST */}
@@ -451,10 +550,92 @@ function RoomCard({ room, index, markup, setMarkup, cfg, onCfg }) {
             <label className="label">Add more room images</label>
             <Dropzone accept="image/*" multiple instant value={cfg.added || []} onChange={(v) => onCfg({ added: v || [] })} placeholder="Drag, upload or paste a link" />
           </div>
+
+          {/* Facilities — ONE merged editor: PWA facilities are pre-loaded and
+              you can add/remove your own (no separate "theirs vs ours"). */}
+          <div>
+            <label className="label">Facilities (PWA + your additions)</label>
+            <StringChips
+              value={cfg.facilities ?? (Array.isArray(room.facilities) ? room.facilities : [])}
+              onChange={(v) => onCfg({ facilities: v })}
+              suggestions={['Air Conditioning', 'Wi-Fi', 'TV', 'Room Service', 'Mini Fridge', 'Electric Kettle', 'Hair Dryer', 'Wardrobe', '24/7 Hot Water', 'Toiletries', 'Work Desk', 'Balcony', 'Bathtub', 'Heater', 'Towels', 'Slippers']}
+            />
+          </div>
+
+          {/* Per-room content — same predefined fields as the property level */}
+          <div className="space-y-3 rounded-lg border border-slate-200 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Room content</p>
+            <div>
+              <label className="label">Short description</label>
+              <RichTextEditor value={cfg.shortDescription ?? ''} onChange={(v) => onCfg({ shortDescription: v })} placeholder="One-liner shown under the room name" minHeight={80} />
+            </div>
+            <div>
+              <label className="label">Long description</label>
+              <RichTextEditor value={cfg.longDescription ?? ''} onChange={(v) => onCfg({ longDescription: v })} placeholder="Full room description" minHeight={120} />
+            </div>
+            <div>
+              <label className="label">Highlights</label>
+              <RichTextEditor value={cfg.highlights ?? (room.highlights || '')} onChange={(v) => onCfg({ highlights: v })} placeholder="Key highlights for this room" minHeight={100} />
+            </div>
+            <div>
+              <label className="label">Inclusions</label>
+              <RichTextEditor value={cfg.inclusions ?? ''} onChange={(v) => onCfg({ inclusions: v })} placeholder="What's included with this room" minHeight={100} />
+            </div>
+            <div>
+              <label className="label">Exclusions</label>
+              <RichTextEditor value={cfg.exclusions ?? ''} onChange={(v) => onCfg({ exclusions: v })} placeholder="What's not included" minHeight={100} />
+            </div>
+          </div>
+
           <div>
             <label className="label">Extra fields for this room</label>
             <CustomFieldsEditor fields={cfg.customFields || []} setFields={(fn) => onCfg({ customFields: typeof fn === 'function' ? fn(cfg.customFields || []) : fn })} />
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ───────────────────────── string chips (facilities) ───────────────────────── */
+
+function StringChips({ value = [], onChange, suggestions = [] }) {
+  const [input, setInput] = useState('');
+  const list = Array.isArray(value) ? value : [];
+  const add = (v) => {
+    const t = String(v || '').trim();
+    if (!t || list.includes(t)) return;
+    onChange([...list, t]);
+    setInput('');
+  };
+  const remove = (v) => onChange(list.filter((x) => x !== v));
+  const unused = suggestions.filter((s) => !list.includes(s));
+  return (
+    <div>
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        {list.map((f) => (
+          <span key={f} className="inline-flex items-center gap-1 rounded-full bg-brand/10 text-brand text-xs px-2.5 py-1">
+            {f}
+            <button type="button" onClick={() => remove(f)} className="hover:text-red-600"><X size={11} /></button>
+          </span>
+        ))}
+        {list.length === 0 && <span className="text-xs text-ink-muted">No facilities yet.</span>}
+      </div>
+      <div className="flex gap-2">
+        <input
+          className="input flex-1" value={input} onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(input); } }}
+          placeholder="Add a facility and press Enter"
+        />
+        <button type="button" onClick={() => add(input)} className="btn-ghost text-xs">Add</button>
+      </div>
+      {unused.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-2">
+          {unused.map((s) => (
+            <button key={s} type="button" onClick={() => add(s)} className="rounded-full border border-slate-200 text-ink-muted text-[11px] px-2 py-0.5 hover:border-brand/40 hover:text-brand">
+              + {s}
+            </button>
+          ))}
         </div>
       )}
     </div>
@@ -467,6 +648,7 @@ function SectionCard({ section, cfg, onCfg }) {
   const [open, setOpen] = useState(false);
   const photos = (Array.isArray(section.photoUrls) ? section.photoUrls : []).filter(Boolean);
   const removed = new Set(cfg.removed || []);
+  const enabled = cfg.enabled !== false;
   const deep = Object.entries(section.deepDiveData || {}).filter(([k, v]) => k !== 'rooms' && v != null && v !== '' && typeof v !== 'object');
 
   const togglePhoto = (u) => {
@@ -475,15 +657,26 @@ function SectionCard({ section, cfg, onCfg }) {
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white">
-      <button type="button" onClick={() => setOpen((o) => !o)} className="w-full flex items-center gap-3 px-4 py-3 text-left">
+    <div className={`rounded-xl border bg-white ${enabled ? 'border-slate-200' : 'border-slate-200 opacity-70'}`}>
+      <div className="w-full flex items-center gap-3 px-4 py-3">
         {photos[0] && <img src={fileUrl(photos[0])} alt="" className="h-11 w-14 rounded-lg object-cover shrink-0" />}
-        <div className="min-w-0 flex-1">
+        <button type="button" onClick={() => setOpen((o) => !o)} className="min-w-0 flex-1 text-left">
           <div className="font-semibold text-sm capitalize truncate">{section.sectionKey}</div>
-          <div className="text-xs text-ink-muted">{photos.length > 0 ? `${photos.length} 📷` : 'No photos'}</div>
-        </div>
-        {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-      </button>
+          <div className="text-xs text-ink-muted">{photos.length > 0 ? `${photos.length} 📷` : 'No photos'}{!enabled && ' · hidden from website'}</div>
+        </button>
+        {/* Show-on-website toggle */}
+        <button
+          type="button"
+          onClick={() => onCfg({ enabled: !enabled })}
+          title={enabled ? 'Listed on website — click to hide' : 'Hidden — click to list'}
+          className={`relative inline-flex h-5 w-9 items-center rounded-full transition shrink-0 ${enabled ? 'bg-brand' : 'bg-slate-300'}`}
+        >
+          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${enabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
+        </button>
+        <button type="button" onClick={() => setOpen((o) => !o)} className="shrink-0 text-ink-muted">
+          {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
+      </div>
 
       {open && (
         <div className="px-4 pb-4 border-t pt-3 space-y-4 text-sm">
@@ -521,39 +714,6 @@ function SectionCard({ section, cfg, onCfg }) {
         </div>
       )}
     </div>
-  );
-}
-
-/* ───────────────────────── listing gallery ───────────────────────── */
-
-function ListingGallery({ property, gallery, setGallery }) {
-  const source = (property.listingImages || []).map((li) => li.url).filter(Boolean);
-  const removed = new Set(gallery.removed || []);
-  const toggle = (u) => {
-    const n = new Set(removed); n.has(u) ? n.delete(u) : n.add(u);
-    setGallery((g) => ({ ...g, removed: [...n] }));
-  };
-  return (
-    <Card title="Listing gallery" hint="The headline listing photos. Untick to drop, add your own below. (Section photos above also feed the gallery.)">
-      {source.length === 0 ? (
-        <p className="text-xs text-ink-muted mb-3">No listing photos.</p>
-      ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-3">
-          {source.map((u) => {
-            const off = removed.has(u);
-            return (
-              <button key={u} type="button" onClick={() => toggle(u)}
-                className={`relative aspect-square rounded-lg overflow-hidden border-2 ${off ? 'border-red-400 opacity-40' : 'border-transparent'}`}>
-                <img src={fileUrl(u)} alt="" className="w-full h-full object-cover" />
-                <span className={`absolute top-1 right-1 rounded-full p-0.5 ${off ? 'bg-slate-500' : 'bg-green-600'} text-white`}>{off ? <X size={11} /> : <Check size={11} />}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-      <label className="label">Add your own images</label>
-      <Dropzone accept="image/*" multiple instant value={gallery.added || []} onChange={(v) => setGallery((g) => ({ ...g, added: v || [] }))} placeholder="Drag, drop, upload or paste a link" />
-    </Card>
   );
 }
 

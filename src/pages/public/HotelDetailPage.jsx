@@ -22,6 +22,7 @@ import WishlistButton from '../../components/public/WishlistButton.jsx';
 import HotelStayPicker, { todayISO, addDaysISO, nightsBetween } from '../../components/public/HotelStayPicker.jsx';
 import useRequireLogin from '../../hooks/useRequireLogin.js';
 import { fromPriceLabel, hasPrice, hotelFromPrice } from '../../utils/price.js';
+import { addressShort } from '../../utils/address.js';
 
 const stripHtml = (s) =>
   (s || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
@@ -145,7 +146,7 @@ export default function HotelDetailPage() {
 
   const locLabel = hotel.location?.name
     ? `${hotel.location.name}${hotel.location.country ? `, ${hotel.location.country}` : ''}`
-    : (hotel.city?.name || '');
+    : (hotel.city?.name || hotel.cityName || addressShort(hotel.address) || '');
 
   return (
     <>
@@ -727,8 +728,8 @@ function RoomRow({ hotel, room, stay, nights }) {
     requireLogin(() => navigate(target), { redirectTo: target });
   };
   return (
-    <article className="card flex flex-col md:flex-row overflow-hidden">
-      <div className="md:w-56 h-44 md:h-auto shrink-0 bg-slate-100 relative">
+    <article className="card flex flex-col md:flex-row overflow-hidden max-w-4xl">
+      <div className="md:w-72 h-44 md:h-auto shrink-0 bg-slate-100 relative">
         {room.mainImage ? (
           <img src={fileUrl(room.mainImage)} alt={room.name} className="w-full h-full object-cover" />
         ) : (
@@ -760,21 +761,40 @@ function RoomRow({ hotel, room, stay, nights }) {
           )}
         </div>
 
-        {room.facilities?.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-2">
-            {room.facilities.slice(0, 5).map((f) => (
-              <span key={f.id} className="text-[11px] px-2 py-0.5 rounded-full bg-brand/10 text-brand">
-                {f.name}
-              </span>
-            ))}
-          </div>
-        )}
+        {(() => {
+          // Facilities come either as taxonomy objects ({id,name}) or — for
+          // PWA-published rooms — as a plain string list (facilitiesList).
+          const facNames = [
+            ...(Array.isArray(room.facilities) ? room.facilities.map((f) => f.name) : []),
+            ...(Array.isArray(room.facilitiesList) ? room.facilitiesList : []),
+          ].filter(Boolean);
+          if (!facNames.length) return null;
+          return (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {facNames.slice(0, 6).map((name, i) => (
+                <span key={`${name}-${i}`} className="text-[11px] px-2 py-0.5 rounded-full bg-brand/10 text-brand">{name}</span>
+              ))}
+              {facNames.length > 6 && <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-ink-muted">+{facNames.length - 6}</span>}
+            </div>
+          );
+        })()}
 
         {room.highlightsRich && (
           <div
             className="rich-prose text-xs text-ink-muted line-clamp-3 mt-2"
             dangerouslySetInnerHTML={{ __html: room.highlightsRich }}
           />
+        )}
+
+        {Array.isArray(room.extraPersonTiers) && room.extraPersonTiers.length > 0 && (
+          <div className="mt-2 text-[11px] text-ink-muted">
+            <span className="font-semibold text-ink">Extra guest:</span>{' '}
+            {room.extraPersonTiers.map((t, i) => {
+              const band = `${t.ageFrom}${t.ageTo != null ? `–${t.ageTo}` : '+'}y`;
+              const price = t.priceType === 'custom' ? `₹${Number(t.price || 0).toLocaleString()}` : 'Free';
+              return <span key={i}>{i > 0 ? ' · ' : ''}{band} {t.bed === 'with' ? '(bed)' : ''} {price}</span>;
+            })}
+          </div>
         )}
 
         <div className="mt-auto pt-3 flex items-end justify-between gap-2">

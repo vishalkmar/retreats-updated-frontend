@@ -315,17 +315,27 @@ export default function RoomDetailPage() {
           </Section>
         )}
 
-        {/* Facilities */}
-        {room.facilities?.length > 0 && (
-          <Section icon={Wifi} title="Room facilities">
-            <div className="flex flex-wrap gap-2">
-              {room.facilities.map((f) => (
-                <span key={f.id} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-brand/10 text-brand text-sm">
-                  {f.name}
-                </span>
-              ))}
-            </div>
-          </Section>
+        {/* Facilities — taxonomy objects ({id,name}) and/or PWA string list. */}
+        {(() => {
+          const facNames = [
+            ...(Array.isArray(room.facilities) ? room.facilities.map((f) => f.name) : []),
+            ...(Array.isArray(room.facilitiesList) ? room.facilitiesList : []),
+          ].filter(Boolean);
+          if (!facNames.length) return null;
+          return (
+            <Section icon={Wifi} title="Room facilities">
+              <div className="flex flex-wrap gap-2">
+                {facNames.map((name, i) => (
+                  <span key={`${name}-${i}`} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-brand/10 text-brand text-sm">{name}</span>
+                ))}
+              </div>
+            </Section>
+          );
+        })()}
+
+        {/* Short description */}
+        {room.shortDescription && (
+          <div className="rich-prose text-ink-muted" dangerouslySetInnerHTML={{ __html: room.shortDescription }} />
         )}
 
         {/* Highlights */}
@@ -340,6 +350,22 @@ export default function RoomDetailPage() {
           <Section title="About this room">
             <div className="rich-prose" dangerouslySetInnerHTML={{ __html: room.descriptionRich }} />
           </Section>
+        )}
+
+        {/* Inclusions / Exclusions */}
+        {(room.inclusionsRich || room.exclusionsRich) && (
+          <div className="grid md:grid-cols-2 gap-5">
+            {room.inclusionsRich && (
+              <Section title="Inclusions">
+                <div className="rich-prose" dangerouslySetInnerHTML={{ __html: room.inclusionsRich }} />
+              </Section>
+            )}
+            {room.exclusionsRich && (
+              <Section title="Exclusions">
+                <div className="rich-prose" dangerouslySetInnerHTML={{ __html: room.exclusionsRich }} />
+              </Section>
+            )}
+          </div>
         )}
       </div>
     </>
