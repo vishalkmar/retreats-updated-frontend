@@ -91,13 +91,7 @@ export default function UserLoginModal() {
       setIsNewUser(!!data.isNewUser);
       setStep('otp');
       setResendSecs(30);
-      if (data.devCode) {
-        toast(`Dev code: ${data.devCode}`, { duration: 12000, icon: '🔑' });
-      } else if (data.emailDelivered === false) {
-        toast('Email service unreachable — check the server console for the code', { duration: 6000 });
-      } else {
-        toast.success(res.data?.message || 'OTP sent to your email');
-      }
+      toast.success(res.data?.message || 'OTP sent to your email');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Could not send OTP');
     } finally {

@@ -4,9 +4,11 @@ import { Lock, Mail, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '../../context/AuthContext.jsx';
+import useSiteLogo from '../../hooks/useSiteLogo.js';
 
 export default function AdminLoginPage() {
   const { admin, login, loading } = useAuth();
+  const { logoSrc, companyName } = useSiteLogo();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/admin/dashboard';
@@ -40,8 +42,8 @@ export default function AdminLoginPage() {
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center mb-3">
             <img
-              src="/retreatlogo.png"
-              alt="Retreats by Traveon"
+              src={logoSrc}
+              alt={companyName}
               className="h-14 w-auto object-contain"
             />
           </div>

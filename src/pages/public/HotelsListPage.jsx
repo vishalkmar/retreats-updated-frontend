@@ -6,6 +6,7 @@ import { onlyStateLocations } from '../../utils/indianStates.js';
 import HotelCard from '../../components/public/HotelCard.jsx';
 import PriceTierFilter from '../../components/public/PriceTierFilter.jsx';
 import StarRatingFilter from '../../components/public/StarRatingFilter.jsx';
+import StarCategoryFilter from '../../components/public/StarCategoryFilter.jsx';
 
 const SORTS = [
   { value: '', label: 'Recommended first' },
@@ -95,6 +96,22 @@ export default function HotelsListPage() {
     Object.entries(queryString).forEach(([k, v]) => sp.set(k, v));
     setSearchParams(sp, { replace: true });
   }, [load, queryString, setSearchParams]);
+
+  // Client-side safety net: the card's "From" price is the cheapest bookable
+  // room. Never render a hotel whose price falls outside the selected range
+  // (defends against any stale/cached response slipping a non-match through).
+  const visibleHotels = useMemo(() => {
+    const min = Number(filters.minPrice) || 0;
+    const max = Number(filters.maxPrice) || 0;
+    if (!min && !max) return hotels;
+    return hotels.filter((h) => {
+      const p = Number(h.priceFrom) || 0;
+      if (p <= 0) return false;            // "On request" can't match a price tier
+      if (min && p < min) return false;
+      if (max && p > max) return false;
+      return true;
+    });
+  }, [hotels, filters.minPrice, filters.maxPrice]);
 
   const update = (k, v) => setFilters((f) => ({ ...f, [k]: v, page: 1 }));
 
@@ -187,35 +204,10 @@ export default function HotelsListPage() {
               </FilterBlock>
 
               <FilterBlock label="Star category">
-                <div className="space-y-1.5">
-                  {STAR_OPTIONS.map((s) => {
-                    const active = isStarActive(s);
-                    return (
-                      <label
-                        key={s}
-                        className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm cursor-pointer transition ${
-                          active ? 'bg-amber-50 text-amber-700 font-semibold' : 'hover:bg-slate-50 text-ink'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={active}
-                          onChange={() => toggleStar(s)}
-                          className="accent-amber-500"
-                        />
-                        <span className="flex-1 inline-flex items-center gap-0.5 text-amber-500 text-base leading-none">
-                          {Array.from({ length: s }).map((_, i) => (
-                            <span key={i}>★</span>
-                          ))}
-                          {Array.from({ length: 5 - s }).map((_, i) => (
-                            <span key={i + 5} className="text-slate-200">★</span>
-                          ))}
-                        </span>
-                        <span className="text-[11px] text-ink-muted">{s}-star</span>
-                      </label>
-                    );
-                  })}
-                </div>
+                <StarCategoryFilter
+                  value={filters.starRating}
+                  onChange={(v) => update('starRating', v)}
+                />
               </FilterBlock>
 
               <FilterBlock label="User rating">
@@ -306,7 +298,7 @@ export default function HotelsListPage() {
                   <div key={i} className="h-56 bg-slate-100 rounded-2xl animate-pulse" />
                 ))}
               </div>
-            ) : hotels.length === 0 ? (
+            ) : visibleHotels.length === 0 ? (
               <div className="card p-12 text-center">
                 <p className="text-ink-muted">No hotels match your filters yet.</p>
                 {hasFilters && (
@@ -315,11 +307,11 @@ export default function HotelsListPage() {
               </div>
             ) : view === 'grid' ? (
               <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-5">
-                {hotels.map((h) => <HotelCard key={h.id} hotel={h} variant="vertical" />)}
+                {visibleHotels.map((h) => <HotelCard key={h.id} hotel={h} variant="vertical" />)}
               </div>
             ) : (
               <div className="space-y-5">
-                {hotels.map((h) => <HotelCard key={h.id} hotel={h} />)}
+                {visibleHotels.map((h) => <HotelCard key={h.id} hotel={h} />)}
               </div>
             )}
 

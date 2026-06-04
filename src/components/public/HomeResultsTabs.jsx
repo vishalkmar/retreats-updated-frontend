@@ -10,6 +10,8 @@ import HotelCard from './HotelCard.jsx';
 import PackageCard from './PackageCard.jsx';
 import EventCard from './EventCard.jsx';
 import PriceTierFilter from './PriceTierFilter.jsx';
+import StarRatingFilter from './StarRatingFilter.jsx';
+import StarCategoryFilter from './StarCategoryFilter.jsx';
 import DatePicker from '../common/DatePicker.jsx';
 
 // Default tab metadata. Admin-managed overrides (label, sublabel, image,
@@ -237,6 +239,23 @@ export default function HomeResultsTabs() {
   const [packages, setPackages] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState({ hotels: false, packages: false, events: false });
+
+  // Client-side price safety net — the card "From" price must fall inside the
+  // selected tier. Guards against any stale/cached response leaking a non-match.
+  const priceGuard = (list, get) => {
+    const min = Number(localFilters.minPrice) || 0;
+    const max = Number(localFilters.maxPrice) || 0;
+    if (!min && !max) return list;
+    return (list || []).filter((x) => {
+      const p = Number(get(x)) || 0;
+      if (p <= 0) return false;
+      if (min && p < min) return false;
+      if (max && p > max) return false;
+      return true;
+    });
+  };
+  const visibleHotels = useMemo(() => priceGuard(hotels, (h) => h.priceFrom), [hotels, localFilters.minPrice, localFilters.maxPrice]); // eslint-disable-line react-hooks/exhaustive-deps
+  const visiblePackages = useMemo(() => priceGuard(packages, (p) => p.priceFrom), [packages, localFilters.minPrice, localFilters.maxPrice]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Admin-managed per-tab metadata: label, sublabel, headline, banner image.
   // Falls back to the static TABS defaults if the admin hasn't edited them.
@@ -524,7 +543,7 @@ export default function HomeResultsTabs() {
           <div className="flex-1 min-w-0 bg-white rounded-2xl shadow-soft border border-slate-100 max-h-[800px] overflow-y-auto">
             {activeTab === 'all' && (
               <AllTabContent
-                hotels={hotels} packages={packages} events={events}
+                hotels={visibleHotels} packages={visiblePackages} events={events}
                 hasSearch={hasSearch} isLoading={isLoading}
                 onTabSwitch={setActiveTab}
               />
@@ -532,7 +551,7 @@ export default function HomeResultsTabs() {
             {activeTab === 'hotels' && (
               <ListPane
                 loading={loading.hotels}
-                items={hotels}
+                items={visibleHotels}
                 emptyLabel={hasSearch ? `No hotels for this search.` : `No hotels published yet.`}
                 seeAllHref={`/hotels${buildQuery({ location })}`}
                 renderItem={(h) => <HotelCard key={h.id} hotel={h} />}
@@ -541,7 +560,7 @@ export default function HomeResultsTabs() {
             {activeTab === 'packages' && (
               <ListPane
                 loading={loading.packages}
-                items={packages}
+                items={visiblePackages}
                 emptyLabel={hasSearch ? `No packages for this search.` : `No packages published yet.`}
                 seeAllHref={`/retreats${buildQuery({ location, startDate, endDate, month, year })}`}
                 renderItem={(p) => <PackageCard key={p.id} pkg={p} />}
@@ -820,44 +839,20 @@ function FilterSidebar({
           {/* User rating — hotels & packages */}
           {(activeTab === 'all' || activeTab === 'hotels' || activeTab === 'packages') && (
             <FilterBlock label="User rating">
-              <div className="space-y-1.5">
-                {RATING_BUCKETS.map((b) => (
-                  <label key={b.value} className="flex items-center gap-2 text-sm cursor-pointer hover:text-brand">
-                    <input
-                      type="radio"
-                      checked={filters.minRating === b.value}
-                      onChange={() => set('minRating', filters.minRating === b.value ? '' : b.value)}
-                    />
-                    <Star size={11} className="fill-amber-400 text-amber-400" />
-                    <span className="flex-1">{b.label}</span>
-                  </label>
-                ))}
-              </div>
+              <StarRatingFilter
+                value={filters.minRating}
+                onChange={(v) => set('minRating', v)}
+              />
             </FilterBlock>
           )}
 
           {/* Star category — hotels only */}
           {(activeTab === 'all' || activeTab === 'hotels') && (
             <FilterBlock label="Star category">
-              <div className="flex flex-wrap gap-1.5">
-                {STAR_OPTIONS.map((s) => {
-                  const active = isStarActive(s);
-                  return (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => toggleStar(s)}
-                      className={`px-2.5 py-1 rounded-full text-xs border transition ${
-                        active
-                          ? 'bg-brand text-white border-brand'
-                          : 'bg-white border-slate-200 hover:border-brand'
-                      }`}
-                    >
-                      {'★'.repeat(s)}
-                    </button>
-                  );
-                })}
-              </div>
+              <StarCategoryFilter
+                value={filters.starRating}
+                onChange={(v) => set('starRating', v)}
+              />
             </FilterBlock>
           )}
 

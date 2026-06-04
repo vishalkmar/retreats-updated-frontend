@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAdminView } from '../../context/AdminViewContext.jsx';
+import useSiteLogo from '../../hooks/useSiteLogo.js';
 
 const websiteItems = [
   { to: '/admin/website/hero', label: 'Hero Sections', icon: Image },
@@ -87,6 +88,7 @@ const platformConfigItems = [
 
 export default function AdminSidebar({ open, onClose }) {
   const { view, setView } = useAdminView();
+  const { logoSrc, companyName } = useSiteLogo();
   const [websiteOpen, setWebsiteOpen] = useState(true);
   const [contentOpen, setContentOpen] = useState(true);
   const [pwaOpen, setPwaOpen] = useState(true);
@@ -131,8 +133,8 @@ export default function AdminSidebar({ open, onClose }) {
         <div className="flex items-center justify-between px-5 h-16 border-b border-white/10">
           <Link to="/admin/dashboard" className="flex items-center gap-2">
             <img
-              src="/retreatlogo.png"
-              alt="Retreats by Traveon"
+              src={logoSrc}
+              alt={companyName}
               className="h-9 w-auto object-contain bg-white/95 rounded px-1.5 py-0.5"
             />
             <span className="font-display font-bold text-sm">Admin</span>

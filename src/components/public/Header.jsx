@@ -5,6 +5,7 @@ import api from '../../services/api';
 import { usePageHero } from './PageHero.jsx';
 import UserMenu from './UserMenu.jsx';
 import { useUserAuth } from '../../context/UserAuthContext.jsx';
+import useSiteLogo from '../../hooks/useSiteLogo.js';
 
 const fallbackLinks = [
   { label: 'Hotels', path: '/hotels' },
@@ -18,6 +19,7 @@ export default function Header() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [links, setLinks] = useState(fallbackLinks);
+  const { logoSrc, companyName } = useSiteLogo();
   const { hasHero } = usePageHero();
   const { isAuthenticated, requestLogin } = useUserAuth();
 
@@ -58,8 +60,8 @@ export default function Header() {
       <div className="container-app flex items-center justify-between h-16 lg:h-20">
         <Link to="/" className="flex items-center">
           <img
-            src="/retreatlogo.png"
-            alt="Retreats by Traveon"
+            src={logoSrc}
+            alt={companyName}
             className={`h-10 lg:h-12 w-auto object-contain transition ${
               solid ? '' : 'drop-shadow-lg'
             }`}
