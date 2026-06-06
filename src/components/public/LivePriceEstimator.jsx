@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { calculateTaxPricing, taxIncludedLabel } from '../../utils/taxPricing.js';
 
 /**
  * Tiny "estimate your total" widget for any bookable detail page. The user
@@ -15,7 +16,7 @@ import { useState } from 'react';
  *   defaultUnits - initial count (default 1)
  *   minUnits    - clamp (default 1)
  *   maxUnits    - clamp (default 50)
- *   note        - small text under the total ("+ taxes & fees")
+ *   note        - small text under the total
  *   onChange    - optional callback (units) => void so the parent can
  *                 forward the same number into its Book CTA
  */
@@ -26,13 +27,17 @@ export default function LivePriceEstimator({
   defaultUnits = 1,
   minUnits = 1,
   maxUnits = 50,
-  note = '+ taxes & fees',
+  note = '',
+  gstRate = 0,
+  tcsRate = 0,
   onChange,
 }) {
   const [units, setUnits] = useState(defaultUnits);
   const safePrice = Math.max(0, Number(unitPrice) || 0);
   const safeUnits = clamp(Number(units) || minUnits, minUnits, maxUnits);
   const total = safePrice * safeUnits;
+  const taxPricing = calculateTaxPricing(total, gstRate, tcsRate);
+  const resolvedNote = note || (taxPricing.hasTaxes ? taxIncludedLabel(taxPricing) : '');
 
   const patch = (next) => {
     const c = clamp(next, minUnits, maxUnits);
@@ -86,10 +91,10 @@ export default function LivePriceEstimator({
             {currency} {safePrice.toLocaleString()} × {safeUnits} {unitLabel}{safeUnits === 1 ? '' : 's'}
           </span>
           <span className="text-2xl font-bold text-brand">
-            {currency} {total.toLocaleString()}
+            {currency} {Math.round(taxPricing.total).toLocaleString()}
           </span>
         </div>
-        {note && <p className="mt-1 text-[11px] text-ink-muted">{note}</p>}
+        {resolvedNote && <p className="mt-1 text-[11px] text-ink-muted">{resolvedNote}</p>}
       </div>
     </div>
   );

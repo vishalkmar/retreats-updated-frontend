@@ -305,6 +305,7 @@ export default function EventDetailPage() {
                     unitLabel={isSportEvent ? 'slot' : 'ticket'}
                     defaultUnits={tickets}
                     maxUnits={20}
+                    gstRate={event.gstRate}
                     onChange={setTickets}
                   />
                 </div>

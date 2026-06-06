@@ -531,7 +531,9 @@ export default function BookingPreviewPage() {
             <h3 className="font-semibold text-ink mb-3">Price summary</h3>
             <div className="text-xs text-ink-muted mb-3">
               {fmtMoney(pricing?.display?.unitPrice, pricing?.currency)} × {pricing?.quantity}
-              {config.unitLabel ? ` (${config.unitLabel(pricing?.quantity)})` : ''}
+              {pricing?.priceUnitLabel
+                ? ` (${pricing.priceUnitLabel})`
+                : (config.unitLabel ? ` (${config.unitLabel(pricing?.quantity)})` : '')}
               {type === 'room' && pricing?.roomsResolved > roomCount && (
                 <div className="text-[11px] text-amber-700 mt-1">
                   Party needs {pricing.roomsResolved} rooms — adjusted automatically.
@@ -546,8 +548,11 @@ export default function BookingPreviewPage() {
               />
             )}
             <Row label="Subtotal" value={fmtMoney(pricing?.display?.subtotal, pricing?.currency)} />
-            {Number(pricing?.display?.tax) > 0 && (
-              <Row label={`GST (${Math.round((pricing?.taxRate || 0) * 100)}%)`} value={fmtMoney(pricing?.display?.tax, pricing?.currency)} />
+            {Number(pricing?.display?.gst) > 0 && (
+              <Row label={`GST (${Number(pricing?.gstRate || 0)}%)`} value={fmtMoney(pricing.display.gst, pricing.currency)} />
+            )}
+            {Number(pricing?.display?.tcs) > 0 && (
+              <Row label={`TCS (${Number(pricing?.tcsRate || 0)}%)`} value={fmtMoney(pricing.display.tcs, pricing.currency)} />
             )}
             {pricing?.display?.walletDiscount > 0 && (
               <Row label="Wallet credit" value={`− ${fmtMoney(pricing.display.walletDiscount, pricing.currency)}`} accent="text-emerald-600" />

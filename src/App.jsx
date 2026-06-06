@@ -28,6 +28,7 @@ import EventActivitiesListPage from './pages/public/EventActivitiesListPage.jsx'
 import EventActivityDetailPage from './pages/public/EventActivityDetailPage.jsx';
 import BlogsListPage from './pages/public/BlogsListPage.jsx';
 import BlogDetailPage from './pages/public/BlogDetailPage.jsx';
+import LegalPage from './pages/public/LegalPage.jsx';
 import NotFoundPage from './pages/public/NotFoundPage.jsx';
 
 import AdminLoginPage from './pages/admin/AdminLoginPage.jsx';
@@ -103,6 +104,8 @@ export default function App() {
         <Route path="/add-ons/:slug" element={<AddOnDetailPage />} />
         <Route path="/blogs" element={<BlogsListPage />} />
         <Route path="/blogs/:slug" element={<BlogDetailPage />} />
+        <Route path="/privacy" element={<LegalPage type="privacy" />} />
+        <Route path="/terms" element={<LegalPage type="terms" />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
 

@@ -263,7 +263,12 @@ export default function BookingSuccessPage() {
             <div className="text-xs font-bold uppercase tracking-wider text-ink-muted mb-3">Payment summary</div>
             <div className="space-y-2 text-sm">
               <Row label={`${fmtMoney(pricing.unitPrice, booking.currency)} × ${booking.units || booking.guest.count}`} value={fmtMoney(pricing.subtotal, booking.currency)} />
-              <Row label="Taxes" value={fmtMoney(pricing.tax, booking.currency)} />
+              {pricing.gst > 0 && (
+                <Row label={booking.item?.pricedAt?.gstRate ? `GST (${booking.item.pricedAt.gstRate}%)` : 'GST'} value={fmtMoney(pricing.gst, booking.currency)} />
+              )}
+              {pricing.tcs > 0 && (
+                <Row label={booking.item?.pricedAt?.tcsRate ? `TCS (${booking.item.pricedAt.tcsRate}%)` : 'TCS'} value={fmtMoney(pricing.tcs, booking.currency)} />
+              )}
               {pricing.walletDiscount > 0 && (
                 <Row label="Wallet credit" value={`− ${fmtMoney(pricing.walletDiscount, booking.currency)}`} accent="text-emerald-600" />
               )}

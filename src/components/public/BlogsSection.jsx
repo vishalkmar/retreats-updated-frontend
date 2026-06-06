@@ -32,31 +32,29 @@ export default function BlogsSection() {
       />
 
       <div className="container-app relative">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] font-bold text-brand bg-brand/10 px-3 py-1.5 rounded-full mb-4">
-              <Sparkles size={12} /> From the journal
-            </div>
-            <h2 className="text-3xl md:text-5xl font-display font-bold leading-tight text-ink">
-              Stories, guides &{' '}
-              <span className="relative inline-block">
-                <span className="relative z-10 text-brand">retreat reflections</span>
-                <span
-                  aria-hidden
-                  className="absolute left-0 right-0 -bottom-1 h-2 bg-wellness/25 rounded-full"
-                />
-              </span>
-            </h2>
-            <p className="text-ink-muted mt-4 text-base md:text-lg leading-relaxed">
-              Wellness tips, travel stories and reflections from our travellers and hosts —
-              read before you go, or savour after you return.
-            </p>
+        {/* Header — centred */}
+        <div className="text-center max-w-2xl mx-auto mb-12">
+          <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] font-bold text-brand bg-brand/10 px-3 py-1.5 rounded-full mb-4">
+            <Sparkles size={12} /> From the journal
           </div>
+          <h2 className="text-3xl md:text-5xl font-display font-bold leading-tight text-ink">
+            Stories, guides &{' '}
+            <span className="relative inline-block">
+              <span className="relative z-10 text-brand">retreat reflections</span>
+              <span
+                aria-hidden
+                className="absolute left-0 right-0 -bottom-1 h-2 bg-wellness/25 rounded-full"
+              />
+            </span>
+          </h2>
+          <p className="text-ink-muted mt-4 text-base md:text-lg leading-relaxed">
+            Wellness tips, travel stories and reflections from our travellers and hosts —
+            read before you go, or savour after you return.
+          </p>
 
           <Link
             to="/blogs"
-            className="self-start md:self-end inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-wellness text-white text-sm font-semibold hover:bg-wellness-dark transition shrink-0"
+            className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-wellness text-white text-sm font-semibold hover:bg-wellness-dark transition"
           >
             <BookOpen size={16} />
             All articles

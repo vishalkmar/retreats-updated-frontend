@@ -15,8 +15,11 @@ import { ItineraryEditor, FaqEditor } from '../../components/admin/KeyValueListE
 import Dropzone from '../../components/admin/Dropzone.jsx';
 import RichTextEditor from '../../components/admin/RichTextEditor.jsx';
 import GstSelect from '../../components/admin/GstSelect.jsx';
+import TcsSelect from '../../components/admin/TcsSelect.jsx';
+import PriceTypeSelect from '../../components/admin/PriceTypeSelect.jsx';
 import usePersistedForm from '../../hooks/usePersistedForm.js';
 import DatePicker from '../../components/common/DatePicker.jsx';
+import { priceUnitLabel } from '../../utils/priceType.js';
 
 const MEAL_OPTIONS = ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Drinks', 'Tea / Coffee'];
 const DIET_OPTIONS = [
@@ -38,7 +41,7 @@ const blankForm = {
   durationDays: 1, durationNights: 0, timing: '',
   availableAllYear: true, startDate: '', endDate: '',
   minGroupSize: 1, maxGroupSize: 30,
-  priceFrom: 0, priceOriginal: '', gstRate: 0, currency: 'INR',
+  priceFrom: 0, priceOriginal: '', gstRate: 0, tcsRate: 0, priceType: 'per_person', priceLabel: '', currency: 'INR',
   freeCancellation: true, isRefundable: true, isGoldHost: false,
   isFeatured: false, isPopular: false, isActive: true,
   richContent: '',
@@ -189,6 +192,9 @@ export default function PackageFormPage() {
         priceFrom: p.priceFrom ?? 0,
         priceOriginal: p.priceOriginal ?? '',
         gstRate: p.gstRate ?? 0,
+        tcsRate: p.tcsRate ?? 0,
+        priceType: p.priceType || 'per_person',
+        priceLabel: p.priceLabel ?? '',
         currency: p.currency || 'INR',
         freeCancellation: p.freeCancellation ?? true,
         isRefundable: p.isRefundable ?? true,
@@ -565,9 +571,9 @@ export default function PackageFormPage() {
 
       {/* Pricing */}
       <Section icon={DollarSign} title="Pricing">
-        <div className="grid sm:grid-cols-3 gap-4">
+        <div className="grid sm:grid-cols-4 gap-4">
           <div>
-            <label className="label">Price from *</label>
+            <label className="label">Price from ({priceUnitLabel(form.priceType, form.priceLabel) || 'per person'}) *</label>
             <input
               type="number" min={0} step="0.01" className="input"
               value={form.priceFrom}
@@ -591,7 +597,14 @@ export default function PackageFormPage() {
               placeholder="INR / USD / EUR"
             />
           </div>
+          <PriceTypeSelect
+            priceType={form.priceType}
+            priceLabel={form.priceLabel}
+            onType={(v) => change('priceType', v)}
+            onLabel={(v) => change('priceLabel', v)}
+          />
           <GstSelect value={form.gstRate} onChange={(v) => change('gstRate', v)} />
+          <TcsSelect value={form.tcsRate} onChange={(v) => change('tcsRate', v)} />
         </div>
       </Section>
 

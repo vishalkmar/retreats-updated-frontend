@@ -17,6 +17,8 @@ import WishlistButton from '../../components/public/WishlistButton.jsx';
 import useRequireLogin from '../../hooks/useRequireLogin.js';
 import { computeRoomEstimate, matchTier } from '../../utils/roomPricing.js';
 import { occupancyLabel } from '../../utils/occupancy.js';
+import { priceUnitLabel } from '../../utils/priceType.js';
+import { calculateTaxPricing, taxIncludedLabel } from '../../utils/taxPricing.js';
 
 export default function RoomDetailPage() {
   const { hotelSlug, roomSlug } = useParams();
@@ -40,6 +42,8 @@ export default function RoomDetailPage() {
     adults,
     extraPersons,
   });
+  const unitPricing = calculateTaxPricing(room?.price, room?.gstRate, room?.tcsRate);
+  const estimatePricing = calculateTaxPricing(estimate.subtotal, room?.gstRate, room?.tcsRate);
 
   const handleBook = () => {
     if (!room) return;
@@ -175,10 +179,10 @@ export default function RoomDetailPage() {
                 </div>
 
                 <div className="mt-5 border-t pt-4">
-                  <div className="text-xs text-ink-muted">Per night</div>
+                  <div className="text-xs text-ink-muted">{priceUnitLabel(room.priceType, room.priceLabel) || 'per night'}</div>
                   <div>
                     <span className="text-3xl font-bold text-brand">
-                      {room.currency} {Number(room.price).toLocaleString()}
+                      {room.currency} {Math.round(unitPricing.total).toLocaleString()}
                     </span>
                     {room.priceOriginal && Number(room.priceOriginal) > Number(room.price) && (
                       <span className="ml-2 line-through text-ink-muted">
@@ -186,7 +190,9 @@ export default function RoomDetailPage() {
                       </span>
                     )}
                   </div>
-                  <div className="text-[11px] text-ink-muted mt-0.5">+ taxes & fees</div>
+                  {unitPricing.hasTaxes && (
+                    <div className="text-[11px] text-ink-muted mt-0.5">{taxIncludedLabel(unitPricing)}</div>
+                  )}
                 </div>
 
                 <div className="mt-4 rounded-xl border border-slate-200 p-4 space-y-3">
@@ -274,10 +280,12 @@ export default function RoomDetailPage() {
                       </div>
                     )}
                     <div className="flex justify-between font-bold text-ink pt-1">
-                      <span>Subtotal</span>
-                      <span className="text-brand">{room.currency} {estimate.subtotal.toLocaleString()}</span>
+                      <span>{estimatePricing.hasTaxes ? 'Total' : 'Subtotal'}</span>
+                      <span className="text-brand">{room.currency} {Math.round(estimatePricing.total).toLocaleString()}</span>
                     </div>
-                    <div className="text-[10px] text-ink-muted">+ taxes & fees</div>
+                    {estimatePricing.hasTaxes && (
+                      <div className="text-[10px] text-ink-muted">{taxIncludedLabel(estimatePricing)}</div>
+                    )}
                   </div>
                 </div>
 

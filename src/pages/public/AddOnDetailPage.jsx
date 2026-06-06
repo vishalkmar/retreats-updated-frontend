@@ -15,6 +15,8 @@ import api, { fileUrl } from '../../services/api';
 import WishlistButton from '../../components/public/WishlistButton.jsx';
 import useRequireLogin from '../../hooks/useRequireLogin.js';
 import LivePriceEstimator from '../../components/public/LivePriceEstimator.jsx';
+import { priceUnitLabel } from '../../utils/priceType.js';
+import { calculateTaxPricing, taxIncludedLabel } from '../../utils/taxPricing.js';
 
 export default function AddOnDetailPage() {
   const { slug } = useParams();
@@ -26,6 +28,7 @@ export default function AddOnDetailPage() {
   // Estimator state lifted up so the Book CTA can forward the chosen
   // guest count straight into the booking preview as ?guests=N.
   const [guests, setGuests] = useState(1);
+  const pricePricing = calculateTaxPricing(activity?.price, activity?.gstRate, activity?.tcsRate);
 
   const handleBook = () => {
     if (!activity) return;
@@ -162,7 +165,7 @@ export default function AddOnDetailPage() {
                   <div className="text-xs text-ink-muted">From</div>
                   <div>
                     <span className="text-3xl font-bold text-brand">
-                      {activity.currency} {Number(activity.price).toLocaleString()}
+                      {activity.currency} {Math.round(pricePricing.total).toLocaleString()}
                     </span>
                     {activity.priceOriginal && Number(activity.priceOriginal) > Number(activity.price) && (
                       <span className="ml-2 line-through text-ink-muted">
@@ -170,7 +173,9 @@ export default function AddOnDetailPage() {
                       </span>
                     )}
                   </div>
-                  <div className="text-[11px] text-ink-muted mt-0.5">per person</div>
+                  <div className="text-[11px] text-ink-muted mt-0.5">
+                    {pricePricing.hasTaxes ? `${taxIncludedLabel(pricePricing)} · ` : ''}{priceUnitLabel(activity.priceType, activity.priceLabel) || 'per person'}
+                  </div>
                 </div>
 
                 <div className="mt-4">
@@ -179,6 +184,8 @@ export default function AddOnDetailPage() {
                     currency={activity.currency || 'INR'}
                     unitLabel="guest"
                     defaultUnits={guests}
+                    gstRate={activity.gstRate}
+                    tcsRate={activity.tcsRate}
                     onChange={setGuests}
                   />
                 </div>

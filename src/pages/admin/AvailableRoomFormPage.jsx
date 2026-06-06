@@ -11,14 +11,17 @@ import MultiSelectChips from '../../components/admin/MultiSelectChips.jsx';
 import Dropzone from '../../components/admin/Dropzone.jsx';
 import RichTextEditor from '../../components/admin/RichTextEditor.jsx';
 import GstSelect from '../../components/admin/GstSelect.jsx';
+import TcsSelect from '../../components/admin/TcsSelect.jsx';
+import PriceTypeSelect from '../../components/admin/PriceTypeSelect.jsx';
 import usePersistedForm from '../../hooks/usePersistedForm.js';
+import { priceUnitLabel } from '../../utils/priceType.js';
 
 const blankForm = {
   ownerType: 'hotel',
   hotelId: '',
   packageId: '',
   name: '', slug: '',
-  price: 0, priceOriginal: '', gstRate: 0, currency: 'INR',
+  price: 0, priceOriginal: '', gstRate: 0, tcsRate: 0, priceType: 'per_night', priceLabel: '', currency: 'INR',
   roomSize: '', maxOccupancy: 2,
   extraPersonTiers: [],
   mainImageUrl: '', galleryUrls: [],
@@ -122,6 +125,9 @@ export default function AvailableRoomFormPage() {
         price: r.price ?? 0,
         priceOriginal: r.priceOriginal ?? '',
         gstRate: r.gstRate ?? 0,
+        tcsRate: r.tcsRate ?? 0,
+        priceType: r.priceType || 'per_night',
+        priceLabel: r.priceLabel ?? '',
         currency: r.currency || 'INR',
         roomSize: r.roomSize || '',
         maxOccupancy: r.maxOccupancy ?? 2,
@@ -389,8 +395,14 @@ export default function AvailableRoomFormPage() {
             <label className="label">Currency</label>
             <input className="input" value={form.currency} onChange={(e) => change('currency', e.target.value)} />
           </div>
+          <PriceTypeSelect
+            priceType={form.priceType}
+            priceLabel={form.priceLabel}
+            onType={(v) => change('priceType', v)}
+            onLabel={(v) => change('priceLabel', v)}
+          />
           <div>
-            <label className="label">Price (per night)</label>
+            <label className="label">Price ({priceUnitLabel(form.priceType, form.priceLabel) || 'per night'})</label>
             <input
               type="number" step="0.01" className="input"
               value={form.price}
@@ -407,6 +419,7 @@ export default function AvailableRoomFormPage() {
             />
           </div>
           <GstSelect value={form.gstRate} onChange={(v) => change('gstRate', v)} />
+          <TcsSelect value={form.tcsRate} onChange={(v) => change('tcsRate', v)} />
           <div>
             <label className="label">Occupancy</label>
             <select

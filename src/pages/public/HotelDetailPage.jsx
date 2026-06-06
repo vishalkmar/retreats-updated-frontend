@@ -4,7 +4,27 @@ import {
   Star, MapPin, Heart, Share2, Play,
   Wifi, Landmark, Shield, ShieldCheck, ChevronDown, Bed, Maximize2,
   Sparkles, Hotel as HotelSuggestIcon,
+  Waves, Mountain, TreePine, Building2, Utensils, ShoppingBag, Plane, Train,
 } from 'lucide-react';
+
+// Pick a sensible icon for a nearby place from its name (used when it has no
+// photo, so the card shows a tidy themed icon instead of an empty box).
+const NEARBY_ICONS = [
+  [/(river|lake|beach|sea|water|ganga|ghat)/i, Waves],
+  [/(mountain|hill|valley|peak|trek)/i, Mountain],
+  [/(forest|garden|park|nature|tree|wood)/i, TreePine],
+  [/(temple|church|mosque|shrine|spiritual|yoga|ashram|meditat)/i, Sparkles],
+  [/(wellness|spa|retreat|health)/i, Heart],
+  [/(restaurant|cafe|food|dining)/i, Utensils],
+  [/(market|mall|shop|bazaar)/i, ShoppingBag],
+  [/(airport|flight)/i, Plane],
+  [/(station|railway|train|metro)/i, Train],
+  [/(hotel|resort|stay)/i, Building2],
+];
+const nearbyIcon = (name) => {
+  const found = NEARBY_ICONS.find(([re]) => re.test(name || ''));
+  return found ? found[1] : Landmark;
+};
 import toast from 'react-hot-toast';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Thumbs, Pagination } from 'swiper/modules';
@@ -23,6 +43,8 @@ import HotelStayPicker, { todayISO, addDaysISO, nightsBetween } from '../../comp
 import useRequireLogin from '../../hooks/useRequireLogin.js';
 import { fromPriceLabel, hasPrice, hotelFromPrice } from '../../utils/price.js';
 import { addressShort } from '../../utils/address.js';
+import { priceUnitLabel } from '../../utils/priceType.js';
+import { calculateTaxPricing, taxIncludedLabel } from '../../utils/taxPricing.js';
 
 const stripHtml = (s) =>
   (s || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
@@ -246,7 +268,7 @@ export default function HotelDetailPage() {
                     )}
                   </div>
                   {hasPrice(hotelFromPrice(hotel, rooms)) && (
-                    <div className="text-[11px] text-ink-muted mt-0.5">+ taxes & fees · per night</div>
+                    <div className="text-[11px] text-ink-muted mt-0.5">per night</div>
                   )}
                 </div>
 
@@ -448,27 +470,32 @@ export default function HotelDetailPage() {
         {hotel.nearbyPlaces?.length > 0 && (
           <Section icon={Landmark} title="Nearby places">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {hotel.nearbyPlaces.map((n) => (
-                <div key={n.id} className="card overflow-hidden">
-                  <div className="aspect-[4/3] bg-slate-100">
+              {hotel.nearbyPlaces.map((n) => {
+                const NIcon = nearbyIcon(n.name);
+                return (
+                  <div key={n.id} className="card overflow-hidden">
                     {n.imageUrl ? (
-                      <img src={fileUrl(n.imageUrl)} alt="" className="w-full h-full object-cover" />
+                      <div className="aspect-[4/3] bg-slate-100">
+                        <img src={fileUrl(n.imageUrl)} alt="" className="w-full h-full object-cover" />
+                      </div>
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-ink-muted">
-                        <Landmark size={18} />
+                      <div className="aspect-[4/3] bg-gradient-to-br from-brand/10 via-white to-sky-100/50 flex items-center justify-center">
+                        <span className="w-14 h-14 rounded-full bg-white shadow-sm ring-1 ring-brand/10 flex items-center justify-center text-brand">
+                          <NIcon size={24} />
+                        </span>
                       </div>
                     )}
+                    <div className="p-2.5">
+                      <div className="text-sm font-medium leading-tight">{n.name}</div>
+                      {n.description && (
+                        <p className="text-[11px] text-ink-muted line-clamp-2 mt-0.5">
+                          {stripHtml(n.description)}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div className="p-2.5">
-                    <div className="text-sm font-medium leading-tight">{n.name}</div>
-                    {n.description && (
-                      <p className="text-[11px] text-ink-muted line-clamp-2 mt-0.5">
-                        {stripHtml(n.description)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </Section>
         )}
@@ -716,6 +743,9 @@ function RoomRow({ hotel, room, stay, nights }) {
   const roomsBooked = Math.max(1, stay?.rooms || 1);
   const stayNights = Math.max(1, nights || 1);
   const totalPerStay = Number(room.price || 0) * stayNights * roomsBooked;
+  const unitPricing = calculateTaxPricing(room.price, room.gstRate, room.tcsRate);
+  const stayPricing = calculateTaxPricing(totalPerStay, room.gstRate, room.tcsRate);
+  const unitLabel = priceUnitLabel(room.priceType, room.priceLabel) || 'per night';
   const guests = (stay?.adults || 0) + (stay?.children || 0);
 
   const handleBook = () => {
@@ -800,18 +830,20 @@ function RoomRow({ hotel, room, stay, nights }) {
         <div className="mt-auto pt-3 flex items-end justify-between gap-2">
           <div>
             <span className="text-xl font-bold text-brand">
-              {room.currency} {Number(room.price).toLocaleString()}
+              {room.currency} {Math.round(unitPricing.total).toLocaleString()}
             </span>
             {room.priceOriginal && Number(room.priceOriginal) > Number(room.price) && (
               <span className="ml-2 line-through text-ink-muted text-sm">
                 {Number(room.priceOriginal).toLocaleString()}
               </span>
             )}
-            <div className="text-[11px] text-ink-muted">+ taxes · per night, per room</div>
+            <div className="text-[11px] text-ink-muted">
+              {unitPricing.hasTaxes ? `${taxIncludedLabel(unitPricing)} · ` : ''}{unitLabel}
+            </div>
             <div className="mt-1 text-xs">
               <span className="text-ink-muted">{stayNights} night{stayNights > 1 ? 's' : ''} × {roomsBooked} room{roomsBooked > 1 ? 's' : ''} = </span>
-              <span className="font-semibold text-ink">{room.currency} {totalPerStay.toLocaleString()}</span>
-              <span className="text-[10px] text-ink-muted ml-1">before tax</span>
+              <span className="font-semibold text-ink">{room.currency} {Math.round(stayPricing.total).toLocaleString()}</span>
+              {stayPricing.hasTaxes && <span className="text-[10px] text-ink-muted ml-1">tax included</span>}
             </div>
           </div>
           <div className="flex flex-col gap-2 items-stretch">

@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import { fileUrl } from '../../services/api';
 import WishlistButton from './WishlistButton.jsx';
+import { priceUnitLabel } from '../../utils/priceType.js';
+import { calculateTaxPricing, taxIncludedLabel } from '../../utils/taxPricing.js';
 
 /**
  * Reusable carousel for "Suggested add-on activities" used on Hotel, Package
@@ -119,10 +121,12 @@ export default function AddOnsCarousel({
 function AddOnPremiumCard({ addOn: a, guestCount = 0 }) {
   const orig = Number(a.priceOriginal || 0);
   const now = Number(a.price || 0);
+  const taxPricing = calculateTaxPricing(now, a.gstRate, a.tcsRate);
   const discountPct = orig > now && orig > 0 ? Math.round(((orig - now) / orig) * 100) : 0;
   // Live per-person multiplied total — only shows when the parent passes a
   // real guest count so the section stays clean on pages without a picker.
   const livePartyTotal = guestCount > 0 ? now * guestCount : 0;
+  const livePartyPricing = calculateTaxPricing(livePartyTotal, a.gstRate, a.tcsRate);
 
   return (
     <article className="relative h-full rounded-2xl overflow-hidden bg-white shadow-[0_8px_24px_-12px_rgba(15,23,42,0.18)] hover:shadow-[0_20px_40px_-16px_rgba(15,118,110,0.35)] transition-all duration-300 group flex flex-col border border-slate-100">
@@ -199,19 +203,22 @@ function AddOnPremiumCard({ addOn: a, guestCount = 0 }) {
           <div className="flex items-baseline gap-1.5">
             <span className="text-[10px] text-ink-muted uppercase tracking-wide mr-1">From</span>
             <span className="text-lg font-bold text-brand">
-              {a.currency} {Number(a.price).toLocaleString()}
+              {a.currency} {Math.round(taxPricing.total).toLocaleString()}
             </span>
             {a.priceOriginal && Number(a.priceOriginal) > Number(a.price) && (
               <span className="text-xs line-through text-ink-muted">
                 {Number(a.priceOriginal).toLocaleString()}
               </span>
             )}
-            <span className="text-[10px] text-ink-muted">/ person</span>
+            <span className="text-[10px] text-ink-muted">{priceUnitLabel(a.priceType, a.priceLabel) || 'per person'}</span>
           </div>
+          {taxPricing.hasTaxes && (
+            <div className="text-[10px] text-ink-muted mt-0.5">{taxIncludedLabel(taxPricing)}</div>
+          )}
           {livePartyTotal > 0 && (
             <div className="text-[11px] mt-0.5">
               <span className="text-ink-muted">{guestCount} guests = </span>
-              <span className="font-semibold text-ink">{a.currency} {livePartyTotal.toLocaleString()}</span>
+              <span className="font-semibold text-ink">{a.currency} {Math.round(livePartyPricing.total).toLocaleString()}</span>
             </div>
           )}
           <Link

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import {
   Save, Plus, Trash2, Mail, Phone, MapPin, Building2,
-  Facebook, Instagram, Twitter, Youtube, Linkedin, Globe,
+  Facebook, Instagram, Twitter, Youtube, Linkedin, Globe, ShieldCheck,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import Dropzone from '../../components/admin/Dropzone.jsx';
+import RichTextEditor from '../../components/admin/RichTextEditor.jsx';
 
 const SOCIAL_PRESETS = [
   { value: 'facebook', label: 'Facebook', Icon: Facebook },
@@ -24,6 +25,8 @@ const blank = {
   phones: [''],
   addresses: [''],
   socials: [],
+  privacyPolicy: '',
+  termsConditions: '',
 };
 
 function ListEditor({ items, onChange, placeholder, icon: Icon }) {
@@ -168,6 +171,8 @@ export default function SiteDetailsPage() {
         phones: info.phones?.length ? info.phones : [''],
         addresses: info.addresses?.length ? info.addresses : [''],
         socials: info.socials || [],
+        privacyPolicy: info.privacyPolicy || '',
+        termsConditions: info.termsConditions || '',
       });
       setExistingLogo(info.logoUrl || null);
       setLogoFile(null);
@@ -193,6 +198,8 @@ export default function SiteDetailsPage() {
     fd.append('phones', JSON.stringify(form.phones.filter(Boolean)));
     fd.append('addresses', JSON.stringify(form.addresses.filter(Boolean)));
     fd.append('socials', JSON.stringify(form.socials.filter((s) => s.url)));
+    fd.append('privacyPolicy', form.privacyPolicy || '');
+    fd.append('termsConditions', form.termsConditions || '');
     if (logoFile) fd.append('logo', logoFile);
     if (removeLogo && !logoFile) fd.append('removeLogo', 'true');
 
@@ -312,6 +319,19 @@ export default function SiteDetailsPage() {
 
       <Section icon={Facebook} title="Social media" hint="Pick a platform and paste the public URL — the footer renders the matching icon.">
         <SocialEditor items={form.socials} onChange={(v) => change('socials', v)} />
+      </Section>
+
+      <Section icon={ShieldCheck} title="Legal pages" hint="Content shown on the public /privacy and /terms pages. Rich text supported.">
+        <div className="space-y-5">
+          <div>
+            <label className="label">Privacy Policy</label>
+            <RichTextEditor value={form.privacyPolicy} onChange={(v) => change('privacyPolicy', v)} placeholder="Write your privacy policy…" minHeight={220} />
+          </div>
+          <div>
+            <label className="label">Terms &amp; Conditions</label>
+            <RichTextEditor value={form.termsConditions} onChange={(v) => change('termsConditions', v)} placeholder="Write your terms & conditions…" minHeight={220} />
+          </div>
+        </div>
       </Section>
 
       <div className="sticky bottom-4 flex justify-end mt-6">

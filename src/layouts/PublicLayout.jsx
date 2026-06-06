@@ -6,6 +6,7 @@ import BookRetreatsCTA from '../components/public/BookRetreatsCTA.jsx';
 import ScrollToTopButton from '../components/public/ScrollToTopButton.jsx';
 import ScrollToTop from '../components/public/ScrollToTop.jsx';
 import UserLoginModal from '../components/public/UserLoginModal.jsx';
+import CursorGlow from '../components/public/CursorGlow.jsx';
 
 /**
  * Header is `fixed` and transparent at the top of pages that have a hero —
@@ -29,6 +30,7 @@ export default function PublicLayout() {
       </div>
       <ScrollToTopButton />
       <UserLoginModal />
+      <CursorGlow />
     </PageHeroProvider>
   );
 }

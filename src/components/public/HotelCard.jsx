@@ -229,7 +229,7 @@ function CardBody({ hotel, teaser, locLabel, ratingLabel, detailHref, expanded }
               </span>
             )}
           </div>
-          {hasPrice(hotel.priceFrom) && <div className="text-[10px] text-ink-muted">+ taxes & fees · per night</div>}
+          {hasPrice(hotel.priceFrom) && <div className="text-[10px] text-ink-muted">per night</div>}
         </div>
         <div className="relative z-20 flex flex-col gap-2 items-stretch">
           <Link

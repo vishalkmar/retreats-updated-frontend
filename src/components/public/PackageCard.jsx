@@ -1,10 +1,11 @@
-import { Link, useNavigate } from 'react-router-dom';
+﻿import { Link, useNavigate } from 'react-router-dom';
 import {
   MapPin, Star, Calendar, ShieldCheck, Award, Flame,
   Moon, Sun, Sparkles, BadgePercent, Users,
 } from 'lucide-react';
 import { fileUrl } from '../../services/api';
 import { fromPriceLabel, hasPrice } from '../../utils/price.js';
+import { calculateTaxPricing, taxIncludedLabel } from '../../utils/taxPricing.js';
 import WishlistButton from './WishlistButton.jsx';
 import useRequireLogin from '../../hooks/useRequireLogin.js';
 
@@ -29,6 +30,7 @@ export default function PackageCard({ pkg }) {
 
   const orig = Number(pkg.priceOriginal || 0);
   const now = Number(pkg.priceFrom || 0);
+  const taxPricing = calculateTaxPricing(now, pkg.gstRate, pkg.tcsRate);
   const discountPct = orig > now && orig > 0 ? Math.round(((orig - now) / orig) * 100) : 0;
 
   const locLabel = pkg.location?.name || pkg.city?.name || pkg.locationDetail;
@@ -165,7 +167,9 @@ export default function PackageCard({ pkg }) {
             <div className="text-[11px] text-ink-muted uppercase tracking-wide">From</div>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-bold text-brand">
-                {fromPriceLabel(pkg.priceFrom, pkg.currency)}
+                {hasPrice(pkg.priceFrom)
+                  ? `${pkg.currency || 'INR'} ${Math.round(taxPricing.total).toLocaleString()}`
+                  : fromPriceLabel(pkg.priceFrom, pkg.currency)}
               </span>
               {hasPrice(pkg.priceFrom) && pkg.priceOriginal && Number(pkg.priceOriginal) > Number(pkg.priceFrom) && (
                 <span className="text-sm line-through text-ink-muted">
@@ -173,7 +177,9 @@ export default function PackageCard({ pkg }) {
                 </span>
               )}
             </div>
-            <div className="text-[10px] text-ink-muted">{hasPrice(pkg.priceFrom) ? '+ taxes · ' : ''}{reviewsLine}</div>
+            <div className="text-[10px] text-ink-muted">
+              {hasPrice(pkg.priceFrom) && taxPricing.hasTaxes ? `${taxIncludedLabel(taxPricing)} · ` : ''}{reviewsLine}
+            </div>
           </div>
 
           <div className="relative z-20 flex gap-2">

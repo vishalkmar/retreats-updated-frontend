@@ -17,6 +17,8 @@ import 'swiper/css/pagination';
 
 import api, { fileUrl } from '../../services/api';
 import { fromPriceLabel, hasPrice } from '../../utils/price.js';
+import { priceUnitLabel } from '../../utils/priceType.js';
+import { calculateTaxPricing, taxIncludedLabel } from '../../utils/taxPricing.js';
 import WishlistButton from '../../components/public/WishlistButton.jsx';
 import useRequireLogin from '../../hooks/useRequireLogin.js';
 import ReviewsBlock from '../../components/public/ReviewsBlock.jsx';
@@ -39,6 +41,7 @@ export default function PackageDetailPage() {
   // Live traveller count for the LivePriceEstimator on the right rail.
   // Forwarded into the booking preview via ?guests=N.
   const [travellers, setTravellers] = useState(1);
+  const sidebarPricing = calculateTaxPricing(pkg?.priceFrom, pkg?.gstRate, pkg?.tcsRate);
 
   const handleBook = () => {
     if (!pkg) return;
@@ -584,7 +587,9 @@ export default function PackageDetailPage() {
             <div className="text-xs text-ink-muted uppercase tracking-widest">From</div>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-3xl font-bold text-brand">
-                {fromPriceLabel(pkg.priceFrom, pkg.currency)}
+                {hasPrice(pkg.priceFrom)
+                  ? `${pkg.currency || 'INR'} ${Math.round(sidebarPricing.total).toLocaleString()}`
+                  : fromPriceLabel(pkg.priceFrom, pkg.currency)}
               </span>
               {hasPrice(pkg.priceFrom) && pkg.priceOriginal && Number(pkg.priceOriginal) > Number(pkg.priceFrom) && (
                 <span className="line-through text-sm text-ink-muted">
@@ -592,7 +597,11 @@ export default function PackageDetailPage() {
                 </span>
               )}
             </div>
-            {hasPrice(pkg.priceFrom) && <div className="text-[11px] text-ink-muted mt-0.5">per traveller</div>}
+            {hasPrice(pkg.priceFrom) && (
+              <div className="text-[11px] text-ink-muted mt-0.5">
+                {sidebarPricing.hasTaxes ? `${taxIncludedLabel(sidebarPricing)} · ` : ''}{priceUnitLabel(pkg.priceType, pkg.priceLabel) || 'per traveller'}
+              </div>
+            )}
 
             <div className="mt-4">
               <LivePriceEstimator
@@ -601,6 +610,8 @@ export default function PackageDetailPage() {
                 unitLabel="traveller"
                 defaultUnits={travellers}
                 maxUnits={pkg.maxGroupSize || 30}
+                gstRate={pkg.gstRate}
+                tcsRate={pkg.tcsRate}
                 onChange={setTravellers}
               />
             </div>
@@ -1217,5 +1228,3 @@ function SimilarPackageCard({ pkg: p }) {
     </Link>
   );
 }
-
-

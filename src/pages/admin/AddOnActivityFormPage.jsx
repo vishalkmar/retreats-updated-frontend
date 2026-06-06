@@ -10,8 +10,11 @@ import { FaqEditor } from '../../components/admin/KeyValueListEditor.jsx';
 import Dropzone from '../../components/admin/Dropzone.jsx';
 import RichTextEditor from '../../components/admin/RichTextEditor.jsx';
 import GstSelect from '../../components/admin/GstSelect.jsx';
+import TcsSelect from '../../components/admin/TcsSelect.jsx';
+import PriceTypeSelect from '../../components/admin/PriceTypeSelect.jsx';
 import usePersistedForm from '../../hooks/usePersistedForm.js';
 import { onlyStateLocations } from '../../utils/indianStates.js';
+import { priceUnitLabel } from '../../utils/priceType.js';
 
 const blankForm = {
   name: '', slug: '',
@@ -20,7 +23,7 @@ const blankForm = {
   packageId: '',
   locationId: '', cityName: '', address: '',
   mainImageUrl: '', galleryUrls: [],
-  price: 0, priceOriginal: '', gstRate: 0, currency: 'INR',
+  price: 0, priceOriginal: '', gstRate: 0, tcsRate: 0, priceType: 'per_person', priceLabel: '', currency: 'INR',
   descriptionRich: '', highlightsRich: '',
   minAge: '', maxAge: '',
   faqs: [],
@@ -113,6 +116,9 @@ export default function AddOnActivityFormPage() {
         price: a.price ?? 0,
         priceOriginal: a.priceOriginal ?? '',
         gstRate: a.gstRate ?? 0,
+        tcsRate: a.tcsRate ?? 0,
+        priceType: a.priceType || 'per_person',
+        priceLabel: a.priceLabel ?? '',
         currency: a.currency || 'INR',
         descriptionRich: a.descriptionRich || '',
         highlightsRich: a.highlightsRich || '',
@@ -379,6 +385,12 @@ export default function AddOnActivityFormPage() {
             <label className="label">Currency</label>
             <input className="input" value={form.currency} onChange={(e) => change('currency', e.target.value)} />
           </div>
+          <PriceTypeSelect
+            priceType={form.priceType}
+            priceLabel={form.priceLabel}
+            onType={(v) => change('priceType', v)}
+            onLabel={(v) => change('priceLabel', v)}
+          />
           <div>
             <label className="label">Sort order</label>
             <input
@@ -388,7 +400,7 @@ export default function AddOnActivityFormPage() {
             />
           </div>
           <div>
-            <label className="label">Price</label>
+            <label className="label">Price ({priceUnitLabel(form.priceType, form.priceLabel) || 'per person'})</label>
             <input
               type="number" step="0.01" className="input"
               value={form.price}
@@ -404,6 +416,7 @@ export default function AddOnActivityFormPage() {
             />
           </div>
           <GstSelect value={form.gstRate} onChange={(v) => change('gstRate', v)} />
+          <TcsSelect value={form.tcsRate} onChange={(v) => change('tcsRate', v)} />
           <div>
             <label className="label">Min age</label>
             <input

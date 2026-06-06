@@ -12,6 +12,7 @@ import { onlyStateLocations } from '../../utils/indianStates.js';
 import Dropzone from '../../components/admin/Dropzone.jsx';
 import RichTextEditor from '../../components/admin/RichTextEditor.jsx';
 import GstSelect from '../../components/admin/GstSelect.jsx';
+import PriceTypeSelect from '../../components/admin/PriceTypeSelect.jsx';
 import usePersistedForm from '../../hooks/usePersistedForm.js';
 import DatePicker from '../../components/common/DatePicker.jsx';
 
@@ -21,7 +22,7 @@ const blankForm = {
   mainImageUrl: '', galleryUrls: [],
   eventDate: '', endDate: '',
   startTime: '', endTime: '',
-  price: 0, priceOriginal: '', gstRate: 0, currency: 'INR',
+  price: 0, priceOriginal: '', gstRate: 0, priceType: 'per_person', priceLabel: '', currency: 'INR',
   minAge: '', maxAge: '',
   mapEmbedHtml: '',
   aboutRich: '', highlightsRich: '',
@@ -108,6 +109,8 @@ export default function EventFormPage() {
         price: e.price ?? 0,
         priceOriginal: e.priceOriginal ?? '',
         gstRate: e.gstRate ?? 0,
+        priceType: e.priceType || 'per_person',
+        priceLabel: e.priceLabel ?? '',
         currency: e.currency || 'INR',
         minAge: e.minAge ?? '',
         maxAge: e.maxAge ?? '',
@@ -360,6 +363,12 @@ export default function EventFormPage() {
             <label className="label">Currency</label>
             <input className="input" value={form.currency} onChange={(e) => change('currency', e.target.value)} />
           </div>
+          <PriceTypeSelect
+            priceType={form.priceType}
+            priceLabel={form.priceLabel}
+            onType={(v) => change('priceType', v)}
+            onLabel={(v) => change('priceLabel', v)}
+          />
           <div>
             <label className="label">Price</label>
             <input

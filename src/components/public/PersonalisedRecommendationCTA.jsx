@@ -16,6 +16,13 @@ import {
 import api, { fileUrl } from '../../services/api';
 
 const DEFAULT_CENTER_IMAGE = '/retreatlogo.png';
+
+// Both CTAs open a WhatsApp chat with our expert, pre-filled with the right
+// intent (retreat vs hotel) so the team can assist instantly.
+const WHATSAPP_NUMBER = '919540111307';
+const waLink = (msg) => `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
+const RETREAT_WA_MSG = 'Hi, I am confused to find the best retreat. I need assistance choosing the right one for me.';
+const HOTEL_WA_MSG = 'Hi, I need a personalised hotel recommendation. Please help me pick the best wellness hotel for my plan.';
 const FALLBACK_IMAGE = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 700"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="%230f9f8f"/><stop offset="1" stop-color="%232563eb"/></linearGradient></defs><rect width="700" height="700" fill="%23f8fafc"/><circle cx="350" cy="350" r="230" fill="url(%23g)" opacity=".12"/><circle cx="350" cy="278" r="86" fill="%2394a3b8"/><path d="M190 574c30-116 102-174 160-174s130 58 160 174" fill="%2394a3b8"/></svg>`
 );
@@ -74,7 +81,6 @@ export default function PersonalisedRecommendationCTA() {
   }, []);
 
   const quickLinks = (cfg.quickLinks?.length ? cfg.quickLinks : FALLBACK.quickLinks).slice(0, 6);
-  const isExternal = (url) => /^https?:\/\//i.test(url);
   const centerSrc = cfg.centerImageUrl ? fileUrl(cfg.centerImageUrl) : DEFAULT_CENTER_IMAGE;
 
   return (
@@ -102,23 +108,31 @@ export default function PersonalisedRecommendationCTA() {
           </p>
 
           <div className="mt-7 flex flex-col sm:flex-row gap-3">
-            <CtaButton url={cfg.primaryCtaUrl} primary>
+            {/* Personalised retreat recommendation → WhatsApp */}
+            <a
+              href={waLink(RETREAT_WA_MSG)}
+              target="_blank"
+              rel="noreferrer"
+              className="group inline-flex items-center justify-center gap-3 rounded-full bg-brand px-7 py-4 text-white font-bold shadow-xl shadow-brand/20 hover:bg-brand-dark transition"
+              title="Get a personalised retreat recommendation on WhatsApp"
+            >
               {cfg.primaryCtaLabel}
               <span className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center group-hover:translate-x-0.5 transition">
                 <ArrowRight size={15} />
               </span>
-            </CtaButton>
+            </a>
+            {/* Personalised hotel recommendation → WhatsApp */}
             <a
-              href={cfg.whatsappUrl}
+              href={waLink(HOTEL_WA_MSG)}
               target="_blank"
               rel="noreferrer"
               className="group inline-flex items-center justify-center gap-3 rounded-full bg-white px-6 py-4 text-ink font-bold border border-slate-200 shadow-sm hover:border-brand/40 hover:text-brand transition"
-              title="Chat with our retreat expert on WhatsApp"
+              title="Get a personalised hotel recommendation on WhatsApp"
             >
               <span className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                <MessageCircle size={16} />
+                <BedDouble size={16} />
               </span>
-              {cfg.whatsappCtaLabel}
+              Personalised hotel recommendation
             </a>
           </div>
 
@@ -194,17 +208,6 @@ export default function PersonalisedRecommendationCTA() {
       </div>
     </section>
   );
-
-  function CtaButton({ url, primary, children }) {
-    const cls = primary
-      ? 'group inline-flex items-center justify-center gap-3 rounded-full bg-brand px-7 py-4 text-white font-bold shadow-xl shadow-brand/20 hover:bg-brand-dark transition'
-      : 'group inline-flex items-center justify-center gap-3 rounded-full bg-white px-6 py-4 text-ink font-bold border border-slate-200 shadow-sm hover:border-brand/40 hover:text-brand transition';
-    if (!url) return <span className={cls}>{children}</span>;
-    if (isExternal(url)) {
-      return <a href={url} target="_blank" rel="noreferrer" className={cls}>{children}</a>;
-    }
-    return <Link to={url} className={cls}>{children}</Link>;
-  }
 }
 
 /**

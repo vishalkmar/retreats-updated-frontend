@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Facebook, Instagram, Twitter, Youtube, Linkedin, Globe,
-  Mail, Phone, MapPin,
+  Mail, Phone, MapPin, Send,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import api, { fileUrl } from '../../services/api';
 
 const SOCIAL_ICONS = {
@@ -102,20 +103,19 @@ export default function Footer() {
         <div>
           <h4 className="font-display font-semibold mb-4 text-white">Explore</h4>
           <ul className="space-y-2 text-sm text-white/70">
-            <li><Link to="/retreats" className="hover:text-brand-light">All Retreats</Link></li>
-            <li><Link to="/retreats?category=yoga" className="hover:text-brand-light">Yoga</Link></li>
-            <li><Link to="/retreats?category=ayurveda" className="hover:text-wellness-light">Ayurveda</Link></li>
-            <li><Link to="/retreats?category=detox" className="hover:text-wellness-light">Detox</Link></li>
+            <li><Link to="/hotels" className="hover:text-brand-light">Hotels</Link></li>
+            <li><Link to="/retreats" className="hover:text-brand-light">Packages</Link></li>
+            <li><Link to="/events" className="hover:text-brand-light">Events</Link></li>
+            <li><Link to="/events-activities" className="hover:text-brand-light">Activities</Link></li>
           </ul>
         </div>
 
         <div>
           <h4 className="font-display font-semibold mb-4">Company</h4>
           <ul className="space-y-2 text-sm text-white/70">
-            <li><Link to="/about" className="hover:text-brand-light">About</Link></li>
             <li><Link to="/blogs" className="hover:text-brand-light">Blogs</Link></li>
-            <li><Link to="/contact" className="hover:text-brand-light">Contact</Link></li>
-            <li><Link to="/privacy" className="hover:text-brand-light">Privacy</Link></li>
+            <li><Link to="/privacy" className="hover:text-brand-light">Privacy Policy</Link></li>
+            <li><Link to="/terms" className="hover:text-brand-light">Terms &amp; Conditions</Link></li>
           </ul>
         </div>
 
@@ -149,12 +149,71 @@ export default function Footer() {
         </div>
       </div>
 
+      {/* Contact form */}
+      <div className="border-t border-white/10">
+        <div className="container-app py-12 grid lg:grid-cols-2 gap-10 items-start">
+          <div>
+            <h3 className="text-2xl font-display font-bold">Get in touch</h3>
+            <p className="text-white/70 mt-2 max-w-md leading-relaxed">
+              Have a question about a stay, package or event? Drop us a message and our
+              wellness team will get back to you shortly.
+            </p>
+          </div>
+          <ContactForm />
+        </div>
+      </div>
+
       <div className="border-t border-white/10">
         <div className="container-app py-5 flex flex-col md:flex-row items-center justify-between text-xs text-white/60 gap-2">
           <span>© {new Date().getFullYear()} {info.companyName}. All rights reserved.</span>
-          <span>Made with care for mindful travellers.</span>
+          <div className="flex items-center gap-4">
+            <Link to="/privacy" className="hover:text-brand-light">Privacy</Link>
+            <Link to="/terms" className="hover:text-brand-light">Terms</Link>
+          </div>
         </div>
       </div>
     </footer>
+  );
+}
+
+function ContactForm() {
+  const [form, setForm] = useState({ name: '', email: '', phone: '', query: '' });
+  const [sending, setSending] = useState(false);
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!form.name.trim() || !form.email.trim() || !form.query.trim()) {
+      toast.error('Please fill name, email and message');
+      return;
+    }
+    setSending(true);
+    try {
+      const res = await api.post('/contact', form);
+      toast.success(res.data?.message || 'Message sent — we’ll be in touch!');
+      setForm({ name: '', email: '', phone: '', query: '' });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not send your message');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const inputCls = 'w-full rounded-lg bg-white/10 border border-white/15 px-3.5 py-2.5 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand';
+
+  return (
+    <form onSubmit={submit} className="grid sm:grid-cols-2 gap-3">
+      <input className={inputCls} placeholder="Your name *" value={form.name} onChange={(e) => set('name', e.target.value)} />
+      <input className={inputCls} type="email" placeholder="Email *" value={form.email} onChange={(e) => set('email', e.target.value)} />
+      <input className={`${inputCls} sm:col-span-2`} placeholder="Phone (optional)" value={form.phone} onChange={(e) => set('phone', e.target.value)} />
+      <textarea className={`${inputCls} sm:col-span-2`} rows={3} placeholder="Your message *" value={form.query} onChange={(e) => set('query', e.target.value)} />
+      <button
+        type="submit"
+        disabled={sending}
+        className="sm:col-span-2 inline-flex items-center justify-center gap-2 rounded-lg bg-brand hover:brightness-110 text-white font-semibold py-2.5 transition disabled:opacity-60"
+      >
+        <Send size={16} /> {sending ? 'Sending…' : 'Send message'}
+      </button>
+    </form>
   );
 }
